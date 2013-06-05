@@ -86,7 +86,9 @@ preamble =
       __choc_count = __choc_count + 1
       console.log("count:  #{__choc_count}/#{opts.count} type: #{info.type}")
       if __choc_count >= opts.count
-        throw new Error("__choc_pause")
+        error = new Error("__choc_pause")
+        error.info = info
+        throw error
 
 scrub = (source, count) ->
   modifiers = [ tracers.postStatement("__choc_trace") ]
@@ -99,22 +101,37 @@ scrub = (source, count) ->
   
   chocified
 
-# source = """
-# // Life, Universe, and Everything
-# var answer = 6 * 7;
-# var foo = "bar";
-# console.log(answer); console.log(foo);
+if require? && (require.main == module)
+  source = """
+  // Life, Universe, and Everything
+  var answer = 6 * 7;
+  var foo = "bar";
+  console.log(answer); console.log(foo);
 
-# // parabolas
-# var shift = 0;
-# while (shift <= 200) {
-#   // console.log(shift);
-#   shift += 14; // increment
-# }
-# """
-# new_source = scrub(source, 10)
-# puts new_source
-# eval new_source
+  // parabolas
+  var shift = 0;
+  while (shift <= 200) {
+    // console.log(shift);
+    shift += 14; // increment
+  }
+  """
+  new_source = scrub(source, 10)
+  puts new_source
+
+  try
+    eval new_source
+  catch e
+    if e.message == "__choc_pause"
+      puts "you paused"
+    else
+      throw e
+
+
+TODO = """
+  * set a few constants for our markers
+  * take a function to call back with on pause / on line numbers
+    * set it as a constant global?
+""" 
 
 exports.scrub = scrub
 
