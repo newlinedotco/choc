@@ -1,0 +1,25 @@
+{
+  "name": "choc",
+  "version": "0.0.1",
+  "private": true,
+  "description": "a library for learnable programming",
+  "keywords": [],
+  "author": "Nate Murray <nate@natemurray.com>",
+  "dependencies": {
+    "coffee-script": "~1.6.2",
+    "debug": "~0.7.2",
+    "underscore": "~1.4.4",
+    "underscore.string": "~2.3.1",
+    "supervisor": "~0.5.2",
+    "esprima": "~1.0.3",
+    "escodegen": "0.0.22",
+    "esmorph": "git://github.com/ariya/esmorph.git#0b3378f05056778f9ea5f89231372aac8bb03ccc"
+  },
+  "devDependencies": {
+    "mocha": "*",
+    "replay": "*",
+    "should": "*",
+    "browserify": "~2.17.3"
+  },
+  "main": "index"
+}
