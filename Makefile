@@ -44,4 +44,9 @@ develop:
 	npm install
 	npm link
 
-.PHONY: test
+browserify:
+	npm run-script build
+
+build: js browserify
+
+.PHONY: test build
