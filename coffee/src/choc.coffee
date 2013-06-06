@@ -90,7 +90,7 @@ preamble =
     __choc_count = 0
     (info) =>
       __choc_count = __choc_count + 1
-      console.log("count:  #{__choc_count}/#{opts.count} type: #{info.type}")
+      # console.log("count:  #{__choc_count}/#{opts.count} type: #{info.type}")
       if __choc_count >= opts.count
         error = new Error("__choc_pause")
         error.info = info
@@ -112,16 +112,21 @@ scrub = (source, count, opts) ->
   scope   = opts.scope   || @
 
   newSource = generateScrubbedSource(source, count)
-  newSource = wrapper(newSource)
+  # newSource = wrapper(newSource)
   puts newSource
   try
     # window.eval.call?
-    window.eval.call scope, newSource
+    # eval.call scope, newSource
+    # opts.eval newSource
+    opts.before()
+    Function(newSource)()
   catch e
     if e.message == Choc.PAUSE_ERROR_NAME
       notify(e.info)
     else
       throw e
+  finally
+    opts.after()
 
 if require? && (require.main == module)
   source = """
