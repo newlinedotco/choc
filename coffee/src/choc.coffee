@@ -8,6 +8,12 @@ _ = require("underscore")
 # return a + b in a function ReturnStatement placement
 # While statement placement - ending part
 
+Choc = 
+  VERSION: "0.0.1"
+  TRACE_FUNCTION_NAME: "__choc_trace"
+  PAUSE_ERROR_NAME: "__choc_pause"
+
+
 isStatement = (thing) ->
   statements = [
     'BreakStatement', 'ContinueStatement', 'DoWhileStatement',
@@ -86,20 +92,29 @@ preamble =
       __choc_count = __choc_count + 1
       console.log("count:  #{__choc_count}/#{opts.count} type: #{info.type}")
       if __choc_count >= opts.count
-        error = new Error("__choc_pause")
+        error = new Error(Choc.PAUSE_ERROR_NAME)
         error.info = info
         throw error
 
-scrub = (source, count) ->
-  modifiers = [ tracers.postStatement("__choc_trace") ]
+generateScrubbedSource = (source, count) ->
+  modifiers = [ tracers.postStatement(Choc.TRACE_FUNCTION_NAME) ]
   morphed = esmorph.modify(source, modifiers)
 
-  chocified = """
-    __choc_trace = (#{preamble.trace.toString()})({count: #{count}})
+  scrubbed = """
+    #{Choc.TRACE_FUNCTION_NAME} = (#{preamble.trace.toString()})({count: #{count}})
     #{morphed}
   """
-  
-  chocified
+  scrubbed
+
+scrub = (source, count, cb) ->
+  newSource = generateScrubbedSource(source, count)
+  try
+    eval newSource
+  catch e
+    if e.message == Choc.PAUSE_ERROR_NAME
+      cb e.info
+    else
+      throw e
 
 if require? && (require.main == module)
   source = """
@@ -115,23 +130,10 @@ if require? && (require.main == module)
     shift += 14; // increment
   }
   """
-  new_source = scrub(source, 10)
-  puts new_source
+  scrubNotify = (info) ->
+    puts inspect info
 
-  try
-    eval new_source
-  catch e
-    if e.message == "__choc_pause"
-      puts "you paused"
-    else
-      throw e
-
-
-TODO = """
-  * set a few constants for our markers
-  * take a function to call back with on pause / on line numbers
-    * set it as a constant global?
-""" 
+  scrub(source, 10, scrubNotify)
 
 exports.scrub = scrub
 
