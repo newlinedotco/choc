@@ -1,3 +1,8 @@
+# Choc: An Experiment in Learnable Programming
+#
+# References: 
+# 
+#
 {puts,inspect} = require("util")
 esprima = require("esprima")
 escodegen = require("escodegen")
@@ -13,20 +18,19 @@ Choc =
   TRACE_FUNCTION_NAME: "__choc_trace"
   PAUSE_ERROR_NAME: "__choc_pause"
 
-
 isStatement = (thing) ->
   statements = [
     'BreakStatement', 'ContinueStatement', 'DoWhileStatement',
-    'DebuggerStatement', 'EmptyStatement', 'ExpressionStatement', 'ForStatement',
-    'ForInStatement', 'IfStatement', 'LabeledStatement', 'ReturnStatement',
-    'SwitchStatement', 'ThrowStatement', 'TryStatement', 'WhileStatement',
-    'WithStatement',
+    'DebuggerStatement', 'EmptyStatement', 'ExpressionStatement',
+    'ForStatement', 'ForInStatement', 'IfStatement', 'LabeledStatement',
+    'ReturnStatement', 'SwitchStatement', 'ThrowStatement', 'TryStatement',
+    'WhileStatement', 'WithStatement',
 
     'VariableDeclaration'
   ]
   _.contains(statements, thing)
 
-# Executes visitor on the object and its children (recursively).
+# Executes visitor on the object and its children (recursively).- from esmorph
 traverse = (object, visitor, path) ->
   key = undefined
   child = undefined
@@ -45,6 +49,7 @@ collectStatements = (code, tree) ->
   statements
 
 tracers = 
+  # based on a tracer from esmorph
   postStatement: (traceName) ->
     (code) ->
       tree = esprima.parse(code, { range: true, loc: true })
@@ -106,27 +111,29 @@ generateScrubbedSource = (source, count) ->
   """
   scrubbed
 
-scrub = (source, count, opts) ->
-  notify  = opts.notify  || () -> 
-  wrapper = opts.wrapper || (source) -> source
-  scope   = opts.scope   || @
+noop = () -> 
 
+scrub = (source, count, opts) ->
+  notify  = opts.notify  || noop
+  before  = opts.before  || noop
+  after   = opts.after   || noop
+  locals  = opts.locals  || []
   newSource = generateScrubbedSource(source, count)
-  # newSource = wrapper(newSource)
-  puts newSource
+
+  localsStr = _.map(_.keys(locals), (name) -> "var #{name} = locals.#{name};").join("; ")
+
   try
-    # window.eval.call?
-    # eval.call scope, newSource
-    # opts.eval newSource
-    opts.before()
-    Function(newSource)()
+    before()
+    # http://perfectionkills.com/global-eval-what-are-the-options/
+    eval(localsStr + "\n" + newSource)
+    # Function(newSource)()
   catch e
     if e.message == Choc.PAUSE_ERROR_NAME
       notify(e.info)
     else
       throw e
   finally
-    opts.after()
+    after()
 
 if require? && (require.main == module)
   source = """
@@ -145,13 +152,13 @@ if require? && (require.main == module)
   scrubNotify = (info) ->
     puts inspect info
 
-  wrapper = (source) -> """
-  // start
-  #{source}
-  // end
-  """
-
-  scrub(source, 10, notify: scrubNotify, wrapper: wrapper)
+  scrub(source, 10, notify: scrubNotify)
 
 exports.scrub = scrub
 
+todo = """
+  * set locals
+  * highlight current line
+  * parse only once
+  
+"""
