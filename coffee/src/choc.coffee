@@ -17,6 +17,7 @@ Choc =
   VERSION: "0.0.1"
   TRACE_FUNCTION_NAME: "__choc_trace"
   PAUSE_ERROR_NAME: "__choc_pause"
+  EXECUTION_FINISHED_ERROR_NAME: "__choc_finished"
 
 isStatement = (thing) ->
   statements = [
@@ -90,50 +91,56 @@ tracers =
 
       fragments
 
-preamble = 
-  trace: (opts) ->
-    __choc_count = 0
+class Tracer
+  constructor: (options={}) ->
+    @step_count = 0
+
+  trace: (opts) =>
+    @step_count = 0
     (info) =>
-      __choc_count = __choc_count + 1
-      # console.log("count:  #{__choc_count}/#{opts.count} type: #{info.type}")
-      if __choc_count >= opts.count
-        error = new Error("__choc_pause")
+      @step_count = @step_count + 1
+      # console.log("count:  #{@step_count}/#{opts.count} type: #{info.type}")
+      if @step_count >= opts.count
+        error = new Error(Choc.PAUSE_ERROR_NAME)
         error.info = info
         throw error
 
 generateScrubbedSource = (source, count) ->
   modifiers = [ tracers.postStatement(Choc.TRACE_FUNCTION_NAME) ]
   morphed = esmorph.modify(source, modifiers)
-
-  scrubbed = """
-    #{Choc.TRACE_FUNCTION_NAME} = (#{preamble.trace.toString()})({count: #{count}})
-    #{morphed}
-  """
-  scrubbed
+  morphed
 
 noop = () -> 
 
 scrub = (source, count, opts) ->
-  notify  = opts.notify  || noop
-  before  = opts.before  || noop
-  after   = opts.after   || noop
+  notify      = opts.notify  || noop
+  beforeEach  = opts.beforeEach  || noop
+  afterEach   = opts.afterEach   || noop
   locals  = opts.locals  || []
   newSource = generateScrubbedSource(source, count)
 
+  locals.Choc = Choc
   localsStr = _.map(_.keys(locals), (name) -> "var #{name} = locals.#{name};").join("; ")
 
   try
-    before()
+    beforeEach()
+
+    tracer = new Tracer()
+    __choc_trace = tracer.trace(count: count)
     # http://perfectionkills.com/global-eval-what-are-the-options/
     eval(localsStr + "\n" + newSource)
-    # Function(newSource)()
+
+    # if you make it here, execution finished
+    console.log(tracer.step_count)
   catch e
     if e.message == Choc.PAUSE_ERROR_NAME
       notify(e.info)
+    # else if e.message == Choc.EXECUTION_FINISHED_ERROR_NAME
+    #  throw e
     else
       throw e
   finally
-    after()
+    afterEach()
 
 if require? && (require.main == module)
   source = """
@@ -157,8 +164,6 @@ if require? && (require.main == module)
 exports.scrub = scrub
 
 todo = """
-  * set locals
   * highlight current line
   * parse only once
-  
 """
