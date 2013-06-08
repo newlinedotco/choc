@@ -113,9 +113,10 @@ generateScrubbedSource = (source, count) ->
 noop = () -> 
 
 scrub = (source, count, opts) ->
-  notify      = opts.notify  || noop
+  notify      = opts.notify      || noop
   beforeEach  = opts.beforeEach  || noop
   afterEach   = opts.afterEach   || noop
+  afterAll    = opts.afterAll    || noop
   locals  = opts.locals  || []
   newSource = generateScrubbedSource(source, count)
 
@@ -132,6 +133,7 @@ scrub = (source, count, opts) ->
 
     # if you make it here, execution finished
     console.log(tracer.step_count)
+    afterAll({step_count: tracer.step_count})
   catch e
     if e.message == Choc.PAUSE_ERROR_NAME
       notify(e.info)
