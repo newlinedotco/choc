@@ -147,10 +147,11 @@
   noop = function() {};
 
   scrub = function(source, count, opts) {
-    var afterEach, beforeEach, e, locals, localsStr, newSource, notify, tracer, __choc_trace;
+    var afterAll, afterEach, beforeEach, e, locals, localsStr, newSource, notify, tracer, __choc_trace;
     notify = opts.notify || noop;
     beforeEach = opts.beforeEach || noop;
     afterEach = opts.afterEach || noop;
+    afterAll = opts.afterAll || noop;
     locals = opts.locals || [];
     newSource = generateScrubbedSource(source, count);
     locals.Choc = Choc;
@@ -164,7 +165,10 @@
         count: count
       });
       eval(localsStr + "\n" + newSource);
-      return console.log(tracer.step_count);
+      console.log(tracer.step_count);
+      return afterAll({
+        step_count: tracer.step_count
+      });
     } catch (_error) {
       e = _error;
       if (e.message === Choc.PAUSE_ERROR_NAME) {
