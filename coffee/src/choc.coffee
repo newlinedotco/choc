@@ -119,6 +119,7 @@ tracers =
 class Tracer
   constructor: (options={}) ->
     @step_count = 0
+    @onMessages = () ->
 
   trace: (opts) =>
     @step_count = 0
@@ -126,6 +127,7 @@ class Tracer
       @step_count = @step_count + 1
       # console.log("count:  #{@step_count}/#{opts.count} type: #{info.type}")
       if @step_count >= opts.count
+        @onMessages(info.messages)
         error = new Error(Choc.PAUSE_ERROR_NAME)
         error.info = info
         throw error
@@ -142,6 +144,7 @@ scrub = (source, count, opts) ->
   beforeEach  = opts.beforeEach  || noop
   afterEach   = opts.afterEach   || noop
   afterAll    = opts.afterAll    || noop
+  onMessages  = opts.onMessages  || noop
   locals  = opts.locals  || []
   newSource = generateScrubbedSource(source, count)
 
@@ -154,6 +157,7 @@ scrub = (source, count, opts) ->
     beforeEach()
 
     tracer = new Tracer()
+    tracer.onMessages = onMessages
     __choc_trace = tracer.trace(count: count)
     # http://perfectionkills.com/global-eval-what-are-the-options/
     eval(localsStr + "\n" + newSource)
