@@ -49,11 +49,32 @@ collectStatements = (code, tree) ->
       statements.push { node: node, path: path }
   statements
 
+readableNode = (node) ->
+  switch node.type
+    when 'VariableDeclaration'
+      i = 0
+      sentences = _.map node.declarations, (dec) -> 
+        name = dec.id.name
+        prefix = if i == 0 then "Create" else " and create"
+        i = i + 1
+        ('"' + prefix + ' the variable <span class=\\"choc-variable\\">' + name + '</span> and set it to <span class=\\"choc-value\\">" + ' + name + ' + "</span>"')
+      msgs = _.map sentences, (sentence) ->
+         s  = "{ " 
+         s += "lineNumber: " + node.loc.start.line + ", "
+         s += "message: " + sentence 
+         s += " }"
+      "[ " + msgs.join(", ") + " ]"
+    else
+      "[]"
+
 tracers = 
   # based on a tracer from esmorph
   postStatement: (traceName) ->
     (code) ->
       tree = esprima.parse(code, { range: true, loc: true })
+
+      # puts inspect tree, null, 10
+
       statementList = collectStatements(code, tree)
 
       fragments = []
@@ -76,10 +97,14 @@ tracers =
             range: range
           )
         else
+          puts inspect node, null, 10
+          messagesString = readableNode(node)
+
           signature = traceName + "({ "
           signature += "lineNumber: " + line + ", "
           signature += "range: [" + range[0] + ", " + range[1] + "], "
-          signature += "type: '" + nodeType + "' "
+          signature += "type: '" + nodeType + "', "
+          signature += "messages: " + messagesString + " "
           signature += "});"
 
         signature = " " + signature + ""
@@ -120,6 +145,8 @@ scrub = (source, count, opts) ->
   locals  = opts.locals  || []
   newSource = generateScrubbedSource(source, count)
 
+  puts newSource
+
   locals.Choc = Choc
   localsStr = _.map(_.keys(locals), (name) -> "var #{name} = locals.#{name};").join("; ")
 
@@ -137,17 +164,33 @@ scrub = (source, count, opts) ->
   catch e
     if e.message == Choc.PAUSE_ERROR_NAME
       notify(e.info)
-    # else if e.message == Choc.EXECUTION_FINISHED_ERROR_NAME
-    #  throw e
     else
       throw e
   finally
     afterEach()
 
 if require? && (require.main == module)
+
+  source_todo = """
+  function add(a, b) {
+    var c = 3;
+    return a + b;
+  }
+
+  var sub = function(a, b) {
+    var c = 3;
+    return a - b;
+  }
+  while (shift <= 200) {
+    // console.log(shift);
+    var x = add(1, shift);
+    shift += 14; // increment
+  }
+  """
+
   source = """
   // Life, Universe, and Everything
-  var answer = 6 * 7;
+  var answer = 6 * 7, question = 3;
   var foo = "bar";
   console.log(answer); console.log(foo);
 
@@ -166,6 +209,7 @@ if require? && (require.main == module)
 exports.scrub = scrub
 
 todo = """
-  * highlight current line
   * parse only once
+  * function returns - i think we're going to need to transform every ReturnStatement to hoist its argument into a variable - then give the language for that variable and pause on that line right before you return it
+  * function calls on the line - 
 """
