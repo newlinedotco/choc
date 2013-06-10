@@ -686,6 +686,32 @@ EventEmitter.prototype.listeners = function(type) {
         };
         message = operators[node.operator] || "";
         return "[ { lineNumber: " + node.loc.start.line + ", message: " + message + " }]";
+      case 'BinaryExpression':
+        operators = {
+          "==": "''",
+          "!=": "''",
+          "===": "''",
+          "!==": "''",
+          "<": "''",
+          "<=": "''",
+          ">": "''",
+          ">=": "''",
+          "<<": "''",
+          ">>": "''",
+          ">>>": "''",
+          "+": "'add ' + __choc_first_message(" + (generateReadableExpression(node.right)) + ") + ' to " + node.left.name + " and set " + node.left.name + " to ' + " + node.left.name,
+          "-": "''",
+          "*": "''",
+          "/": "''",
+          "%": "''",
+          "|": "''",
+          "^": "''",
+          "in": "''",
+          "instanceof": "''",
+          "..": "''"
+        };
+        message = operators[node.operator] || "";
+        return "[ { lineNumber: " + node.loc.start.line + ", message: " + message + " }]";
       case 'Literal':
         return "[ { lineNumber: " + node.loc.start.line + ", message: '" + node.value + "' }]";
       default:
@@ -789,13 +815,25 @@ EventEmitter.prototype.listeners = function(type) {
       this.trace = __bind(this.trace, this);
       this.step_count = 0;
       this.onMessages = function() {};
+      this.clearTimeline();
     }
+
+    Tracer.prototype.clearTimeline = function() {
+      return this.timeline = {
+        steps: [],
+        maxLines: 0
+      };
+    };
 
     Tracer.prototype.trace = function(opts) {
       var _this = this;
       this.step_count = 0;
       return function(info) {
         var error;
+        _this.timeline.steps[_this.step_count] = {
+          lineNumber: info.lineNumber
+        };
+        _this.timeline.maxLines = Math.max(_this.timeline.maxLines, info.lineNumber);
         _this.step_count = _this.step_count + 1;
         if (_this.step_count >= opts.count) {
           _this.onMessages(info.messages);
@@ -820,11 +858,12 @@ EventEmitter.prototype.listeners = function(type) {
   noop = function() {};
 
   scrub = function(source, count, opts) {
-    var afterAll, afterEach, beforeEach, e, locals, localsStr, newSource, notify, onMessages, tracer, __choc_first_message, __choc_trace;
+    var afterAll, afterEach, beforeEach, e, locals, localsStr, newSource, notify, onMessages, onTimeline, tracer, __choc_first_message, __choc_trace;
     notify = opts.notify || noop;
     beforeEach = opts.beforeEach || noop;
     afterEach = opts.afterEach || noop;
     afterAll = opts.afterAll || noop;
+    onTimeline = opts.onTimeline || noop;
     onMessages = opts.onMessages || noop;
     locals = opts.locals || [];
     newSource = generateScrubbedSource(source, count);
@@ -837,6 +876,7 @@ EventEmitter.prototype.listeners = function(type) {
       beforeEach();
       tracer = new Tracer();
       tracer.onMessages = onMessages;
+      tracer.onTimeline = onTimeline;
       __choc_trace = tracer.trace({
         count: count
       });
@@ -846,9 +886,10 @@ EventEmitter.prototype.listeners = function(type) {
       };
       eval(localsStr + "\n" + newSource);
       console.log(tracer.step_count);
-      return afterAll({
+      afterAll({
         step_count: tracer.step_count
       });
+      return onTimeline(tracer.timeline);
     } catch (_error) {
       e = _error;
       if (e.message === Choc.PAUSE_ERROR_NAME) {
