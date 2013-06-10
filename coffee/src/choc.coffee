@@ -65,38 +65,30 @@ generateReadableExpression = (node) ->
 
     when 'BinaryExpression'
       operators = 
-        "==": "" 
-        "!=" : ""
-        "===": "" 
-        "!==": ""
-        "<": ""
-        "<=": "" 
-        ">": ""
-        ">=": ""
-        "<<": ""
-        ">>": ""
-        ">>>": ""
+        "==": "''" 
+        "!=" : "''"
+        "===": "''" 
+        "!==": "''"
+        "<": "''"
+        "<=": "''" 
+        ">": "''"
+        ">=": "''"
+        "<<": "''"
+        ">>": "''"
+        ">>>": "''"
         "+": "'add ' + __choc_first_message(#{generateReadableExpression(node.right)}) + ' to #{node.left.name} and set #{node.left.name} to ' + #{node.left.name}"
-        "-": ""
-        "*": ""
-        "/": "" 
-        "%": ""
-        "|": "" 
-        "^": ""
-        "in": ""
-        "instanceof": ""
-        "..": ""
-
-        # "=":  "'set #{node.left.name} to ' + __choc_first_message(#{generateReadableExpression(node.right)})"
-        # "+=": "'add ' + __choc_first_message(#{generateReadableExpression(node.right)}) + ' to #{node.left.name} and set #{node.left.name} to ' + #{node.left.name}"
-        # "-=": "'subtract ' + __choc_first_message(#{generateReadableExpression(node.right)}) + ' from #{node.left.name}'"
-        # "*=": "'multiply #{node.left.name} by ' + __choc_first_message(#{generateReadableExpression(node.right)}) "
-        # "/=": "'divide #{node.left.name} by ' + __choc_first_message(#{generateReadableExpression(node.right)}) "
-        # "%=": "'divide #{node.left.name} by ' + __choc_first_message(#{generateReadableExpression(node.right)}) + ' and set #{node.left.name} to the remainder'"
+        "-": "''"
+        "*": "''"
+        "/": "''" 
+        "%": "''"
+        "|": "''" 
+        "^": "''"
+        "in": "''"
+        "instanceof": "''"
+        "..": "''"
 
       message = operators[node.operator] || ""
       "[ { lineNumber: #{node.loc.start.line}, message: #{message} }]"
- 
     when 'Literal'
       "[ { lineNumber: #{node.loc.start.line}, message: '#{node.value}' }]"
     else
@@ -184,10 +176,20 @@ class Tracer
   constructor: (options={}) ->
     @step_count = 0
     @onMessages = () ->
+    @clearTimeline()
+
+  clearTimeline: () ->
+    @timeline = {
+      steps: []
+      maxLines: 0
+    }
 
   trace: (opts) =>
     @step_count = 0
     (info) =>
+      @timeline.steps[@step_count] = {lineNumber: info.lineNumber}
+      @timeline.maxLines = Math.max(@timeline.maxLines, info.lineNumber)
+
       @step_count = @step_count + 1
       # console.log("count:  #{@step_count}/#{opts.count} type: #{info.type}")
       if @step_count >= opts.count
@@ -208,6 +210,7 @@ scrub = (source, count, opts) ->
   beforeEach  = opts.beforeEach  || noop
   afterEach   = opts.afterEach   || noop
   afterAll    = opts.afterAll    || noop
+  onTimeline  = opts.onTimeline  || noop
   onMessages  = opts.onMessages  || noop
   locals  = opts.locals  || []
   newSource = generateScrubbedSource(source, count)
@@ -222,6 +225,7 @@ scrub = (source, count, opts) ->
 
     tracer = new Tracer()
     tracer.onMessages = onMessages
+    tracer.onTimeline = onTimeline
     __choc_trace = tracer.trace(count: count)
     __choc_first_message = (messages) -> messages[0]?.message || "TODO"
     # http://perfectionkills.com/global-eval-what-are-the-options/
@@ -230,6 +234,7 @@ scrub = (source, count, opts) ->
     # if you make it here, execution finished
     console.log(tracer.step_count)
     afterAll({step_count: tracer.step_count})
+    onTimeline(tracer.timeline)
   catch e
     if e.message == Choc.PAUSE_ERROR_NAME
       notify(e.info)
