@@ -181,6 +181,7 @@ class Tracer
   clearTimeline: () ->
     @timeline = {
       steps: []
+      stepMap: {}
       maxLines: 0
     }
 
@@ -188,6 +189,8 @@ class Tracer
     @step_count = 0
     (info) =>
       @timeline.steps[@step_count] = {lineNumber: info.lineNumber}
+      @timeline.stepMap[@step_count] ||= {}
+      @timeline.stepMap[@step_count][info.lineNumber - 1] = true
       @timeline.maxLines = Math.max(@timeline.maxLines, info.lineNumber)
 
       @step_count = @step_count + 1
