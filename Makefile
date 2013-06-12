@@ -19,7 +19,7 @@ install:
 	npm install
 
 watch:
-	./node_modules/.bin/forever --minUptime 1000 --spinSleepTime 2000 ./node_modules/.bin/mocha --watch --recursive
+	./node_modules/.bin/supervisor --watch coffee/ --extensions coffee --exec 'make' --no-restart-on exit build
 
 js: clean
 	coffee -c -o ./js ./coffee
