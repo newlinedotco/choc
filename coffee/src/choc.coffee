@@ -16,9 +16,8 @@ debug = require("debug")("choc")
 # * if statements - hoist conditional into tmp and put a trace before calling the if
 # * While statement placement - ending part
 # * add a trace at the very last step that says 'done'
-# * parse only once
 # * function returns - i think we're going to need to transform every ReturnStatement to hoist its argument into a variable - then give the language for that variable and pause on that line right before you return it
-# * function calls on the line - 
+# * function calls on the line
 
 Choc = 
   VERSION: "0.0.1"
@@ -62,8 +61,7 @@ collectNodes = (tree, condition) ->
 collectStatements = (tree) ->
   collectNodes tree, (node, path) -> isStatement(node.type)
 
-# based on a tracer from esmorph
-postStatementTracer = (traceName) ->
+statementAnnotator = (traceName) ->
   (code) ->
     # use esprima to parse our code into a syntax tree
     tree = esprima.parse(code, { range: true, loc: true })
@@ -86,32 +84,30 @@ postStatementTracer = (traceName) ->
         pos = node.block.range[0] + 1
 
       messagesString = readable.readableNode(node)
+     
+      signature = """
+      #{traceName}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
+      """
 
-      signature = traceName + "({ "
-      signature += "lineNumber: " + line + ", "
-      signature += "range: [" + range[0] + ", " + range[1] + "], "
-      signature += "type: '" + nodeType + "', "
-      signature += "messages: " + messagesString + " "
-      signature += "});"
-
-      signature = " " + signature + ""
       fragments.push
         index: pos
-        text: signature
+        text: " " + signature
 
       i += 1
 
     fragments
 
-generateScrubbedSource = (source) ->
-  modifiers = [ postStatementTracer(Choc.TRACE_FUNCTION_NAME) ]
+generateAnnotatedSource = (source) ->
+  modifiers = [ statementAnnotator(Choc.TRACE_FUNCTION_NAME) ]
   morphed = esmorph.modify(source, modifiers)
   morphed
 
+# TODO - use an LRU memoize if you're planning on doing a lot of editing
+generateAnnotatedSourceM = _.memoize(generateAnnotatedSource)
 
 class Tracer
   constructor: (options={}) ->
-    @step_count = 0
+    @frameCount = 0
     @onMessages = () ->
     @clearTimeline()
 
@@ -123,17 +119,17 @@ class Tracer
     }
 
   trace: (opts) =>
-    @step_count = 0
+    @frameCount = 0
     (info) =>
-      @timeline.steps[@step_count] = {lineNumber: info.lineNumber}
-      @timeline.stepMap[@step_count] ||= {}
-      @timeline.stepMap[@step_count][info.lineNumber - 1] = true
+      @timeline.steps[@frameCount] = {lineNumber: info.lineNumber}
+      @timeline.stepMap[@frameCount] ||= {}
+      @timeline.stepMap[@frameCount][info.lineNumber - 1] = true
       @timeline.maxLines = Math.max(@timeline.maxLines, info.lineNumber)
-      info.frameNumber = @step_count # todo revise this language
+      info.frameNumber = @frameCount # todo revise this language
 
-      @step_count = @step_count + 1
-      # console.log("count:  #{@step_count}/#{opts.count} type: #{info.type}")
-      if @step_count >= opts.count
+      @frameCount = @frameCount + 1
+      # console.log("count:  #{@frameCount}/#{opts.count} type: #{info.type}")
+      if @frameCount >= opts.count
         @onMessages(info.messages)
         error = new Error(Choc.PAUSE_ERROR_NAME)
         error.info = info
@@ -150,7 +146,7 @@ scrub = (source, count, opts) ->
   onMessages  = opts.onMessages  || noop
   locals      = opts.locals      || {}
 
-  newSource   = generateScrubbedSource(source)
+  newSource   = generateAnnotatedSourceM(source)
   debug(newSource)
 
   tracer = new Tracer()
@@ -195,7 +191,7 @@ scrub = (source, count, opts) ->
     # program. Call back to the client and let them know how many steps we've
     # taken and give them the tracer's timeline
     if executionTerminated
-      afterAll({step_count: tracer.step_count})
+      afterAll({frameCount: tracer.frameCount})
       onTimeline(tracer.timeline)
 
 exports.scrub = scrub
