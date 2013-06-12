@@ -26,7 +26,9 @@ Choc =
   PAUSE_ERROR_NAME: "__choc_pause"
   EXECUTION_FINISHED_ERROR_NAME: "__choc_finished"
 
-isStatement = (thing) ->
+# Given string nodeType, returns true if the nodeType is (loosely, not strictly)
+# a statement (e.g. unit of interest). Returns false otherwise
+isStatement = (nodeType) ->
   statements = [
     'BreakStatement', 'ContinueStatement', 'DoWhileStatement',
     'DebuggerStatement', 'EmptyStatement', 'ExpressionStatement',
@@ -36,9 +38,9 @@ isStatement = (thing) ->
 
     'VariableDeclaration'
   ]
-  _.contains(statements, thing)
+  _.contains(statements, nodeType)
 
-# Executes visitor on the object and its children (recursively).- from esmorph
+# Executes visitor on the object and its children (recursively) - taken from esmorph
 traverse = (object, visitor, path) ->
   key = undefined
   child = undefined
@@ -49,61 +51,63 @@ traverse = (object, visitor, path) ->
       child = object[key]
       traverse child, visitor, [object].concat(path) if typeof child is "object" and child isnt null
 
-collectStatements = (code, tree) ->
-  statements = []
+# Given syntax tree, return an array of all of the nodes that satisfy condition
+collectNodes = (tree, condition) ->
+  nodes = []
   traverse tree, (node, path) ->
-    if isStatement(node.type)
-      statements.push { node: node, path: path }
-  statements
+    if condition(node, path)
+      nodes.push { node: node, path: path }
+  nodes
 
-tracers = 
-  # based on a tracer from esmorph
-  postStatement: (traceName) ->
-    (code) ->
-      tree = esprima.parse(code, { range: true, loc: true })
+collectStatements = (tree) ->
+  collectNodes tree, (node, path) -> isStatement(node.type)
 
-      # puts inspect tree, null, 10
+# based on a tracer from esmorph
+postStatementTracer = (traceName) ->
+  (code) ->
+    # use esprima to parse our code into a syntax tree
+    tree = esprima.parse(code, { range: true, loc: true })
+    
+    # gather each of the statements
+    statementList = collectStatements(tree)
 
-      statementList = collectStatements(code, tree)
+    fragments = []
+    i = 0
+    while i < statementList.length
+      node = statementList[i].node
+      nodeType = node.type
+      line = node.loc.start.line
+      range = node.range
+      pos = node.range[1]
 
-      fragments = []
-      i = 0
-      while i < statementList.length
-        node = statementList[i].node
-        nodeType = node.type
-        line = node.loc.start.line
-        range = node.range
-        pos = node.range[1]
+      if node.hasOwnProperty("body")
+        pos = node.body.range[0] + 1
+      else if node.hasOwnProperty("block")
+        pos = node.block.range[0] + 1
 
-        if node.hasOwnProperty("body")
-          pos = node.body.range[0] + 1
-        else if node.hasOwnProperty("block")
-          pos = node.block.range[0] + 1
+      messagesString = readable.readableNode(node)
 
-        if typeof traceName is "function"
-          signature = traceName.call(null,
-            line: line
-            range: range
-          )
-        else
-          puts inspect node, null, 10
-          messagesString = readable.readableNode(node)
+      signature = traceName + "({ "
+      signature += "lineNumber: " + line + ", "
+      signature += "range: [" + range[0] + ", " + range[1] + "], "
+      signature += "type: '" + nodeType + "', "
+      signature += "messages: " + messagesString + " "
+      signature += "});"
 
-          signature = traceName + "({ "
-          signature += "lineNumber: " + line + ", "
-          signature += "range: [" + range[0] + ", " + range[1] + "], "
-          signature += "type: '" + nodeType + "', "
-          signature += "messages: " + messagesString + " "
-          signature += "});"
+      signature = " " + signature + ""
+      fragments.push
+        index: pos
+        text: signature
 
-        signature = " " + signature + ""
-        fragments.push
-          index: pos
-          text: signature
+      i += 1
 
-        i += 1
+    fragments
 
-      fragments
+generateScrubbedSource = (source) ->
+  modifiers = [ postStatementTracer(Choc.TRACE_FUNCTION_NAME) ]
+  morphed = esmorph.modify(source, modifiers)
+  morphed
+
 
 class Tracer
   constructor: (options={}) ->
@@ -135,32 +139,27 @@ class Tracer
         error.info = info
         throw error
 
-generateScrubbedSource = (source, count) ->
-  modifiers = [ tracers.postStatement(Choc.TRACE_FUNCTION_NAME) ]
-  morphed = esmorph.modify(source, modifiers)
-  morphed
-
 noop = () -> 
 
 scrub = (source, count, opts) ->
-  onFrame     = opts.onFrame      || noop
+  onFrame     = opts.onFrame     || noop
   beforeEach  = opts.beforeEach  || noop
   afterEach   = opts.afterEach   || noop
   afterAll    = opts.afterAll    || noop
   onTimeline  = opts.onTimeline  || noop
   onMessages  = opts.onMessages  || noop
-  locals      = opts.locals  || []
-  newSource   = generateScrubbedSource(source, count)
+  locals      = opts.locals      || {}
 
+  newSource   = generateScrubbedSource(source)
   debug(newSource)
-  executionTerminated = false
 
+  tracer = new Tracer()
+  tracer.onMessages = onMessages
+  tracer.onTimeline = onTimeline
+
+  executionTerminated = false
   try
     beforeEach()
-
-    tracer = new Tracer()
-    tracer.onMessages = onMessages
-    tracer.onTimeline = onTimeline
 
     # create a few functions to be used by the eval'd source
     __choc_trace         = tracer.trace(count: count)
@@ -178,6 +177,7 @@ scrub = (source, count, opts) ->
     # if you make it here without an exception, execution finished
     executionTerminated = true
   catch e
+
     # throwing a Choc.PAUSE_ERROR_NAME is how we pause execution (for now)
     # the most obvious consequence of this is that you can't have a catch-all
     # exception handler in the code you wish to trace
@@ -186,8 +186,14 @@ scrub = (source, count, opts) ->
     else
       throw e
   finally
+    # call afterEach after each frame no matter what happens. E.g. if we are
+    # drawing a picture, we want to be able to update the canvas even if we
+    # paused execution halfway through
     afterEach()
 
+    # if no exceptions were raised then we've successfully run our whole
+    # program. Call back to the client and let them know how many steps we've
+    # taken and give them the tracer's timeline
     if executionTerminated
       afterAll({step_count: tracer.step_count})
       onTimeline(tracer.timeline)
