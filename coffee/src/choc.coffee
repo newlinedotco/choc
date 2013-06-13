@@ -18,6 +18,7 @@ debug = require("debug")("choc")
 # * add a trace at the very last step that says 'done'
 # * function returns - i think we're going to need to transform every ReturnStatement to hoist its argument into a variable - then give the language for that variable and pause on that line right before you return it
 # * function calls on the line
+# * return syntax errors for parsing in a digestable way
 
 Choc = 
   VERSION: "0.0.1"
