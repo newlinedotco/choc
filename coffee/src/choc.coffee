@@ -3,13 +3,15 @@
 # References: 
 # 
 #
-{puts,inspect} = require("util")
+{puts,inspect} = require("util"); pp = (x) -> puts inspect x
 esprima = require("esprima")
 escodegen = require("escodegen")
 esmorph = require("esmorph")
+estraverse = require('../../lib/estraverse')
 _ = require("underscore")
 readable = require("./readable")
 debug = require("debug")("choc")
+deep = require("deep")
 
 # TODOs 
 # * return a + b in a function ReturnStatement placement
@@ -49,14 +51,23 @@ traverse = (object, visitor, path) ->
   for key of object
     if object.hasOwnProperty(key)
       child = object[key]
+      # TODO - if we're in an array, we want to keep a reference to the data structure we're in and our own index. this way we can shove code in around it
       traverse child, visitor, [object].concat(path) if typeof child is "object" and child isnt null
 
 # Given syntax tree, return an array of all of the nodes that satisfy condition
 collectNodes = (tree, condition) ->
   nodes = []
   traverse tree, (node, path) ->
+    puts "traverse "
+    puts inspect node
+    puts inspect path
+    puts "/traverse "
+ 
     if condition(node, path)
-      nodes.push { node: node, path: path }
+      # puts "condition met"
+      # puts inspect path
+      # puts "/condition met"
+      nodes.push { node: node, path: path } 
   nodes
 
 collectStatements = (tree) ->
@@ -97,6 +108,69 @@ statementAnnotator = (traceName) ->
       i += 1
 
     fragments
+
+# varInit: e.g. { type: 'Literal', value: 1 } 
+generateVariableDeclaration = (varInit) ->
+  identifier = "__choc_var_" + Math.floor(Math.random() * 1000000) # TODO - real uuid
+  { 
+   type: 'VariableDeclaration'
+   kind: 'var' 
+   declarations: [ { 
+     type: 'VariableDeclarator',
+     id: { type: 'Identifier', name:  identifier },
+     init: varInit
+     } 
+   ]
+  }
+
+hoist = (source) ->
+  tree = esprima.parse(source)
+  puts inspect tree, null, 20
+
+  candidates = []
+
+  estraverse.traverse tree, {
+    enter: (node, parent) ->
+      puts "enter:"
+      puts inspect node
+      puts inspect parent
+      if node.type == "IfStatement"
+        candidates.push({node: node, parent: parent})
+
+    # leave: (node, parent) ->
+    #   puts "leave:"
+    #   puts inspect node
+    #   puts inspect parent
+ 
+  }
+
+  puts "\n=== candidates ==="
+  puts inspect candidates, null, 10
+
+  node = candidates[0].node
+  parent = candidates[0].parent
+
+  # in an IfStatement we want to do three things
+  if node.type == "IfStatement"
+    # pull test expresion out
+    originalExpression = node.test
+
+    # generate our new pre-variable
+    newCodeTree = generateVariableDeclaration(originalExpression)
+    parent[node._parentAttribute].splice(node._parentAttributeIdx, 0, newCodeTree)
+
+    # replace it with the name of our variable
+    newVariableName = newCodeTree.declarations[0].id.name
+    node.test = { type: 'Identifier', name: newVariableName }
+
+
+  # statementList = collectStatements(tree)
+  # puts "==="
+  # puts inspect statementList, null, 20
+  puts "\n=== code ==="
+  puts escodegen.generate(tree)
+
+
 
 generateAnnotatedSource = (source) ->
   modifiers = [ statementAnnotator(Choc.TRACE_FUNCTION_NAME) ]
@@ -196,3 +270,5 @@ scrub = (source, count, opts) ->
       onTimeline(tracer.timeline)
 
 exports.scrub = scrub
+exports.generateAnnotatedSource = generateAnnotatedSource
+exports._hoist = hoist
