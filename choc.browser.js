@@ -1243,7 +1243,6 @@ EventEmitter.prototype.listeners = function(type) {
             innerBlockContainer = node.body.body;
             innerBlockContainer.push(newAssignmentNode);
             innerBlockContainer.push(traceTree);
-            true;
           }
         } else if (isPlainStatement(nodeType)) {
           if (_.isNumber(parentPathIndex)) {
