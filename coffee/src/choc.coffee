@@ -3,7 +3,7 @@
 # References: 
 # 
 #
-{puts,inspect} = require("util"); pp = (x) -> puts inspect x
+{puts,inspect} = require("util"); pp = (x) -> puts inspect(x, null, 1000)
 esprima = require("esprima")
 escodegen = require("escodegen")
 esmorph = require("esmorph")
@@ -30,17 +30,24 @@ Choc =
 
 # Given string nodeType, returns true if the nodeType is (loosely, not strictly)
 # a statement (e.g. unit of interest). Returns false otherwise
-isStatement = (nodeType) ->
-  statements = [
-    'BreakStatement', 'ContinueStatement', 'DoWhileStatement',
-    'DebuggerStatement', 'EmptyStatement', 'ExpressionStatement',
-    'ForStatement', 'ForInStatement',  'LabeledStatement',
-    'SwitchStatement', 'ThrowStatement', 'TryStatement',
-    'WithStatement',
-    # 'ReturnStatement', 'WhileStatement', 'IfStatement',
-    'VariableDeclaration'
-  ]
-  _.contains(statements, nodeType)
+
+PLAIN_STATEMENTS = [
+ 'BreakStatement', 'ContinueStatement', 'DoWhileStatement',
+ 'DebuggerStatement', 'EmptyStatement', 'ExpressionStatement',
+ 'ForStatement', 'ForInStatement',  'LabeledStatement',
+ 'SwitchStatement', 'ThrowStatement', 'TryStatement',
+ 'WithStatement',
+ 'VariableDeclaration'
+]
+
+HOIST_STATEMENTS = [
+  'ReturnStatement', 'WhileStatement', 'IfStatement',
+]
+
+ALL_STATEMENTS = PLAIN_STATEMENTS.concat(HOIST_STATEMENTS)
+isStatement      = (nodeType) -> _.contains(ALL_STATEMENTS, nodeType)
+isPlainStatement = (nodeType) -> _.contains(PLAIN_STATEMENTS, nodeType)
+isHoistStatement = (nodeType) -> _.contains(HOIST_STATEMENTS, nodeType)
 
 # Executes visitor on the object and its children (recursively) - taken from esmorph
 traverse = (object, visitor, path) ->
@@ -188,18 +195,14 @@ generateAnnotatedSource2 = (source) ->
   candidates = []
 
   estraverse.traverse tree, {
-    enter: (node, parent) ->
-      switch node.type
-        when 'IfStatement', 'WhileStatement', 'ReturnStatement'
-          candidates.push({node: node, parent: parent})
-        # TODO right here push the type of statements we want 
-        # and we'll send over an annotation when we need and a hoist when we need
-
-        else
-          true
-
+    enter: (node, parent, element) ->
+      # puts "enter:"
+      # puts inspect node
+      # puts inspect parent
+      # puts inspect element
+      if isStatement(node.type) 
+        candidates.push({node: node, parent: parent, element: element})
   }
-
 
   hoister = 
     'IfStatement': 'test'
@@ -209,24 +212,45 @@ generateAnnotatedSource2 = (source) ->
   for candidate in candidates
     node = candidate.node
     parent = candidate.parent
+    element = candidate.element 
 
-    switch node.type
-      when 'IfStatement', 'WhileStatement', 'ReturnStatement'
-        # pull test expresion out
-        originalExpression = node[hoister[node.type]]
+    pp element
 
-        # generate our new pre-variable
-        newCodeTree = generateVariableDeclaration(originalExpression)
-        parent[node._parentAttribute].splice(node._parentAttributeIdx, 0, newCodeTree)
+    if isHoistStatement(node.type)
+      # pull test expresion out
+      originalExpression = node[hoister[node.type]]
 
-        # replace it with the name of our variable
-        newVariableName = newCodeTree.declarations[0].id.name
-        node[hoister[node.type]] = { type: 'Identifier', name: newVariableName }
+      # generate our new pre-variable
+      newCodeTree = generateVariableDeclaration(originalExpression)
+      parent[element.path[0]].splice(element.path[1], 0, newCodeTree)
 
-        # ah - what if we populated our own choc_tracer here? then we maintain our line numbers
+      # replace it with the name of our variable
+      newVariableName = newCodeTree.declarations[0].id.name
+      node[hoister[node.type]] = { type: 'Identifier', name: newVariableName }
 
+      # ah - what if we populated our own choc_tracer here? then we maintain our line numbers
+
+    else if isPlainStatement(node.type)
+      nodeType = node.type
+      line = node.loc.start.line
+      range = node.range
+      pos = node.range[1]
+
+      messagesString = readable.readableNode(node)
+
+      # create the call to the trace function here. It's a lot easier to write
+      # the string and then call esprima.parse for now. But probably would get a
+      # performance boost if you just wrote the raw parse tree here. That said,
+      # composing 'messagesString' is tricky so it might just be easier to parse
+      # forever if it's fast enough. 
+      signature = """
+      #{Choc.TRACE_FUNCTION_NAME}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
+      """
+      traceTree =  esprima.parse(signature).body[0]
+      if element.path[1]
+        parent[element.path[0]].splice(element.path[1], 0, traceTree)
       else
-        true
+        puts "WARNING: no parent idx. TODO"
 
   # statementList = collectStatements(tree)
   # puts "==="

@@ -54,6 +54,6 @@ if require? && (require.main == module)
   scrubNotify = (info) ->
     puts inspect info
 
-  puts choc._hoist(source)
-  # puts choc.scrub(source, 10, notify: scrubNotify)
+  # puts choc._hoist(source)
+  puts choc.scrub(source, 10, notify: scrubNotify)
 
