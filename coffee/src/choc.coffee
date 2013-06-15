@@ -214,15 +214,18 @@ generateAnnotatedSource2 = (source) ->
     parent = candidate.parent
     element = candidate.element 
 
-    pp element
+    parentPathAttribute = element.path[0]
+    parentPathIndex     = element.path[1]
+    parentOffset = if parent.hasOwnProperty("__choc_offset") then parent.__choc_offset else 0
 
-    if isHoistStatement(node.type)
+    #if isHoistStatement(node.type)
+    if false
       # pull test expresion out
       originalExpression = node[hoister[node.type]]
 
       # generate our new pre-variable
       newCodeTree = generateVariableDeclaration(originalExpression)
-      parent[element.path[0]].splice(element.path[1], 0, newCodeTree)
+      parent[parentPathAttribute].splice(parentPathIndex, 0, newCodeTree)
 
       # replace it with the name of our variable
       newVariableName = newCodeTree.declarations[0].id.name
@@ -247,10 +250,18 @@ generateAnnotatedSource2 = (source) ->
       #{Choc.TRACE_FUNCTION_NAME}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
       """
       traceTree =  esprima.parse(signature).body[0]
-      if element.path[1]
-        parent[element.path[0]].splice(element.path[1], 0, traceTree)
+      # pp [nodeType, parentPathAttribute, parentPathIndex, parentOffset]
+      # puts inspect parent[parentPathAttribute], null, 3
+      if _.isNumber(parentPathIndex)
+        currentIndex = parentPathIndex
+        # if there are several siblings being set, then we need to account for our new location to be incremented by one per addition
+        parent[parentPathAttribute].splice(currentIndex + parentOffset + 1, 0, traceTree)
+        parent.__choc_offset = parentOffset + 1
       else
         puts "WARNING: no parent idx. TODO"
+        pp node
+        pp parent
+        pp element
 
   # statementList = collectStatements(tree)
   # puts "==="
