@@ -227,6 +227,17 @@ generateAnnotatedSource2 = (source) ->
 
 
     if isStatement(nodeType)
+      # create the call to the trace function here. It's a lot easier to write
+      # the string and then call esprima.parse for now. But probably would get a
+      # performance boost if you just wrote the raw parse tree here. That said,
+      # composing 'messagesString' is tricky so it might just be easier to parse
+      # forever if it's fast enough. 
+      signature = """
+      #{Choc.TRACE_FUNCTION_NAME}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
+      """
+      traceTree =  esprima.parse(signature).body[0]
+      newPosition = null
+
       if isHoistStatement(nodeType)
       #if false
         # pull test expresion out
@@ -242,29 +253,32 @@ generateAnnotatedSource2 = (source) ->
         parent.__choc_offset = parent.__choc_offset + 1
 
         # ah - what if we populated our own choc_tracer here? then we maintain our line numbers
-
-      else if isPlainStatement(nodeType)
-        # create the call to the trace function here. It's a lot easier to write
-        # the string and then call esprima.parse for now. But probably would get a
-        # performance boost if you just wrote the raw parse tree here. That said,
-        # composing 'messagesString' is tricky so it might just be easier to parse
-        # forever if it's fast enough. 
-        signature = """
-        #{Choc.TRACE_FUNCTION_NAME}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
-        """
-        traceTree =  esprima.parse(signature).body[0]
-        # pp [nodeType, parentPathAttribute, parentPathIndex, parent.__choc_offset]
-        # puts inspect parent[parentPathAttribute], null, 3
         if _.isNumber(parentPathIndex)
-          currentIndex = parentPathIndex
-          # if there are several siblings being set, then we need to account for our new location to be incremented by one per addition
-          parent[parentPathAttribute].splice(currentIndex + parent.__choc_offset + 1, 0, traceTree)
-          parent.__choc_offset = parent.__choc_offset + 1
-        else
-          puts "WARNING: no parent idx. TODO"
-          pp node
-          pp parent
-          pp element
+          newPosition = parentPathIndex + parent.__choc_offset
+        else 
+          puts "WARNING: no parent idx"
+
+      # TODO else or not else?
+      # else if isPlainStatement(nodeType)
+
+      if isPlainStatement(nodeType)
+        if _.isNumber(parentPathIndex)
+          newPosition = parentPathIndex + parent.__choc_offset + 1
+        else 
+          puts "WARNING: no parent idx"
+
+      # pp [nodeType, parentPathAttribute, parentPathIndex, parent.__choc_offset]
+      # puts inspect parent[parentPathAttribute], null, 3
+      # if _.isNumber(parentPathIndex)
+      #   currentIndex = parentPathIndex
+        # if there are several siblings being set, then we need to account for our new location to be incremented by one per addition
+      parent[parentPathAttribute].splice(newPosition, 0, traceTree)
+      parent.__choc_offset = parent.__choc_offset + 1
+      # else
+      #   puts "WARNING: no parent idx. TODO"
+      #   pp node
+      #   pp parent
+      #   pp element
 
   # statementList = collectStatements(tree)
   # puts "==="
@@ -379,4 +393,5 @@ scrub = (source, count, opts) ->
 
 exports.scrub = scrub
 exports.generateAnnotatedSource = generateAnnotatedSource
+exports.generateAnnotatedSource = generateAnnotatedSource2
 exports._hoist = hoist
