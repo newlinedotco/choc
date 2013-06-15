@@ -50,6 +50,7 @@ if require? && (require.main == module)
       foo = shift - 1;
     }
     shift += 14; // increment
+    foo = 1;
   }
   """
 

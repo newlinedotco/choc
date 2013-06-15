@@ -63,6 +63,18 @@ generateVariableDeclaration = (varInit) ->
    ]
   }
 
+generateVariableAssignment = (identifier, valueNode) ->
+  { 
+  type: 'ExpressionStatement'
+  expression:
+    type: 'AssignmentExpression'
+    operator: '='
+    left: { type: 'Identifier', name: identifier }
+    right: valueNode
+  }
+
+generateStatement = (code) -> esprima.parse(code).body[0]
+
 generateAnnotatedSource = (source) ->
 
   try
@@ -97,6 +109,8 @@ generateAnnotatedSource = (source) ->
 
     parentPathAttribute = element.path[0]
     parentPathIndex     = element.path[1]
+
+    # if several siblings are added to the same node, we need to track how many we've added previously
     parent.__choc_offset = 0 unless parent.hasOwnProperty("__choc_offset")
 
     nodeType = node.type
@@ -120,7 +134,6 @@ generateAnnotatedSource = (source) ->
       newPosition = null
 
       if isHoistStatement(nodeType)
-      #if false
         # pull test expresion out
         originalExpression = node[hoister[nodeType]]
 
@@ -133,25 +146,44 @@ generateAnnotatedSource = (source) ->
         node[hoister[node.type]] = { type: 'Identifier', name: newVariableName }
         parent.__choc_offset = parent.__choc_offset + 1
 
-        # ah - what if we populated our own choc_tracer here? then we maintain our line numbers
         if _.isNumber(parentPathIndex)
           newPosition = parentPathIndex + parent.__choc_offset
+
+          parent[parentPathAttribute].splice(newPosition, 0, traceTree)
+          parent.__choc_offset = parent.__choc_offset + 1
+
         else 
           puts "WARNING: no parent idx"
+
+        # I'm not so sure this is a great idea
+        if nodeType == "WhileStatement"
+          # re-assign our temporary variable the value it is going to need for the while statement  
+          newAssignmentNode = generateVariableAssignment(newVariableName, originalExpression)
+          # parent[parentPathAttribute].splice(parentPathIndex + parent.__choc_offset, 0, newAssignmentNode)
+          # parent[parentPathAttribute].push(newAssignmentNode)
+          innerBlockContainer = node.body.body # WhileStatement > BlockExpression
+          innerBlockContainer.push(newAssignmentNode)
+          innerBlockContainer.push(traceTree)
+
+          # ad the end of the block
+          # and update your lineNumber/message to to be the while statement header
+
+
+          true
 
       # TODO else or not else?
       # else if isPlainStatement(nodeType)
 
-      if isPlainStatement(nodeType)
+      else if isPlainStatement(nodeType)
         if _.isNumber(parentPathIndex)
           newPosition = parentPathIndex + parent.__choc_offset + 1
+
+          parent[parentPathAttribute].splice(newPosition, 0, traceTree)
+          parent.__choc_offset = parent.__choc_offset + 1
+
         else 
           puts "WARNING: no parent idx"
 
-
-      # if there are several siblings being set, then we need to account for our new location to be incremented by one per addition
-      parent[parentPathAttribute].splice(newPosition, 0, traceTree)
-      parent.__choc_offset = parent.__choc_offset + 1
 
   escodegen.generate(tree, format: { compact: false } )
 
@@ -223,7 +255,6 @@ scrub = (source, count, opts) ->
     localsStr = _.map(_.keys(locals), (name) -> "var #{name} = locals.#{name};").join("; ")
   
     # http://perfectionkills.com/global-eval-what-are-the-options/
-    console.log(newSource)
     eval(localsStr + "\n" + newSource)
 
     # if you make it here without an exception, execution finished
