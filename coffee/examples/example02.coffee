@@ -40,9 +40,20 @@ if require? && (require.main == module)
   }
   """
 
+  source = """
+  // parabolas
+  var shift = 0;
+  while (shift <= 200) {
+    // console.log(shift);
+    var foo = shift;
+    foo = shift - 1;
+    shift += 14; // increment
+  }
+  """
+
   scrubNotify = (info) ->
     puts inspect info
 
-  # puts choc._hoist(source)
-  puts choc.scrub(source, 10, notify: scrubNotify)
+  puts choc._hoist(source)
+  # puts choc.scrub(source, 10, notify: scrubNotify)
 

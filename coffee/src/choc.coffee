@@ -34,10 +34,10 @@ isStatement = (nodeType) ->
   statements = [
     'BreakStatement', 'ContinueStatement', 'DoWhileStatement',
     'DebuggerStatement', 'EmptyStatement', 'ExpressionStatement',
-    'ForStatement', 'ForInStatement', 'IfStatement', 'LabeledStatement',
-    'ReturnStatement', 'SwitchStatement', 'ThrowStatement', 'TryStatement',
-    'WhileStatement', 'WithStatement',
-
+    'ForStatement', 'ForInStatement',  'LabeledStatement',
+    'SwitchStatement', 'ThrowStatement', 'TryStatement',
+    'WithStatement',
+    # 'ReturnStatement', 'WhileStatement', 'IfStatement',
     'VariableDeclaration'
   ]
   _.contains(statements, nodeType)
@@ -92,6 +92,7 @@ statementAnnotator = (traceName) ->
       signature = """
       #{traceName}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
       """
+      # esprima.parse that to then shove it into the tree?
 
       fragments.push
         index: pos
@@ -116,16 +117,17 @@ generateVariableDeclaration = (varInit) ->
   }
 
 hoist = (source) ->
-  tree = esprima.parse(source)
-  puts inspect tree, null, 20
+  # tree = esprima.parse(source, {range: true, loc: true, comment: true, tokens: true})
+  tree = esprima.parse(source, {range: true, loc: true})
+  # puts inspect tree, null, 20
 
   candidates = []
 
   estraverse.traverse tree, {
     enter: (node, parent) ->
-      puts "enter:"
-      puts inspect node
-      puts inspect parent
+      # puts "enter:"
+      # puts inspect node
+      # puts inspect parent
 
       switch node.type
         when 'IfStatement', 'WhileStatement', 'ReturnStatement'
@@ -140,8 +142,9 @@ hoist = (source) ->
  
   }
 
-  puts "\n=== candidates ==="
-  puts inspect candidates, null, 10
+  # puts "\n=== candidates ==="
+  # puts inspect candidates, null, 10
+
   hoister = 
     'IfStatement': 'test'
     'WhileStatement': 'test' 
@@ -169,12 +172,71 @@ hoist = (source) ->
       else
         true
 
+  # statementList = collectStatements(tree)
+  # puts "==="
+  # puts inspect statementList, null, 20
+
+  # puts "\n=== code ==="
+  # puts inspect tree, null, 20
+  # escodegen.attachComments(tree, tree.comments, tree.tokens)
+  escodegen.generate(tree)
+
+generateAnnotatedSource2 = (source) ->
+  tree = esprima.parse(source, {range: true, loc: true})
+  # puts inspect tree, null, 20
+
+  candidates = []
+
+  estraverse.traverse tree, {
+    enter: (node, parent) ->
+      switch node.type
+        when 'IfStatement', 'WhileStatement', 'ReturnStatement'
+          candidates.push({node: node, parent: parent})
+        # TODO right here push the type of statements we want 
+        # and we'll send over an annotation when we need and a hoist when we need
+
+        else
+          true
+
+  }
+
+
+  hoister = 
+    'IfStatement': 'test'
+    'WhileStatement': 'test' 
+    'ReturnStatement': 'argument'
+
+  for candidate in candidates
+    node = candidate.node
+    parent = candidate.parent
+
+    switch node.type
+      when 'IfStatement', 'WhileStatement', 'ReturnStatement'
+        # pull test expresion out
+        originalExpression = node[hoister[node.type]]
+
+        # generate our new pre-variable
+        newCodeTree = generateVariableDeclaration(originalExpression)
+        parent[node._parentAttribute].splice(node._parentAttributeIdx, 0, newCodeTree)
+
+        # replace it with the name of our variable
+        newVariableName = newCodeTree.declarations[0].id.name
+        node[hoister[node.type]] = { type: 'Identifier', name: newVariableName }
+
+        # ah - what if we populated our own choc_tracer here? then we maintain our line numbers
+
+      else
+        true
 
   # statementList = collectStatements(tree)
   # puts "==="
   # puts inspect statementList, null, 20
-  puts "\n=== code ==="
-  puts escodegen.generate(tree)
+
+  # puts "\n=== code ==="
+  # puts inspect tree, null, 20
+  # escodegen.attachComments(tree, tree.comments, tree.tokens)
+  escodegen.generate(tree)
+
 
 
 
@@ -227,7 +289,9 @@ scrub = (source, count, opts) ->
   onMessages  = opts.onMessages  || noop
   locals      = opts.locals      || {}
 
-  newSource   = generateAnnotatedSourceM(source)
+  newSource   = generateAnnotatedSource2(source)
+  # newSource   = generateAnnotatedSourceM(source)
+  # newSource   = hoist(newSource)
   debug(newSource)
 
   tracer = new Tracer()
