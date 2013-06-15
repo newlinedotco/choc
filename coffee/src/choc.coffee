@@ -15,9 +15,6 @@ deep = require("deep")
 
 # TODOs 
 # * return a + b in a function ReturnStatement placement
-# * if statements - hoist conditional into tmp and put a trace before calling the if
-# * While statement placement - ending part
-# * add a trace at the very last step that says 'done'
 # * function returns - i think we're going to need to transform every ReturnStatement to hoist its argument into a variable - then give the language for that variable and pause on that line right before you return it
 # * function calls on the line
 # * return syntax errors for parsing in a digestable way
@@ -89,10 +86,6 @@ generateAnnotatedSource = (source) ->
 
   estraverse.traverse tree, {
     enter: (node, parent, element) ->
-      # puts "enter:"
-      # puts inspect node
-      # puts inspect parent
-      # puts inspect element
       if isStatement(node.type) 
         candidates.push({node: node, parent: parent, element: element})
   }
@@ -159,20 +152,9 @@ generateAnnotatedSource = (source) ->
         if nodeType == "WhileStatement"
           # re-assign our temporary variable the value it is going to need for the while statement  
           newAssignmentNode = generateVariableAssignment(newVariableName, originalExpression)
-          # parent[parentPathAttribute].splice(parentPathIndex + parent.__choc_offset, 0, newAssignmentNode)
-          # parent[parentPathAttribute].push(newAssignmentNode)
           innerBlockContainer = node.body.body # WhileStatement > BlockExpression
           innerBlockContainer.push(newAssignmentNode)
           innerBlockContainer.push(traceTree)
-
-          # ad the end of the block
-          # and update your lineNumber/message to to be the while statement header
-
-
-          true
-
-      # TODO else or not else?
-      # else if isPlainStatement(nodeType)
 
       else if isPlainStatement(nodeType)
         if _.isNumber(parentPathIndex)
