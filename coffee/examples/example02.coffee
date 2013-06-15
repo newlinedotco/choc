@@ -34,15 +34,15 @@ if require? && (require.main == module)
   """
 
   source = """
-  var foo = 1;
-  if(foo + 2 < 3) {
-    console.log('it is');
+  function add(a, b) {
+    var c = 3;
+    return a + b;
   }
   """
 
   scrubNotify = (info) ->
     puts inspect info
 
-  # choc.scrub(source, 10, notify: scrubNotify)
-  puts choc._hoist(source)
+  # puts choc._hoist(source)
+  puts choc.scrub(source, 10, notify: scrubNotify)
 

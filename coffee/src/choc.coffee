@@ -58,15 +58,7 @@ traverse = (object, visitor, path) ->
 collectNodes = (tree, condition) ->
   nodes = []
   traverse tree, (node, path) ->
-    puts "traverse "
-    puts inspect node
-    puts inspect path
-    puts "/traverse "
- 
     if condition(node, path)
-      # puts "condition met"
-      # puts inspect path
-      # puts "/condition met"
       nodes.push { node: node, path: path } 
   nodes
 
@@ -134,8 +126,12 @@ hoist = (source) ->
       puts "enter:"
       puts inspect node
       puts inspect parent
-      if node.type == "IfStatement"
-        candidates.push({node: node, parent: parent})
+
+      switch node.type
+        when 'IfStatement', 'WhileStatement', 'ReturnStatement'
+          candidates.push({node: node, parent: parent})
+        else
+          true
 
     # leave: (node, parent) ->
     #   puts "leave:"
@@ -146,22 +142,32 @@ hoist = (source) ->
 
   puts "\n=== candidates ==="
   puts inspect candidates, null, 10
+  hoister = 
+    'IfStatement': 'test'
+    'WhileStatement': 'test' 
+    'ReturnStatement': 'argument'
 
-  node = candidates[0].node
-  parent = candidates[0].parent
+  for candidate in candidates
+    node = candidate.node
+    parent = candidate.parent
 
-  # in an IfStatement we want to do three things
-  if node.type == "IfStatement"
-    # pull test expresion out
-    originalExpression = node.test
+    switch node.type
+      when 'IfStatement', 'WhileStatement', 'ReturnStatement'
+        # pull test expresion out
+        originalExpression = node[hoister[node.type]]
 
-    # generate our new pre-variable
-    newCodeTree = generateVariableDeclaration(originalExpression)
-    parent[node._parentAttribute].splice(node._parentAttributeIdx, 0, newCodeTree)
+        # generate our new pre-variable
+        newCodeTree = generateVariableDeclaration(originalExpression)
+        parent[node._parentAttribute].splice(node._parentAttributeIdx, 0, newCodeTree)
 
-    # replace it with the name of our variable
-    newVariableName = newCodeTree.declarations[0].id.name
-    node.test = { type: 'Identifier', name: newVariableName }
+        # replace it with the name of our variable
+        newVariableName = newCodeTree.declarations[0].id.name
+        node[hoister[node.type]] = { type: 'Identifier', name: newVariableName }
+
+        # ah - what if we populated our own choc_tracer here? then we maintain our line numbers
+
+      else
+        true
 
 
   # statementList = collectStatements(tree)
