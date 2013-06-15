@@ -49,66 +49,6 @@ isStatement      = (nodeType) -> _.contains(ALL_STATEMENTS, nodeType)
 isPlainStatement = (nodeType) -> _.contains(PLAIN_STATEMENTS, nodeType)
 isHoistStatement = (nodeType) -> _.contains(HOIST_STATEMENTS, nodeType)
 
-# Executes visitor on the object and its children (recursively) - taken from esmorph
-traverse = (object, visitor, path) ->
-  key = undefined
-  child = undefined
-  path = []  if typeof path is "undefined"
-  visitor.call null, object, path
-  for key of object
-    if object.hasOwnProperty(key)
-      child = object[key]
-      # TODO - if we're in an array, we want to keep a reference to the data structure we're in and our own index. this way we can shove code in around it
-      traverse child, visitor, [object].concat(path) if typeof child is "object" and child isnt null
-
-# Given syntax tree, return an array of all of the nodes that satisfy condition
-collectNodes = (tree, condition) ->
-  nodes = []
-  traverse tree, (node, path) ->
-    if condition(node, path)
-      nodes.push { node: node, path: path } 
-  nodes
-
-collectStatements = (tree) ->
-  collectNodes tree, (node, path) -> isStatement(node.type)
-
-statementAnnotator = (traceName) ->
-  (code) ->
-    # use esprima to parse our code into a syntax tree
-    tree = esprima.parse(code, { range: true, loc: true })
-    
-    # gather each of the statements
-    statementList = collectStatements(tree)
-
-    fragments = []
-    i = 0
-    while i < statementList.length
-      node = statementList[i].node
-      nodeType = node.type
-      line = node.loc.start.line
-      range = node.range
-      pos = node.range[1]
-
-      if node.hasOwnProperty("body")
-        pos = node.body.range[0] + 1
-      else if node.hasOwnProperty("block")
-        pos = node.block.range[0] + 1
-
-      messagesString = readable.readableNode(node)
-     
-      signature = """
-      #{traceName}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
-      """
-      # esprima.parse that to then shove it into the tree?
-
-      fragments.push
-        index: pos
-        text: " " + signature
-
-      i += 1
-
-    fragments
-
 # varInit: e.g. { type: 'Literal', value: 1 } 
 generateVariableDeclaration = (varInit) ->
   identifier = "__choc_var_" + Math.floor(Math.random() * 1000000) # TODO - real uuid
@@ -123,73 +63,14 @@ generateVariableDeclaration = (varInit) ->
    ]
   }
 
-hoist = (source) ->
-  # tree = esprima.parse(source, {range: true, loc: true, comment: true, tokens: true})
-  tree = esprima.parse(source, {range: true, loc: true})
-  # puts inspect tree, null, 20
+generateAnnotatedSource = (source) ->
 
-  candidates = []
-
-  estraverse.traverse tree, {
-    enter: (node, parent) ->
-      # puts "enter:"
-      # puts inspect node
-      # puts inspect parent
-
-      switch node.type
-        when 'IfStatement', 'WhileStatement', 'ReturnStatement'
-          candidates.push({node: node, parent: parent})
-        else
-          true
-
-    # leave: (node, parent) ->
-    #   puts "leave:"
-    #   puts inspect node
-    #   puts inspect parent
- 
-  }
-
-  # puts "\n=== candidates ==="
-  # puts inspect candidates, null, 10
-
-  hoister = 
-    'IfStatement': 'test'
-    'WhileStatement': 'test' 
-    'ReturnStatement': 'argument'
-
-  for candidate in candidates
-    node = candidate.node
-    parent = candidate.parent
-
-    switch node.type
-      when 'IfStatement', 'WhileStatement', 'ReturnStatement'
-        # pull test expresion out
-        originalExpression = node[hoister[node.type]]
-
-        # generate our new pre-variable
-        newCodeTree = generateVariableDeclaration(originalExpression)
-        parent[node._parentAttribute].splice(node._parentAttributeIdx, 0, newCodeTree)
-
-        # replace it with the name of our variable
-        newVariableName = newCodeTree.declarations[0].id.name
-        node[hoister[node.type]] = { type: 'Identifier', name: newVariableName }
-
-        # ah - what if we populated our own choc_tracer here? then we maintain our line numbers
-
-      else
-        true
-
-  # statementList = collectStatements(tree)
-  # puts "==="
-  # puts inspect statementList, null, 20
-
-  # puts "\n=== code ==="
-  # puts inspect tree, null, 20
-  # escodegen.attachComments(tree, tree.comments, tree.tokens)
-  escodegen.generate(tree)
-
-generateAnnotatedSource2 = (source) ->
-  tree = esprima.parse(source, {range: true, loc: true})
+  try
+    tree = esprima.parse(source, {range: true, loc: true})
+  catch e
+    error = new Error("choc source parsing error")
+    error.original = e
+    throw error
   # puts inspect tree, null, 20
 
   candidates = []
@@ -267,35 +148,12 @@ generateAnnotatedSource2 = (source) ->
         else 
           puts "WARNING: no parent idx"
 
-      # pp [nodeType, parentPathAttribute, parentPathIndex, parent.__choc_offset]
-      # puts inspect parent[parentPathAttribute], null, 3
-      # if _.isNumber(parentPathIndex)
-      #   currentIndex = parentPathIndex
-        # if there are several siblings being set, then we need to account for our new location to be incremented by one per addition
+
+      # if there are several siblings being set, then we need to account for our new location to be incremented by one per addition
       parent[parentPathAttribute].splice(newPosition, 0, traceTree)
       parent.__choc_offset = parent.__choc_offset + 1
-      # else
-      #   puts "WARNING: no parent idx. TODO"
-      #   pp node
-      #   pp parent
-      #   pp element
 
-  # statementList = collectStatements(tree)
-  # puts "==="
-  # puts inspect statementList, null, 20
-
-  # puts "\n=== code ==="
-  # puts inspect tree, null, 20
-  # escodegen.attachComments(tree, tree.comments, tree.tokens)
   escodegen.generate(tree, format: { compact: false } )
-
-
-
-
-generateAnnotatedSource = (source) ->
-  modifiers = [ statementAnnotator(Choc.TRACE_FUNCTION_NAME) ]
-  morphed = esmorph.modify(source, modifiers)
-  morphed
 
 # TODO - use an LRU memoize if you're planning on doing a lot of editing
 generateAnnotatedSourceM = _.memoize(generateAnnotatedSource)
@@ -339,11 +197,11 @@ scrub = (source, count, opts) ->
   afterAll    = opts.afterAll    || noop
   onTimeline  = opts.onTimeline  || noop
   onMessages  = opts.onMessages  || noop
+  onCodeError = opts.onCodeError || noop
   locals      = opts.locals      || {}
 
-  newSource   = generateAnnotatedSource2(source)
+  newSource   = generateAnnotatedSource(source)
   # newSource   = generateAnnotatedSourceM(source)
-  # newSource   = hoist(newSource)
   debug(newSource)
 
   tracer = new Tracer()
@@ -363,12 +221,14 @@ scrub = (source, count, opts) ->
 
     # define any user-given locals as a string for eval'ing
     localsStr = _.map(_.keys(locals), (name) -> "var #{name} = locals.#{name};").join("; ")
-
+  
     # http://perfectionkills.com/global-eval-what-are-the-options/
+    console.log(newSource)
     eval(localsStr + "\n" + newSource)
 
     # if you make it here without an exception, execution finished
     executionTerminated = true
+    console.log("execution terminated")
   catch e
 
     # throwing a Choc.PAUSE_ERROR_NAME is how we pause execution (for now)
@@ -393,5 +253,3 @@ scrub = (source, count, opts) ->
 
 exports.scrub = scrub
 exports.generateAnnotatedSource = generateAnnotatedSource
-exports.generateAnnotatedSource = generateAnnotatedSource2
-exports._hoist = hoist
