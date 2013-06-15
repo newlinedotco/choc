@@ -46,7 +46,9 @@ if require? && (require.main == module)
   while (shift <= 200) {
     // console.log(shift);
     var foo = shift;
-    foo = shift - 1;
+    if(foo % 2) {
+      foo = shift - 1;
+    }
     shift += 14; // increment
   }
   """

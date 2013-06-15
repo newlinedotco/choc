@@ -216,52 +216,55 @@ generateAnnotatedSource2 = (source) ->
 
     parentPathAttribute = element.path[0]
     parentPathIndex     = element.path[1]
-    parentOffset = if parent.hasOwnProperty("__choc_offset") then parent.__choc_offset else 0
+    parent.__choc_offset = 0 unless parent.hasOwnProperty("__choc_offset")
 
-    #if isHoistStatement(node.type)
-    if false
-      # pull test expresion out
-      originalExpression = node[hoister[node.type]]
+    nodeType = node.type
+    line = node.loc.start.line
+    range = node.range
+    pos = node.range[1]
 
-      # generate our new pre-variable
-      newCodeTree = generateVariableDeclaration(originalExpression)
-      parent[parentPathAttribute].splice(parentPathIndex, 0, newCodeTree)
+    messagesString = readable.readableNode(node)
 
-      # replace it with the name of our variable
-      newVariableName = newCodeTree.declarations[0].id.name
-      node[hoister[node.type]] = { type: 'Identifier', name: newVariableName }
 
-      # ah - what if we populated our own choc_tracer here? then we maintain our line numbers
+    if isStatement(nodeType)
+      if isHoistStatement(nodeType)
+      #if false
+        # pull test expresion out
+        originalExpression = node[hoister[nodeType]]
 
-    else if isPlainStatement(node.type)
-      nodeType = node.type
-      line = node.loc.start.line
-      range = node.range
-      pos = node.range[1]
+        # generate our new pre-variable
+        newCodeTree = generateVariableDeclaration(originalExpression)
+        parent[parentPathAttribute].splice(parentPathIndex + parent.__choc_offset, 0, newCodeTree)
 
-      messagesString = readable.readableNode(node)
+        # replace it with the name of our variable
+        newVariableName = newCodeTree.declarations[0].id.name
+        node[hoister[node.type]] = { type: 'Identifier', name: newVariableName }
+        parent.__choc_offset = parent.__choc_offset + 1
 
-      # create the call to the trace function here. It's a lot easier to write
-      # the string and then call esprima.parse for now. But probably would get a
-      # performance boost if you just wrote the raw parse tree here. That said,
-      # composing 'messagesString' is tricky so it might just be easier to parse
-      # forever if it's fast enough. 
-      signature = """
-      #{Choc.TRACE_FUNCTION_NAME}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
-      """
-      traceTree =  esprima.parse(signature).body[0]
-      # pp [nodeType, parentPathAttribute, parentPathIndex, parentOffset]
-      # puts inspect parent[parentPathAttribute], null, 3
-      if _.isNumber(parentPathIndex)
-        currentIndex = parentPathIndex
-        # if there are several siblings being set, then we need to account for our new location to be incremented by one per addition
-        parent[parentPathAttribute].splice(currentIndex + parentOffset + 1, 0, traceTree)
-        parent.__choc_offset = parentOffset + 1
-      else
-        puts "WARNING: no parent idx. TODO"
-        pp node
-        pp parent
-        pp element
+        # ah - what if we populated our own choc_tracer here? then we maintain our line numbers
+
+      else if isPlainStatement(nodeType)
+        # create the call to the trace function here. It's a lot easier to write
+        # the string and then call esprima.parse for now. But probably would get a
+        # performance boost if you just wrote the raw parse tree here. That said,
+        # composing 'messagesString' is tricky so it might just be easier to parse
+        # forever if it's fast enough. 
+        signature = """
+        #{Choc.TRACE_FUNCTION_NAME}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
+        """
+        traceTree =  esprima.parse(signature).body[0]
+        # pp [nodeType, parentPathAttribute, parentPathIndex, parent.__choc_offset]
+        # puts inspect parent[parentPathAttribute], null, 3
+        if _.isNumber(parentPathIndex)
+          currentIndex = parentPathIndex
+          # if there are several siblings being set, then we need to account for our new location to be incremented by one per addition
+          parent[parentPathAttribute].splice(currentIndex + parent.__choc_offset + 1, 0, traceTree)
+          parent.__choc_offset = parent.__choc_offset + 1
+        else
+          puts "WARNING: no parent idx. TODO"
+          pp node
+          pp parent
+          pp element
 
   # statementList = collectStatements(tree)
   # puts "==="
@@ -270,7 +273,7 @@ generateAnnotatedSource2 = (source) ->
   # puts "\n=== code ==="
   # puts inspect tree, null, 20
   # escodegen.attachComments(tree, tree.comments, tree.tokens)
-  escodegen.generate(tree)
+  escodegen.generate(tree, format: { compact: false } )
 
 
 
