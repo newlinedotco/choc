@@ -72,10 +72,27 @@ generateVariableAssignment = (identifier, valueNode) ->
 
 generateStatement = (code) -> esprima.parse(code).body[0]
 
-generateAnnotatedSource = (source) ->
+# create the call to the trace function here. It's a lot easier to write
+# the string and then call esprima.parse for now. But probably would get a
+# performance boost if you just wrote the raw parse tree here. That said,
+# composing 'messagesString' is tricky so it might just be easier to parse
+# forever if it's fast enough. 
+generateTraceTree = (node, opts={}) ->
+  nodeType = node.type
+  line = node.loc.start.line
+  range = node.range
 
+  messagesString = readable.readableNode(node, opts)
+  signature = """
+  #{Choc.TRACE_FUNCTION_NAME}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
+  """
+  return esprima.parse(signature).body[0]
+
+
+generateAnnotatedSource = (source) ->
   try
     tree = esprima.parse(source, {range: true, loc: true})
+    debug(inspect(tree, null, 100))
   catch e
     error = new Error("choc source parsing error")
     error.original = e
@@ -111,19 +128,7 @@ generateAnnotatedSource = (source) ->
     range = node.range
     pos = node.range[1]
 
-    messagesString = readable.readableNode(node)
-
-
     if isStatement(nodeType)
-      # create the call to the trace function here. It's a lot easier to write
-      # the string and then call esprima.parse for now. But probably would get a
-      # performance boost if you just wrote the raw parse tree here. That said,
-      # composing 'messagesString' is tricky so it might just be easier to parse
-      # forever if it's fast enough. 
-      signature = """
-      #{Choc.TRACE_FUNCTION_NAME}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
-      """
-      traceTree =  esprima.parse(signature).body[0]
       newPosition = null
 
       if isHoistStatement(nodeType)
@@ -132,16 +137,19 @@ generateAnnotatedSource = (source) ->
 
         # generate our new pre-variable
         newCodeTree = generateVariableDeclaration(originalExpression)
+        newVariableName = newCodeTree.declarations[0].id.name
+
+        # generate the trace tree before we actually perform the hoisting
+        traceTree = generateTraceTree(node, hoistedAttributes: [hoister[nodeType], newVariableName])
+
         parent[parentPathAttribute].splice(parentPathIndex + parent.__choc_offset, 0, newCodeTree)
 
         # replace it with the name of our variable
-        newVariableName = newCodeTree.declarations[0].id.name
         node[hoister[node.type]] = { type: 'Identifier', name: newVariableName }
         parent.__choc_offset = parent.__choc_offset + 1
 
         if _.isNumber(parentPathIndex)
           newPosition = parentPathIndex + parent.__choc_offset
-
           parent[parentPathAttribute].splice(newPosition, 0, traceTree)
           parent.__choc_offset = parent.__choc_offset + 1
 
@@ -157,6 +165,7 @@ generateAnnotatedSource = (source) ->
           innerBlockContainer.push(traceTree)
 
       else if isPlainStatement(nodeType)
+        traceTree = generateTraceTree(node)
         if _.isNumber(parentPathIndex)
           newPosition = parentPathIndex + parent.__choc_offset + 1
 
@@ -190,7 +199,7 @@ class Tracer
     (info) =>
       @timeline.steps[@frameCount] = {lineNumber: info.lineNumber}
       @timeline.stepMap[@frameCount] ||= {}
-      @timeline.stepMap[@frameCount][info.lineNumber - 1] = true
+      @timeline.stepMap[@frameCount][info.lineNumber - 1] = info
       @timeline.maxLines = Math.max(@timeline.maxLines, info.lineNumber)
       info.frameNumber = @frameCount # todo revise this language
 
@@ -228,7 +237,7 @@ scrub = (source, count, opts) ->
 
     # create a few functions to be used by the eval'd source
     __choc_trace         = tracer.trace(count: count)
-    __choc_first_message = (messages) -> messages[0]?.message || "TODO"
+    __choc_first_message = (messages) -> if _.isNull(messages[0]?.message) then "TODO" else messages[0].message
 
     # add our own local vars
     locals.Choc = Choc

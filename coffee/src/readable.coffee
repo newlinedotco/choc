@@ -5,7 +5,7 @@ esmorph = require("esmorph")
 _ = require("underscore")
 
 
-generateReadableExpression = (node) ->
+generateReadableExpression = (node, opts={}) ->
   switch node.type
     when 'AssignmentExpression'
       operators = 
@@ -26,7 +26,7 @@ generateReadableExpression = (node) ->
         "===": "''" 
         "!==": "''"
         "<": "''"
-        "<=": "''" 
+        "<=": "__choc_first_message(#{generateReadableExpression(node.left)}) + ' <= ' + __choc_first_message(#{generateReadableExpression(node.right)})" 
         ">": "''"
         ">=": "''"
         "<<": "''"
@@ -44,13 +44,15 @@ generateReadableExpression = (node) ->
         "..": "''"
 
       message = operators[node.operator] || ""
-      "[ { lineNumber: #{node.loc.start.line}, message: #{message} }]"
+      "[ { lineNumber: #{node.loc.start.line}, message: #{message} } ]"
     when 'Literal'
-      "[ { lineNumber: #{node.loc.start.line}, message: '#{node.value}' }]"
+      "[ { lineNumber: #{node.loc.start.line}, message: '#{node.value}' } ]"
+    when 'Identifier'
+      "[ { lineNumber: #{node.loc.start.line}, message: #{node.name} } ]"
     else
       "[]"
 
-generateReadableStatement = (node) ->
+generateReadableStatement = (node, opts={}) ->
   switch node.type
     when 'VariableDeclaration'
       i = 0
@@ -67,15 +69,48 @@ generateReadableStatement = (node) ->
       "[ " + msgs.join(", ") + " ]"
     when 'ExpressionStatement'
       generateReadableExpression(node.expression)
+    when 'WhileStatement'
+      # ugh - I do not like this API - TODO
+      puts inspect node
+      conditional = if opts.hoistedAttributes
+          opts.hoistedAttributes[1] # TODO
+        else 
+          true # should this ever happen? no 
+      """
+      (function (__conditional) { 
+       if(__conditional) { 
+         var startLine = #{node.loc.start.line};
+         var endLine   = #{node.loc.end.line};
+         var messages = [ { lineNumber: startLine, message: "Because " + __choc_first_message(#{generateReadableExpression(node.test)}) } ]
+         for(var i=startLine+1; i<= endLine; i++) {
+           var message = i == startLine+1 ? "do this" : "and this";
+           messages.push({ lineNumber: i, message: message });
+         }
+         messages.push( { lineNumber: endLine, message: "... and try again" } )
+         // do this
+         // and this
+         // ... and try again
+         return messages;
+       } else {
+         // Because -> condition with variables expanded e.g. 0 <= 200 is false
+         // ... stop looping
+         var startLine = #{node.loc.start.line};
+         var endLine   = #{node.loc.end.line};
+         var messages = [ { lineNumber: startLine, message: "Because " + __choc_first_message(#{generateReadableExpression(node.test)}) + " is false"} ]
+         messages.push( { lineNumber: endLine, message: "stop looping" } )
+         return messages;
+       }
+      })(#{conditional})
+    """ 
     else
       "[]"
   
-readableNode = (node) ->
+readableNode = (node, opts={}) ->
   switch node.type
-    when 'VariableDeclaration', 'ExpressionStatement'
-      generateReadableStatement(node)
+    when 'VariableDeclaration', 'ExpressionStatement', 'WhileStatement'
+      generateReadableStatement(node, opts)
     when 'AssignmentExpression'
-      generateReadableExpression
+      generateReadableExpression(node, opts)
     else
       "[]"
 
