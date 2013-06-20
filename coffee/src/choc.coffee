@@ -223,8 +223,8 @@ scrub = (source, count, opts) ->
   onCodeError = opts.onCodeError || noop
   locals      = opts.locals      || {}
 
-  newSource   = generateAnnotatedSource(source)
-  # newSource   = generateAnnotatedSourceM(source)
+  # newSource   = generateAnnotatedSource(source)
+  newSource   = generateAnnotatedSourceM(source)
   debug(newSource)
 
   tracer = new Tracer()

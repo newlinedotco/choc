@@ -21,7 +21,7 @@ generateReadableExpression = (node, opts={}) ->
 
     when 'BinaryExpression'
       operators = 
-        "==": "''" 
+        "==": "__choc_first_message(#{generateReadableExpression(node.left)}) + ' == ' + __choc_first_message(#{generateReadableExpression(node.right)})" 
         "!=" : "''"
         "===": "''" 
         "!==": "''"
@@ -32,11 +32,11 @@ generateReadableExpression = (node, opts={}) ->
         "<<": "''"
         ">>": "''"
         ">>>": "''"
-        "+": "'add ' + __choc_first_message(#{generateReadableExpression(node.right)}) + ' to #{node.left.name} and set #{node.left.name} to ' + #{node.left.name}"
-        "-": "''"
-        "*": "''"
-        "/": "''" 
-        "%": "''"
+        "+": "#{node.left.name}"
+        "-": "#{node.left.name}"
+        "*": "#{node.left.name}"
+        "/": "#{node.left.name}"
+        "%": "__choc_first_message(#{generateReadableExpression(node.left)}) + ' % ' + __choc_first_message(#{generateReadableExpression(node.right)})"
         "|": "''" 
         "^": "''"
         "in": "''"
@@ -71,7 +71,6 @@ generateReadableStatement = (node, opts={}) ->
       generateReadableExpression(node.expression)
     when 'WhileStatement'
       # ugh - I do not like this API - TODO
-      puts inspect node
       conditional = if opts.hoistedAttributes
           opts.hoistedAttributes[1] # TODO
         else 
@@ -82,10 +81,11 @@ generateReadableStatement = (node, opts={}) ->
          var startLine = #{node.loc.start.line};
          var endLine   = #{node.loc.end.line};
          var messages = [ { lineNumber: startLine, message: "Because " + __choc_first_message(#{generateReadableExpression(node.test)}) } ]
-         for(var i=startLine+1; i<= endLine; i++) {
-           var message = i == startLine+1 ? "do this" : "and this";
-           messages.push({ lineNumber: i, message: message });
-         }
+         // CodeMirror is ridiculously slow when removing these messages. TODO speed it up and add them back
+         // for(var i=startLine+1; i<= endLine; i++) {
+         //   var message = i == startLine+1 ? "do this" : "and this";
+         //   messages.push({ lineNumber: i, message: message });
+         // }
          messages.push( { lineNumber: endLine, message: "... and try again" } )
          // do this
          // and this
@@ -102,12 +102,31 @@ generateReadableStatement = (node, opts={}) ->
        }
       })(#{conditional})
     """ 
+    when 'IfStatement'
+      # ugh - I do not like this API - TODO
+      conditional = if opts.hoistedAttributes
+          opts.hoistedAttributes[1] # TODO
+        else 
+          true # should this ever happen? no 
+      """
+      (function (__conditional) { 
+       var startLine = #{node.loc.start.line};
+       var endLine   = #{node.loc.end.line};
+       if(__conditional) { 
+         var messages = [ { lineNumber: startLine, message: "Because " + __choc_first_message(#{generateReadableExpression(node.test)}) } ]
+         return messages;
+       } else {
+         var messages = [ { lineNumber: startLine, message: "Because " + __choc_first_message(#{generateReadableExpression(node.test)}) + " is false"} ]
+         return messages;
+       }
+      })(#{conditional})
+    """ 
     else
       "[]"
   
 readableNode = (node, opts={}) ->
   switch node.type
-    when 'VariableDeclaration', 'ExpressionStatement', 'WhileStatement'
+    when 'VariableDeclaration', 'ExpressionStatement', 'WhileStatement', 'IfStatement'
       generateReadableStatement(node, opts)
     when 'AssignmentExpression'
       generateReadableExpression(node, opts)
