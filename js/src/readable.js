@@ -12,8 +12,11 @@
 
   _ = require("underscore");
 
-  generateReadableExpression = function(node) {
+  generateReadableExpression = function(node, opts) {
     var message, operators;
+    if (opts == null) {
+      opts = {};
+    }
     switch (node.type) {
       case 'AssignmentExpression':
         operators = {
@@ -33,7 +36,7 @@
           "===": "''",
           "!==": "''",
           "<": "''",
-          "<=": "''",
+          "<=": "__choc_first_message(" + (generateReadableExpression(node.left)) + ") + ' <= ' + __choc_first_message(" + (generateReadableExpression(node.right)) + ")",
           ">": "''",
           ">=": "''",
           "<<": "''",
@@ -51,16 +54,21 @@
           "..": "''"
         };
         message = operators[node.operator] || "";
-        return "[ { lineNumber: " + node.loc.start.line + ", message: " + message + " }]";
+        return "[ { lineNumber: " + node.loc.start.line + ", message: " + message + " } ]";
       case 'Literal':
-        return "[ { lineNumber: " + node.loc.start.line + ", message: '" + node.value + "' }]";
+        return "[ { lineNumber: " + node.loc.start.line + ", message: '" + node.value + "' } ]";
+      case 'Identifier':
+        return "[ { lineNumber: " + node.loc.start.line + ", message: " + node.name + " } ]";
       default:
         return "[]";
     }
   };
 
-  generateReadableStatement = function(node) {
-    var i, msgs, sentences;
+  generateReadableStatement = function(node, opts) {
+    var conditional, i, msgs, sentences;
+    if (opts == null) {
+      opts = {};
+    }
     switch (node.type) {
       case 'VariableDeclaration':
         i = 0;
@@ -81,18 +89,26 @@
         return "[ " + msgs.join(", ") + " ]";
       case 'ExpressionStatement':
         return generateReadableExpression(node.expression);
+      case 'WhileStatement':
+        puts(inspect(node));
+        conditional = opts.hoistedAttributes ? opts.hoistedAttributes[1] : true;
+        return "(function (__conditional) { \n if(__conditional) { \n   var startLine = " + node.loc.start.line + ";\n   var endLine   = " + node.loc.end.line + ";\n   var messages = [ { lineNumber: startLine, message: \"Because \" + __choc_first_message(" + (generateReadableExpression(node.test)) + ") } ]\n   for(var i=startLine+1; i<= endLine; i++) {\n     var message = i == startLine+1 ? \"do this\" : \"and this\";\n     messages.push({ lineNumber: i, message: message });\n   }\n   messages.push( { lineNumber: endLine, message: \"... and try again\" } )\n   // do this\n   // and this\n   // ... and try again\n   return messages;\n } else {\n   // Because -> condition with variables expanded e.g. 0 <= 200 is false\n   // ... stop looping\n   var startLine = " + node.loc.start.line + ";\n   var endLine   = " + node.loc.end.line + ";\n   var messages = [ { lineNumber: startLine, message: \"Because \" + __choc_first_message(" + (generateReadableExpression(node.test)) + ") + \" is false\"} ]\n   messages.push( { lineNumber: endLine, message: \"stop looping\" } )\n   return messages;\n }\n})(" + conditional + ")";
       default:
         return "[]";
     }
   };
 
-  readableNode = function(node) {
+  readableNode = function(node, opts) {
+    if (opts == null) {
+      opts = {};
+    }
     switch (node.type) {
       case 'VariableDeclaration':
       case 'ExpressionStatement':
-        return generateReadableStatement(node);
+      case 'WhileStatement':
+        return generateReadableStatement(node, opts);
       case 'AssignmentExpression':
-        return generateReadableExpression;
+        return generateReadableExpression(node, opts);
       default:
         return "[]";
     }
