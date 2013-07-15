@@ -73,10 +73,10 @@ generateVariableAssignment = (identifier, valueNode) ->
 generateStatement = (code) -> esprima.parse(code).body[0]
 
 # create the call to the trace function here. It's a lot easier to write
-# the string and then call esprima.parse for now. But probably would get a
-# performance boost if you just wrote the raw parse tree here. That said,
-# composing 'messagesString' is tricky so it might just be easier to parse
-# forever if it's fast enough. 
+# the string and then call esprima.parse for now. But we might get a
+# performance boost if we wrote the raw parse tree here. That said, composing
+# 'messagesString' is tricky so it's a lot clearer to just use parse, if it's
+# fast enough.
 generateTraceTree = (node, opts={}) ->
   nodeType = node.type
   line = node.loc.start.line
@@ -87,7 +87,6 @@ generateTraceTree = (node, opts={}) ->
   #{Choc.TRACE_FUNCTION_NAME}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
   """
   return esprima.parse(signature).body[0]
-
 
 generateAnnotatedSource = (source) ->
   try
@@ -223,7 +222,6 @@ scrub = (source, count, opts) ->
   onCodeError = opts.onCodeError || noop
   locals      = opts.locals      || {}
 
-  # newSource   = generateAnnotatedSource(source)
   newSource   = generateAnnotatedSourceM(source)
   debug(newSource)
 
@@ -252,7 +250,6 @@ scrub = (source, count, opts) ->
     executionTerminated = true
     console.log("execution terminated")
   catch e
-
     # throwing a Choc.PAUSE_ERROR_NAME is how we pause execution (for now)
     # the most obvious consequence of this is that you can't have a catch-all
     # exception handler in the code you wish to trace

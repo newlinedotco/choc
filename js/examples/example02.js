@@ -18,7 +18,7 @@
     source_todo = "function add(a, b) {\n  var c = 3;\n  return a + b;\n}\n\nvar sub = function(a, b) {\n  var c = 3;\n  return a - b;\n}\nwhile (shift <= 200) {\n  // console.log(shift);\n  var x = add(1, shift);\n  shift += 14; // increment\n}";
     source = "var foo = 1;\nvar bar = foo + 2 < 3;\nif(foo + 2 < 3) {\n  console.log('it is');\n}\nconsole.log(foo);";
     source = "function add(a, b) {\n  var c = 3;\n  return a + b;\n}";
-    source = "// parabolas\nvar shift = 0;\nwhile (shift <= 200) {\n  // console.log(shift);\n  var foo = shift;\n  if(foo % 2) {\n    foo = shift - 1;\n  }\n  shift += 14; // increment\n  foo = 1;\n}";
+    source = "// parabolas\nvar shift = 0;\nwhile (shift <= 200) {\n  // console.log(shift);\n  var foo = shift;\n  if(foo % 2 == 0) {\n    foo = shift - 1;\n  }\n  shift += 14; // increment\n  foo = 1;\n}";
     scrubNotify = function(info) {
       return puts(inspect(info));
     };

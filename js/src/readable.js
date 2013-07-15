@@ -31,7 +31,7 @@
         return "[ { lineNumber: " + node.loc.start.line + ", message: " + message + " }]";
       case 'BinaryExpression':
         operators = {
-          "==": "''",
+          "==": "__choc_first_message(" + (generateReadableExpression(node.left)) + ") + ' == ' + __choc_first_message(" + (generateReadableExpression(node.right)) + ")",
           "!=": "''",
           "===": "''",
           "!==": "''",
@@ -42,11 +42,11 @@
           "<<": "''",
           ">>": "''",
           ">>>": "''",
-          "+": "'add ' + __choc_first_message(" + (generateReadableExpression(node.right)) + ") + ' to " + node.left.name + " and set " + node.left.name + " to ' + " + node.left.name,
-          "-": "''",
-          "*": "''",
-          "/": "''",
-          "%": "''",
+          "+": "" + node.left.name,
+          "-": "" + node.left.name,
+          "*": "" + node.left.name,
+          "/": "" + node.left.name,
+          "%": "__choc_first_message(" + (generateReadableExpression(node.left)) + ") + ' % ' + __choc_first_message(" + (generateReadableExpression(node.right)) + ")",
           "|": "''",
           "^": "''",
           "in": "''",
@@ -90,9 +90,11 @@
       case 'ExpressionStatement':
         return generateReadableExpression(node.expression);
       case 'WhileStatement':
-        puts(inspect(node));
         conditional = opts.hoistedAttributes ? opts.hoistedAttributes[1] : true;
-        return "(function (__conditional) { \n if(__conditional) { \n   var startLine = " + node.loc.start.line + ";\n   var endLine   = " + node.loc.end.line + ";\n   var messages = [ { lineNumber: startLine, message: \"Because \" + __choc_first_message(" + (generateReadableExpression(node.test)) + ") } ]\n   for(var i=startLine+1; i<= endLine; i++) {\n     var message = i == startLine+1 ? \"do this\" : \"and this\";\n     messages.push({ lineNumber: i, message: message });\n   }\n   messages.push( { lineNumber: endLine, message: \"... and try again\" } )\n   // do this\n   // and this\n   // ... and try again\n   return messages;\n } else {\n   // Because -> condition with variables expanded e.g. 0 <= 200 is false\n   // ... stop looping\n   var startLine = " + node.loc.start.line + ";\n   var endLine   = " + node.loc.end.line + ";\n   var messages = [ { lineNumber: startLine, message: \"Because \" + __choc_first_message(" + (generateReadableExpression(node.test)) + ") + \" is false\"} ]\n   messages.push( { lineNumber: endLine, message: \"stop looping\" } )\n   return messages;\n }\n})(" + conditional + ")";
+        return "(function (__conditional) { \n if(__conditional) { \n   var startLine = " + node.loc.start.line + ";\n   var endLine   = " + node.loc.end.line + ";\n   var messages = [ { lineNumber: startLine, message: \"Because \" + __choc_first_message(" + (generateReadableExpression(node.test)) + ") } ]\n   // CodeMirror is ridiculously slow when removing these messages. TODO speed it up and add them back\n   // for(var i=startLine+1; i<= endLine; i++) {\n   //   var message = i == startLine+1 ? \"do this\" : \"and this\";\n   //   messages.push({ lineNumber: i, message: message });\n   // }\n   messages.push( { lineNumber: endLine, message: \"... and try again\" } )\n   // do this\n   // and this\n   // ... and try again\n   return messages;\n } else {\n   // Because -> condition with variables expanded e.g. 0 <= 200 is false\n   // ... stop looping\n   var startLine = " + node.loc.start.line + ";\n   var endLine   = " + node.loc.end.line + ";\n   var messages = [ { lineNumber: startLine, message: \"Because \" + __choc_first_message(" + (generateReadableExpression(node.test)) + ") + \" is false\"} ]\n   messages.push( { lineNumber: endLine, message: \"stop looping\" } )\n   return messages;\n }\n})(" + conditional + ")";
+      case 'IfStatement':
+        conditional = opts.hoistedAttributes ? opts.hoistedAttributes[1] : true;
+        return "(function (__conditional) { \n var startLine = " + node.loc.start.line + ";\n var endLine   = " + node.loc.end.line + ";\n if(__conditional) { \n   var messages = [ { lineNumber: startLine, message: \"Because \" + __choc_first_message(" + (generateReadableExpression(node.test)) + ") } ]\n   return messages;\n } else {\n   var messages = [ { lineNumber: startLine, message: \"Because \" + __choc_first_message(" + (generateReadableExpression(node.test)) + ") + \" is false\"} ]\n   return messages;\n }\n})(" + conditional + ")";
       default:
         return "[]";
     }
@@ -106,6 +108,7 @@
       case 'VariableDeclaration':
       case 'ExpressionStatement':
       case 'WhileStatement':
+      case 'IfStatement':
         return generateReadableStatement(node, opts);
       case 'AssignmentExpression':
         return generateReadableExpression(node, opts);

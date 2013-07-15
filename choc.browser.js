@@ -1336,7 +1336,7 @@ EventEmitter.prototype.listeners = function(type) {
     onMessages = opts.onMessages || noop;
     onCodeError = opts.onCodeError || noop;
     locals = opts.locals || {};
-    newSource = generateAnnotatedSource(source);
+    newSource = generateAnnotatedSourceM(source);
     debug(newSource);
     tracer = new Tracer();
     tracer.onMessages = onMessages;
@@ -1386,7 +1386,7 @@ EventEmitter.prototype.listeners = function(type) {
 
 }).call(this);
 
-},{"util":3,"./readable":7,"../../lib/estraverse":6,"esprima":8,"escodegen":9,"esmorph":10,"underscore":11,"debug":12,"deep":13}],8:[function(require,module,exports){
+},{"util":3,"./readable":7,"../../lib/estraverse":6,"esprima":8,"esmorph":9,"escodegen":10,"underscore":11,"debug":12,"deep":13}],8:[function(require,module,exports){
 (function(){/*
   Copyright (C) 2012 Ariya Hidayat <ariya.hidayat@gmail.com>
   Copyright (C) 2012 Mathias Bynens <mathias@qiwi.be>
@@ -6688,7 +6688,7 @@ if (window.localStorage) debug.enable(localStorage.debug);
         return "[ { lineNumber: " + node.loc.start.line + ", message: " + message + " }]";
       case 'BinaryExpression':
         operators = {
-          "==": "''",
+          "==": "__choc_first_message(" + (generateReadableExpression(node.left)) + ") + ' == ' + __choc_first_message(" + (generateReadableExpression(node.right)) + ")",
           "!=": "''",
           "===": "''",
           "!==": "''",
@@ -6699,11 +6699,11 @@ if (window.localStorage) debug.enable(localStorage.debug);
           "<<": "''",
           ">>": "''",
           ">>>": "''",
-          "+": "'add ' + __choc_first_message(" + (generateReadableExpression(node.right)) + ") + ' to " + node.left.name + " and set " + node.left.name + " to ' + " + node.left.name,
-          "-": "''",
-          "*": "''",
-          "/": "''",
-          "%": "''",
+          "+": "" + node.left.name,
+          "-": "" + node.left.name,
+          "*": "" + node.left.name,
+          "/": "" + node.left.name,
+          "%": "__choc_first_message(" + (generateReadableExpression(node.left)) + ") + ' % ' + __choc_first_message(" + (generateReadableExpression(node.right)) + ")",
           "|": "''",
           "^": "''",
           "in": "''",
@@ -6747,9 +6747,11 @@ if (window.localStorage) debug.enable(localStorage.debug);
       case 'ExpressionStatement':
         return generateReadableExpression(node.expression);
       case 'WhileStatement':
-        puts(inspect(node));
         conditional = opts.hoistedAttributes ? opts.hoistedAttributes[1] : true;
-        return "(function (__conditional) { \n if(__conditional) { \n   var startLine = " + node.loc.start.line + ";\n   var endLine   = " + node.loc.end.line + ";\n   var messages = [ { lineNumber: startLine, message: \"Because \" + __choc_first_message(" + (generateReadableExpression(node.test)) + ") } ]\n   for(var i=startLine+1; i<= endLine; i++) {\n     var message = i == startLine+1 ? \"do this\" : \"and this\";\n     messages.push({ lineNumber: i, message: message });\n   }\n   messages.push( { lineNumber: endLine, message: \"... and try again\" } )\n   // do this\n   // and this\n   // ... and try again\n   return messages;\n } else {\n   // Because -> condition with variables expanded e.g. 0 <= 200 is false\n   // ... stop looping\n   var startLine = " + node.loc.start.line + ";\n   var endLine   = " + node.loc.end.line + ";\n   var messages = [ { lineNumber: startLine, message: \"Because \" + __choc_first_message(" + (generateReadableExpression(node.test)) + ") + \" is false\"} ]\n   messages.push( { lineNumber: endLine, message: \"stop looping\" } )\n   return messages;\n }\n})(" + conditional + ")";
+        return "(function (__conditional) { \n if(__conditional) { \n   var startLine = " + node.loc.start.line + ";\n   var endLine   = " + node.loc.end.line + ";\n   var messages = [ { lineNumber: startLine, message: \"Because \" + __choc_first_message(" + (generateReadableExpression(node.test)) + ") } ]\n   // CodeMirror is ridiculously slow when removing these messages. TODO speed it up and add them back\n   // for(var i=startLine+1; i<= endLine; i++) {\n   //   var message = i == startLine+1 ? \"do this\" : \"and this\";\n   //   messages.push({ lineNumber: i, message: message });\n   // }\n   messages.push( { lineNumber: endLine, message: \"... and try again\" } )\n   // do this\n   // and this\n   // ... and try again\n   return messages;\n } else {\n   // Because -> condition with variables expanded e.g. 0 <= 200 is false\n   // ... stop looping\n   var startLine = " + node.loc.start.line + ";\n   var endLine   = " + node.loc.end.line + ";\n   var messages = [ { lineNumber: startLine, message: \"Because \" + __choc_first_message(" + (generateReadableExpression(node.test)) + ") + \" is false\"} ]\n   messages.push( { lineNumber: endLine, message: \"stop looping\" } )\n   return messages;\n }\n})(" + conditional + ")";
+      case 'IfStatement':
+        conditional = opts.hoistedAttributes ? opts.hoistedAttributes[1] : true;
+        return "(function (__conditional) { \n var startLine = " + node.loc.start.line + ";\n var endLine   = " + node.loc.end.line + ";\n if(__conditional) { \n   var messages = [ { lineNumber: startLine, message: \"Because \" + __choc_first_message(" + (generateReadableExpression(node.test)) + ") } ]\n   return messages;\n } else {\n   var messages = [ { lineNumber: startLine, message: \"Because \" + __choc_first_message(" + (generateReadableExpression(node.test)) + ") + \" is false\"} ]\n   return messages;\n }\n})(" + conditional + ")";
       default:
         return "[]";
     }
@@ -6763,6 +6765,7 @@ if (window.localStorage) debug.enable(localStorage.debug);
       case 'VariableDeclaration':
       case 'ExpressionStatement':
       case 'WhileStatement':
+      case 'IfStatement':
         return generateReadableStatement(node, opts);
       case 'AssignmentExpression':
         return generateReadableExpression(node, opts);
@@ -6775,7 +6778,7 @@ if (window.localStorage) debug.enable(localStorage.debug);
 
 }).call(this);
 
-},{"util":3,"esprima":8,"escodegen":9,"esmorph":10,"underscore":11}],15:[function(require,module,exports){
+},{"util":3,"esprima":8,"escodegen":10,"esmorph":9,"underscore":11}],15:[function(require,module,exports){
 module.exports={
   "name": "escodegen",
   "description": "ECMAScript code generator",
@@ -6836,7 +6839,7 @@ module.exports={
   "_resolved": "https://registry.npmjs.org/escodegen/-/escodegen-0.0.22.tgz"
 }
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 (function(global){/*
   Copyright (C) 2012 Michael Ficarra <escodegen.copyright@michael.ficarra.me>
   Copyright (C) 2012 Robert Gust-Bardon <donate@robert.gust-bardon.org>
@@ -9414,7 +9417,7 @@ module.exports={
 /* vim: set sw=4 ts=4 et tw=80 : */
 
 })()
-},{}],10:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 (function(){/*
   Copyright (C) 2013 Ariya Hidayat <ariya.hidayat@gmail.com>
   Copyright (C) 2012 Ariya Hidayat <ariya.hidayat@gmail.com>

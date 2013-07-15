@@ -252,7 +252,7 @@
     onMessages = opts.onMessages || noop;
     onCodeError = opts.onCodeError || noop;
     locals = opts.locals || {};
-    newSource = generateAnnotatedSource(source);
+    newSource = generateAnnotatedSourceM(source);
     debug(newSource);
     tracer = new Tracer();
     tracer.onMessages = onMessages;
