@@ -12,8 +12,8 @@ describe 'Readable', ->
     pp nodes
     readable.readableNode(nodes)
 
-  messageE = (code) ->
-    eval(code + "; " + message(code))
+  messageE = (code, scope) ->
+    eval.call(scope, code + "; " + message(code))
 
   it 'simple assignment', () ->
     code = "var foo = 0"
@@ -23,8 +23,19 @@ describe 'Readable', ->
     code = "foo = 1 + bar"
     pp message(code)
 
-  it.only 'function calls', () ->
+  it 'function calls with no annotations', () ->
     code = "console.log('hello')"
     pp message(code)
+
+  it.only 'function calls with annotations', () ->
+    console.log.__choc_annotation = (node) ->
+      return "an annotation";
+    #code = "console.log('hello')"
+    annotatedfn = () ->
+    annotatedfn.__choc_annotation = (node) ->
+      return "i was annotated";
+    code = "annotatedfn('hello')"
+    pp messageE(code, this)
+
 
 

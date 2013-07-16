@@ -22,24 +22,24 @@ generateReadableExpression = (node, opts={}) ->
 
     when 'BinaryExpression'
       operators = 
-        "==": "#{generateReadableExpression(node.left)} + ' == ' + #{generateReadableExpression(node.right)}" 
-        "!=" : "''"
-        "===": "''" 
-        "!==": "''"
-        "<": "''"
-        "<=": "#{generateReadableExpression(node.left)} + ' <= ' + #{generateReadableExpression(node.right)}" 
-        ">": "''"
-        ">=": "''"
-        "<<": "''"
-        ">>": "''"
-        ">>>": "''"
+        "==": "#{generateReadableExpression(node.left)} + ' equals ' + #{generateReadableExpression(node.right)}" 
+        "!=" : "#{generateReadableExpression(node.left)} + ' does not equal ' + #{generateReadableExpression(node.right)}" 
+        "===": "#{generateReadableExpression(node.left)} + ' equals ' + #{generateReadableExpression(node.right)}" 
+        "!==": "#{generateReadableExpression(node.left)} + ' does not equal ' + #{generateReadableExpression(node.right)}" 
+        "<": "#{generateReadableExpression(node.left)} + ' less than ' + #{generateReadableExpression(node.right)}" 
+        "<=": "#{generateReadableExpression(node.left)} + ' less than or equal to ' + #{generateReadableExpression(node.right)}" 
+        ">": "#{generateReadableExpression(node.left)} + ' greater than ' + #{generateReadableExpression(node.right)}" 
+        ">=": "#{generateReadableExpression(node.left)} + ' greater than or equal to ' + #{generateReadableExpression(node.right)}" 
+        "<<": "#{node.left.name}"
+        ">>": "#{node.left.name}"
+        ">>>": "#{node.left.name}"
         "+": "#{node.left.name}"
         "-": "#{node.left.name}"
         "*": "#{node.left.name}"
         "/": "#{node.left.name}"
-        "%": "#{generateReadableExpression(node.left)} + ' % ' + #{generateReadableExpression(node.right)}"
-        "|": "''" 
-        "^": "''"
+        "%": "#{generateReadableExpression(node.left)} + ' % ' + #{generateReadableExpression(node.right)}" # TODO pretend someone doesn't know what % means and write that
+        "|": "#{node.left.name}" 
+        "^": "#{node.left.name}"
         "in": "''"
         "instanceof": "''"
         "..": "''"
@@ -49,7 +49,11 @@ generateReadableExpression = (node, opts={}) ->
     when 'CallExpression'
       # tell target to verb with parameters
       # but we want to allow some context specific language here
-      ""
+      """
+      (function() {
+        return console.log.__choc_annotation();
+      })()
+      """
     when 'Literal'
       "'#{node.value}'"
     when 'Identifier'
