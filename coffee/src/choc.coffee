@@ -77,7 +77,7 @@ generateStatement = (code) -> esprima.parse(code).body[0]
 # performance boost if we wrote the raw parse tree here. That said, composing
 # 'messagesString' is tricky so it's a lot clearer to just use parse, if it's
 # fast enough.
-generateTraceTree = (node, opts={}) ->
+generateTraceTreeOld = (node, opts={}) ->
   nodeType = node.type
   line = node.loc.start.line
   range = node.range
@@ -88,11 +88,70 @@ generateTraceTree = (node, opts={}) ->
   """
   return esprima.parse(signature).body[0]
 
+generateTraceTree = (node, opts={}) ->
+  nodeType = node.type
+  line = node.loc.start.line
+  range = node.range
+
+  messages = readable.readableNode(node, opts)
+
+  type: "ExpressionStatement"
+  expression:
+    type: "CallExpression"
+    callee:
+      type: "Identifier"
+      name: Choc.TRACE_FUNCTION_NAME
+
+    arguments: [
+      type: "ObjectExpression"
+      properties: [
+        type: "Property"
+        kind: "init"
+        key:
+          type: "Identifier"
+          name: "lineNumber"
+        value:
+          type: "Literal"
+          value: line
+      ,
+        type: "Property"
+        kind: "init"
+        key:
+          type: "Identifier"
+          name: "range"
+        value:
+          type: "ArrayExpression"
+          elements: [
+            type: "Literal"
+            value: range[0]
+          ,
+            type: "Literal"
+            value: range[1]
+          ]
+      ,
+        type: "Property"
+        kind: "init"
+        key:
+          type: "Identifier"
+          name: "type"
+        value:
+          type: "Literal"
+          value: nodeType
+      ,
+        type: "Property"
+        kind: "init"
+        key:
+          type: "Identifier"
+          name: "messages"
+        value: messages
+      ]
+    ]
+
 generateAnnotatedSource = (source) ->
   try
     tree = esprima.parse(source, {range: true, loc: true})
     debug(inspect(tree, null, 100))
-  catch e
+  catch e 
     error = new Error("choc source parsing error")
     error.original = e
     throw error
@@ -167,13 +226,11 @@ generateAnnotatedSource = (source) ->
         traceTree = generateTraceTree(node)
         if _.isNumber(parentPathIndex)
           newPosition = parentPathIndex + parent.__choc_offset + 1
-
           parent[parentPathAttribute].splice(newPosition, 0, traceTree)
           parent.__choc_offset = parent.__choc_offset + 1
 
         else 
           puts "WARNING: no parent idx"
-
 
   escodegen.generate(tree, format: { compact: false } )
 

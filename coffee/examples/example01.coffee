@@ -42,5 +42,10 @@ if require? && (require.main == module)
   scrubNotify = (info) ->
     puts inspect info
 
+  source = """
+    var foo = "bar";
+    console.log(1);
+  """
+
   choc.scrub(source, 10, notify: scrubNotify)
 

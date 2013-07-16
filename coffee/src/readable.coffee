@@ -52,24 +52,41 @@ generateReadableExpression = (node, opts={}) ->
     else
       "[]"
 
+# convert a function to an esprima tree. Add the var b/c esprima has trouble with plain anon function()
+fn2tree = (fn) -> esprima.parse("var _ = " + fn.toString()).body[0].declarations[0].init
+
 generateReadableStatement = (node, opts={}) ->
   switch node.type
     when 'VariableDeclaration'
-      i = 0
-      sentences = _.map node.declarations, (dec) -> 
-        name = dec.id.name
-        prefix = if i == 0 then "Create" else " and create"
-        i = i + 1
-        "'#{prefix} the variable <span class=\"choc-variable\">#{name}</span> and set it to <span class=\"choc-value\">' + #{name} + '</span>'"
-      msgs = _.map sentences, (sentence) ->
-         s  = "{ " 
-         s += "lineNumber: " + node.loc.start.line + ", "
-         s += "message: " + sentence 
-         s += " }"
-      "[ " + msgs.join(", ") + " ]"
-    when 'ExpressionStatement'
+      fn2tree(() ->
+        {
+          # locals: _.reduce(node.declarations, ((memo, dec) -> memo[doc.id.name] = []; memo), {})
+          messages: (locals) -> 
+            i = 0
+            _.map node.declarations, (dec) -> 
+              name = dec.id.name
+              prefix = if i == 0 then "Create" else " and create"
+              i = i + 1
+              {
+                lineNumber: node.loc.start.line
+                message: "#{prefix} the variable <span class='choc-variable'>#{name}</span> and set it to <span class='choc-value'>" + locals[name] + "</span>"
+              }
+        })
+   
+      # msgs = _.map sentences, (sentence) ->
+      #    {
+      #      lineNumber: node.loc.start.line
+      #      message: 
+      #    }
+         # s  = "{ " 
+         # s += "lineNumber: " + node.loc.start.line + ", "
+         # s += "message: " + sentence 
+         # s += " }"
+      # "[ " + msgs.join(", ") + " ]"
+
+    when false # 'ExpressionStatement'
       generateReadableExpression(node.expression)
-    when 'WhileStatement'
+    when false # 'WhileStatement'
       # ugh - I do not like this API - TODO
       conditional = if opts.hoistedAttributes
           opts.hoistedAttributes[1] # TODO
@@ -102,7 +119,7 @@ generateReadableStatement = (node, opts={}) ->
        }
       })(#{conditional})
     """ 
-    when 'IfStatement'
+    when false # 'IfStatement'
       # ugh - I do not like this API - TODO
       conditional = if opts.hoistedAttributes
           opts.hoistedAttributes[1] # TODO
@@ -121,17 +138,21 @@ generateReadableStatement = (node, opts={}) ->
        }
       })(#{conditional})
     """ 
-    else
-      "[]"
+    #else
+    #  "[]"
   
 readableNode = (node, opts={}) ->
   switch node.type
-    when 'VariableDeclaration', 'ExpressionStatement', 'WhileStatement', 'IfStatement'
+    when 'VariableDeclaration'#, 'ExpressionStatement', 'WhileStatement', 'IfStatement'
       generateReadableStatement(node, opts)
-    when 'AssignmentExpression'
-      generateReadableExpression(node, opts)
+    # when 'AssignmentExpression'
+    #   generateReadableExpression(node, opts)
+    # else
     else
-      "[]"
+      fn2tree(() ->
+        {
+          messages: (locals) -> [ { lineNumber: node.loc.start.line,  message: "" } ]
+        })
 
 
 exports.readableNode = readableNode
