@@ -34,24 +34,24 @@
         return message = operators[node.operator] || "";
       case 'BinaryExpression':
         operators = {
-          "==": "" + (generateReadableExpression(node.left)) + " + ' == ' + " + (generateReadableExpression(node.right)),
-          "!=": "''",
-          "===": "''",
-          "!==": "''",
-          "<": "''",
-          "<=": "" + (generateReadableExpression(node.left)) + " + ' <= ' + " + (generateReadableExpression(node.right)),
-          ">": "''",
-          ">=": "''",
-          "<<": "''",
-          ">>": "''",
-          ">>>": "''",
+          "==": "" + (generateReadableExpression(node.left)) + " + ' equals ' + " + (generateReadableExpression(node.right)),
+          "!=": "" + (generateReadableExpression(node.left)) + " + ' does not equal ' + " + (generateReadableExpression(node.right)),
+          "===": "" + (generateReadableExpression(node.left)) + " + ' equals ' + " + (generateReadableExpression(node.right)),
+          "!==": "" + (generateReadableExpression(node.left)) + " + ' does not equal ' + " + (generateReadableExpression(node.right)),
+          "<": "" + (generateReadableExpression(node.left)) + " + ' less than ' + " + (generateReadableExpression(node.right)),
+          "<=": "" + (generateReadableExpression(node.left)) + " + ' less than or equal to ' + " + (generateReadableExpression(node.right)),
+          ">": "" + (generateReadableExpression(node.left)) + " + ' greater than ' + " + (generateReadableExpression(node.right)),
+          ">=": "" + (generateReadableExpression(node.left)) + " + ' greater than or equal to ' + " + (generateReadableExpression(node.right)),
+          "<<": "" + node.left.name,
+          ">>": "" + node.left.name,
+          ">>>": "" + node.left.name,
           "+": "" + node.left.name,
           "-": "" + node.left.name,
           "*": "" + node.left.name,
           "/": "" + node.left.name,
           "%": "" + (generateReadableExpression(node.left)) + " + ' % ' + " + (generateReadableExpression(node.right)),
-          "|": "''",
-          "^": "''",
+          "|": "" + node.left.name,
+          "^": "" + node.left.name,
           "in": "''",
           "instanceof": "''",
           "..": "''"
@@ -59,7 +59,8 @@
         message = operators[node.operator] || "";
         return "" + message;
       case 'CallExpression':
-        return "";
+        pp(node);
+        return "(function() {\n  if(" + node.callee.name + ".hasOwnProperty(\"__choc_annotation\")) {\n    return " + node.callee.name + "(\"__choc_annotation\")(" + node["arguments"] + ");\n  } else {\n    return \"no\";\n  }\n})()";
       case 'Literal':
         return "'" + node.value + "'";
       case 'Identifier':
