@@ -4,16 +4,19 @@ esprima = require("esprima")
 assert = require('assert')
 should = require("should")
 readable = require("../src/readable")
+coffee = require("coffee-script")
 
 describe 'Readable', ->
 
-  message = (code) ->
+  message = (code, opts={}) ->
     nodes = esprima.parse(code, {range: true, loc: true}).body[0]
     pp nodes
-    readable.readableNode(nodes)
+    readable.readableNode(nodes, opts)
 
-  messageE = (code, scope) ->
-    eval.call(scope, code + "; " + message(code))
+  messageE = (code, opts={}) ->
+    beforeCode = opts.before || ""
+    toEval = beforeCode + ";" + code + "; " + message(code, opts)
+    eval(toEval)
 
   it 'simple assignment', () ->
     code = "var foo = 0"
@@ -28,14 +31,15 @@ describe 'Readable', ->
     pp message(code)
 
   it.only 'function calls with annotations', () ->
-    console.log.__choc_annotation = (node) ->
-      return "an annotation";
-    #code = "console.log('hello')"
+    before = """
     annotatedfn = () ->
-    annotatedfn.__choc_annotation = (node) ->
-      return "i was annotated";
+    annotatedfn.__choc_annotation = (args) ->
+      return "i was annotated with " + readable.generateReadableExpression(args[0])
+    """
+    before = coffee.compile(before, bare: true)
     code = "annotatedfn('hello')"
-    pp messageE(code, this)
+    
+    pp messageE(code, before: before)
 
 
 

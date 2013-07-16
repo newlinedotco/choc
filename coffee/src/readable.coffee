@@ -49,9 +49,15 @@ generateReadableExpression = (node, opts={}) ->
     when 'CallExpression'
       # tell target to verb with parameters
       # but we want to allow some context specific language here
+      # if we annotate the functions themselves, then we might be able to annotate prototypes, but maybe not local functions
+      # if we pass a dictionary, then there is variable name ambiguity
       """
       (function() {
-        return console.log.__choc_annotation();
+        if(#{node.callee.name}.hasOwnProperty("__choc_annotation")) {
+          return #{node.callee.name}.__choc_annotation(#{inspect(node.arguments, null, 1000)});
+        } else {
+          return "";
+        }
       })()
       """
     when 'Literal'
@@ -137,3 +143,4 @@ readableNode = (node, opts={}) ->
 
 
 exports.readableNode = readableNode
+exports.generateReadableExpression = generateReadableExpression
