@@ -47,14 +47,17 @@ generateReadableExpression = (node, opts={}) ->
       message = operators[node.operator] || ""
       "#{message}"
     when 'CallExpression'
+      console.log(node)
       # tell target to verb with parameters
       # but we want to allow some context specific language here
       # if we annotate the functions themselves, then we might be able to annotate prototypes, but maybe not local functions
       # if we pass a dictionary, then there is variable name ambiguity
+      # node.callee.name || node.property.name
+      target = node.callee?.name || (node.callee.object.name + "." + node.callee.property.name)
       """
       (function() {
-        if(#{node.callee.name}.hasOwnProperty("__choc_annotation")) {
-          return #{node.callee.name}.__choc_annotation(#{inspect(node.arguments, null, 1000)});
+        if(#{target}.hasOwnProperty("__choc_annotation")) {
+          return #{target}.__choc_annotation(#{inspect(node.arguments, null, 1000)});
         } else {
           return "";
         }

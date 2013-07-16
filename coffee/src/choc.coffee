@@ -86,6 +86,8 @@ generateTraceTree = (node, opts={}) ->
   signature = """
   #{Choc.TRACE_FUNCTION_NAME}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
   """
+  console.log(signature)
+
   return esprima.parse(signature).body[0]
 
 generateAnnotatedSource = (source) ->
