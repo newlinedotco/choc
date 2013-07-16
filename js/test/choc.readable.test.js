@@ -60,11 +60,10 @@
     });
     return it.only('function calls with annotations', function() {
       var before, code;
-      before = "annotatedfn = () ->\nannotatedfn.__choc_annotation = (node) ->\n  return \"i was annotated\";";
+      before = "annotatedfn = () ->\nannotatedfn.__choc_annotation = (args) ->\n  return \"i was annotated with \" + readable.generateReadableExpression(args[0])";
       before = coffee.compile(before, {
         bare: true
       });
-      puts(before);
       code = "annotatedfn('hello')";
       return pp(messageE(code, {
         before: before

@@ -1182,6 +1182,7 @@ EventEmitter.prototype.listeners = function(type) {
     range = node.range;
     messagesString = readable.readableNode(node, opts);
     signature = "" + Choc.TRACE_FUNCTION_NAME + "({ lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " });";
+    console.log(signature);
     return esprima.parse(signature).body[0];
   };
 
@@ -6674,7 +6675,7 @@ if (window.localStorage) debug.enable(localStorage.debug);
   _ = require("underscore");
 
   generateReadableExpression = function(node, opts) {
-    var message, operators;
+    var message, operators, target, _ref1;
     if (opts == null) {
       opts = {};
     }
@@ -6716,8 +6717,9 @@ if (window.localStorage) debug.enable(localStorage.debug);
         message = operators[node.operator] || "";
         return "" + message;
       case 'CallExpression':
-        pp(node);
-        return "(function() {\n  if(" + node.callee.name + ".hasOwnProperty(\"__choc_annotation\")) {\n    return " + node.callee.name + "(\"__choc_annotation\")(" + node["arguments"] + ");\n  } else {\n    return \"no\";\n  }\n})()";
+        console.log(node);
+        target = ((_ref1 = node.callee) != null ? _ref1.name : void 0) || (node.callee.object.name + "." + node.callee.property.name);
+        return "(function() {\n  if(" + target + ".hasOwnProperty(\"__choc_annotation\")) {\n    return " + target + ".__choc_annotation(" + (inspect(node["arguments"], null, 1000)) + ");\n  } else {\n    return \"\";\n  }\n})()";
       case 'Literal':
         return "'" + node.value + "'";
       case 'Identifier':
@@ -6775,6 +6777,8 @@ if (window.localStorage) debug.enable(localStorage.debug);
   };
 
   exports.readableNode = readableNode;
+
+  exports.generateReadableExpression = generateReadableExpression;
 
 }).call(this);
 
