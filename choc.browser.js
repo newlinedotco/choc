@@ -1386,7 +1386,7 @@ EventEmitter.prototype.listeners = function(type) {
 
 }).call(this);
 
-},{"util":3,"./readable":7,"../../lib/estraverse":6,"esprima":8,"esmorph":9,"escodegen":10,"underscore":11,"debug":12,"deep":13}],8:[function(require,module,exports){
+},{"util":3,"./readable":7,"../../lib/estraverse":6,"esprima":8,"escodegen":9,"esmorph":10,"underscore":11,"debug":12,"deep":13}],8:[function(require,module,exports){
 (function(){/*
   Copyright (C) 2012 Ariya Hidayat <ariya.hidayat@gmail.com>
   Copyright (C) 2012 Mathias Bynens <mathias@qiwi.be>
@@ -6767,8 +6767,6 @@ if (window.localStorage) debug.enable(localStorage.debug);
       case 'WhileStatement':
       case 'IfStatement':
         return generateReadableStatement(node, opts);
-      case 'AssignmentExpression':
-        return generateReadableExpression(node, opts);
       default:
         return "[]";
     }
@@ -6778,7 +6776,7 @@ if (window.localStorage) debug.enable(localStorage.debug);
 
 }).call(this);
 
-},{"util":3,"esprima":8,"escodegen":10,"esmorph":9,"underscore":11}],15:[function(require,module,exports){
+},{"util":3,"esprima":8,"escodegen":9,"esmorph":10,"underscore":11}],15:[function(require,module,exports){
 module.exports={
   "name": "escodegen",
   "description": "ECMAScript code generator",
@@ -6839,7 +6837,7 @@ module.exports={
   "_resolved": "https://registry.npmjs.org/escodegen/-/escodegen-0.0.22.tgz"
 }
 
-},{}],10:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 (function(global){/*
   Copyright (C) 2012 Michael Ficarra <escodegen.copyright@michael.ficarra.me>
   Copyright (C) 2012 Robert Gust-Bardon <donate@robert.gust-bardon.org>
@@ -9417,7 +9415,7 @@ module.exports={
 /* vim: set sw=4 ts=4 et tw=80 : */
 
 })()
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 (function(){/*
   Copyright (C) 2013 Ariya Hidayat <ariya.hidayat@gmail.com>
   Copyright (C) 2012 Ariya Hidayat <ariya.hidayat@gmail.com>

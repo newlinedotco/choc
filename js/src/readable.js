@@ -110,8 +110,6 @@
       case 'WhileStatement':
       case 'IfStatement':
         return generateReadableStatement(node, opts);
-      case 'AssignmentExpression':
-        return generateReadableExpression(node, opts);
       default:
         return "[]";
     }
