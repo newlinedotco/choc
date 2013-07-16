@@ -4,6 +4,8 @@ escodegen = require("escodegen")
 esmorph = require("esmorph")
 _ = require("underscore")
 
+# The code below is atrocious  
+# Until javascript has macros, this will have to do
 
 generateReadableExpression = (node, opts={}) ->
   switch node.type
@@ -128,8 +130,8 @@ readableNode = (node, opts={}) ->
   switch node.type
     when 'VariableDeclaration', 'ExpressionStatement', 'WhileStatement', 'IfStatement'
       generateReadableStatement(node, opts)
-    when 'AssignmentExpression'
-      generateReadableExpression(node, opts)
+    # when 'AssignmentExpression'
+    #  generateReadableExpression(node, opts)
     else
       "[]"
 
