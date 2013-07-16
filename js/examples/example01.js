@@ -20,6 +20,7 @@
     scrubNotify = function(info) {
       return puts(inspect(info));
     };
+    source = "var foo = \"bar\";\nconsole.log(1);";
     choc.scrub(source, 10, {
       notify: scrubNotify
     });
