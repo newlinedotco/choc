@@ -274,3 +274,4 @@ scrub = (source, count, opts) ->
 
 exports.scrub = scrub
 exports.generateAnnotatedSource = generateAnnotatedSource
+exports.readable = readable

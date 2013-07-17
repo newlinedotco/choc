@@ -54,17 +54,22 @@ generateReadableExpression = (node, opts={}) ->
       # if we pass a dictionary, then there is variable name ambiguity
       # node.callee.name || node.property.name
       target = node.callee?.name || (node.callee.object.name + "." + node.callee.property.name)
+      # ew eval() Anyone have any suggestions?
       """
       (function() {
         if(#{target}.hasOwnProperty("__choc_annotation")) {
-          return #{target}.__choc_annotation(#{inspect(node.arguments, null, 1000)});
+          return eval(#{target}.__choc_annotation(#{inspect(node.arguments, null, 1000)}));
+        } else if (#{if node.callee?.name? then "true" else "false"}) {
+          return "call the function <span class='choc-variable'>#{node.callee.name}</span>";
+        } else if (#{if node.callee?.object?.name then "true" else "false"}) {
+          return "tell <span class='choc-variable'>#{node.callee?.object?.name}</span> to <span class='choc-variable'>#{node.callee?.property?.name}</span>";
         } else {
           return "";
         }
       })()
       """
     when 'Literal'
-      "'#{node.value}'"
+      "#{node.value}"
     when 'Identifier'
       "#{node.name}"
     else
