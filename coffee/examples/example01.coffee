@@ -39,6 +39,17 @@ if require? && (require.main == module)
     shift += 14; // increment
   }
   """
+
+  source = """
+  function add(a, b) {
+    return a + b;
+  }
+
+  var shift = 0;
+  var x = add(1, shift) + add(1, 2);
+  var y = 1 + x;
+  """
+
   scrubNotify = (info) ->
     puts inspect info
 

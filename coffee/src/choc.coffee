@@ -169,7 +169,6 @@ generateAnnotatedSource = (source) ->
         traceTree = generateTraceTree(node)
         if _.isNumber(parentPathIndex)
           newPosition = parentPathIndex + parent.__choc_offset + 1
-
           parent[parentPathAttribute].splice(newPosition, 0, traceTree)
           parent.__choc_offset = parent.__choc_offset + 1
 
