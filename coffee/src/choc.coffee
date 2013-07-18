@@ -34,7 +34,8 @@ PLAIN_STATEMENTS = [
  'ForStatement', 'ForInStatement',  'LabeledStatement',
  'SwitchStatement', 'ThrowStatement', 'TryStatement',
  'WithStatement',
- 'VariableDeclaration'
+ 'VariableDeclaration',
+ 'CallExpression'
 ]
 
 HOIST_STATEMENTS = [
@@ -86,9 +87,31 @@ generateTraceTree = (node, opts={}) ->
   signature = """
   #{Choc.TRACE_FUNCTION_NAME}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
   """
-  console.log(signature)
-
+  # console.log(signature)
   return esprima.parse(signature).body[0]
+
+generateCallTrace = (node, opts={}) ->
+  nodeType = node.type
+  line = node.loc.start.line
+  range = node.range
+
+  # in the case of an Identifier
+  # add(1, 2) => __choc_trace_call(this, null, add, [1, 2], {...}) 
+  # in the case of a MemberExpression
+  # obj.add(1, 2) => __choc_trace_call(this, obj, add, [1, 2], {...})
+
+  # here you can either generate the tree with generate and a string or you can compose the parser api objects and manipulate them
+
+  if node.callee.type == "Identifier"
+
+  else
+
+  # messagesString = readable.readableNode(node, opts)
+  # signature = """
+  # __choc_trace_call({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
+  # """
+  # return esprima.parse(signature).body[0]
+
 
 generateAnnotatedSource = (source) ->
   try
@@ -164,6 +187,11 @@ generateAnnotatedSource = (source) ->
           innerBlockContainer = node.body.body # WhileStatement > BlockExpression
           innerBlockContainer.push(newAssignmentNode)
           innerBlockContainer.push(traceTree)
+
+      # TODO case statement
+      else if nodeType == 'CallExpression'
+        pp ["CallExpression", parentPathAttribute]
+        traceTree = generateTraceTree(node, hoistedAttributes: [hoister[nodeType], newVariableName])
 
       else if isPlainStatement(nodeType)
         traceTree = generateTraceTree(node)
