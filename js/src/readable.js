@@ -17,7 +17,7 @@
   _ = require("underscore");
 
   generateReadableExpression = function(node, opts) {
-    var message, operators, target, _ref1;
+    var message, operators, target, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8;
     if (opts == null) {
       opts = {};
     }
@@ -61,9 +61,9 @@
       case 'CallExpression':
         console.log(node);
         target = ((_ref1 = node.callee) != null ? _ref1.name : void 0) || (node.callee.object.name + "." + node.callee.property.name);
-        return "(function() {\n  if(" + target + ".hasOwnProperty(\"__choc_annotation\")) {\n    return " + target + ".__choc_annotation(" + (inspect(node["arguments"], null, 1000)) + ");\n  } else {\n    return \"\";\n  }\n})()";
+        return "(function() {\n  if(" + target + ".hasOwnProperty(\"__choc_annotation\")) {\n    return eval(" + target + ".__choc_annotation(" + (inspect(node["arguments"], null, 1000)) + "));\n  } else if (" + (((_ref2 = node.callee) != null ? _ref2.name : void 0) != null ? "true" : "false") + ") {\n    return \"call the function <span class='choc-variable'>" + node.callee.name + "</span>\";\n  } else if (" + (((_ref3 = node.callee) != null ? (_ref4 = _ref3.object) != null ? _ref4.name : void 0 : void 0) ? "true" : "false") + ") {\n    return \"tell <span class='choc-variable'>" + ((_ref5 = node.callee) != null ? (_ref6 = _ref5.object) != null ? _ref6.name : void 0 : void 0) + "</span> to <span class='choc-variable'>" + ((_ref7 = node.callee) != null ? (_ref8 = _ref7.property) != null ? _ref8.name : void 0 : void 0) + "</span>\";\n  } else {\n    return \"\";\n  }\n})()";
       case 'Literal':
-        return "'" + node.value + "'";
+        return "" + node.value;
       case 'Identifier':
         return "" + node.name;
       default:

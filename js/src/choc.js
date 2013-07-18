@@ -301,4 +301,6 @@
 
   exports.generateAnnotatedSource = generateAnnotatedSource;
 
+  exports.readable = readable;
+
 }).call(this);
