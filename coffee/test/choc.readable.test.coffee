@@ -34,7 +34,7 @@ describe 'Readable', ->
     before = """
     annotatedfn = () ->
     annotatedfn.__choc_annotation = (args) ->
-      return "i was annotated with " + readable.generateReadableExpression(args[0])
+      return "'i was annotated with ' + " + readable.generateReadableExpression(args[0])
     """
     before = coffee.compile(before, bare: true)
     code = "annotatedfn('hello')"
