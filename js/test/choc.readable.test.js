@@ -59,15 +59,16 @@
       return pp(message(code));
     });
     return it.only('function calls with annotations', function() {
-      var before, code;
-      before = "annotatedfn = () ->\nannotatedfn.__choc_annotation = (args) ->\n  return \"'i was annotated with ' + \" + readable.generateReadableExpression(args[0])";
+      var before, code, result;
+      before = "annotatedfn = () ->\nannotatedfn.__choc_annotation = (args) ->\n  return \"'i was annotated with ' + \" + \"'\" + readable.generateReadableExpression(args[0]) + \"'\"";
       before = coffee.compile(before, {
         bare: true
       });
       code = "annotatedfn('hello')";
-      return pp(messageE(code, {
+      result = messageE(code, {
         before: before
-      }));
+      });
+      return result[0].message.should.eql('i was annotated with hello');
     });
   });
 
