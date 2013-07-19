@@ -10,7 +10,7 @@ JS_TEST_FILES := $(shell find js/test -name '*.test.*' | sed -e :a -e '$$!N;s/\n
 .PHONY: test test-js install watch js watch-js loc test-loc clean tree develop server workers run
 
 test:
-	./node_modules/.bin/mocha $(TEST_FILES)
+	./node_modules/.bin/mocha --compilers coffee:coffee-script $(TEST_FILES)
 
 test-js: js
 	./node_modules/.bin/mocha $(JS_TEST_FILES)

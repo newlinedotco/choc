@@ -99,9 +99,6 @@
       case 'IfStatement':
         conditional = opts.hoistedAttributes ? opts.hoistedAttributes[1] : true;
         return "(function (__conditional) { \n var startLine = " + node.loc.start.line + ";\n var endLine   = " + node.loc.end.line + ";\n if(__conditional) { \n   var messages = [ { lineNumber: startLine, message: \"Because \" + " + (generateReadableExpression(node.test)) + " } ]\n   return messages;\n } else {\n   var messages = [ { lineNumber: startLine, message: \"Because \" + " + (generateReadableExpression(node.test)) + " + \" is false\"} ]\n   return messages;\n }\n})(" + conditional + ")";
-      case 'ReturnStatement':
-        pp(node);
-        return "[]";
       default:
         return "[]";
     }
@@ -116,7 +113,6 @@
       case 'ExpressionStatement':
       case 'WhileStatement':
       case 'IfStatement':
-      case 'ReturnStatement':
       case 'CallExpression':
         return generateReadableStatement(node, opts);
       default:
