@@ -91,6 +91,8 @@
         return "[ " + msgs.join(", ") + " ]";
       case 'ExpressionStatement':
         return ("[ { lineNumber: " + node.loc.start.line + ", message: ") + generateReadableExpression(node.expression) + " } ]";
+      case 'CallExpression':
+        return ("[ { lineNumber: " + node.loc.start.line + ", message: ") + generateReadableExpression(node) + " } ]";
       case 'WhileStatement':
         conditional = opts.hoistedAttributes ? opts.hoistedAttributes[1] : true;
         return "(function (__conditional) { \n if(__conditional) { \n   var startLine = " + node.loc.start.line + ";\n   var endLine   = " + node.loc.end.line + ";\n   var messages = [ { lineNumber: startLine, message: \"Because \" + " + (generateReadableExpression(node.test)) + " } ]\n   // CodeMirror is ridiculously slow when removing these messages. TODO speed it up and add them back\n   // for(var i=startLine+1; i<= endLine; i++) {\n   //   var message = i == startLine+1 ? \"do this\" : \"and this\";\n   //   messages.push({ lineNumber: i, message: message });\n   // }\n   messages.push( { lineNumber: endLine, message: \"... and try again\" } )\n   // do this\n   // and this\n   // ... and try again\n   return messages;\n } else {\n   // Because -> condition with variables expanded e.g. 0 <= 200 is false\n   // ... stop looping\n   var startLine = " + node.loc.start.line + ";\n   var endLine   = " + node.loc.end.line + ";\n   var messages = [ { lineNumber: startLine, message: \"Because \" + " + (generateReadableExpression(node.test)) + " + \" is false\"} ]\n   messages.push( { lineNumber: endLine, message: \"stop looping\" } )\n   return messages;\n }\n})(" + conditional + ")";
@@ -111,6 +113,7 @@
       case 'ExpressionStatement':
       case 'WhileStatement':
       case 'IfStatement':
+      case 'CallExpression':
         return generateReadableStatement(node, opts);
       default:
         return "[]";

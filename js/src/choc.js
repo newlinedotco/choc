@@ -113,10 +113,12 @@
       original_function = node.callee.name;
       original_arguments = node["arguments"];
       messagesString = readable.readableNode(node, opts);
+      pp(node);
+      pp(messagesString);
       trace_opts = "var opts = { lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " };";
       trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init;
       node.callee.name = "__choc_trace_call";
-      node["arguments"] = [
+      return node["arguments"] = [
         {
           type: 'ThisExpression'
         }, {
@@ -130,7 +132,6 @@
           elements: original_arguments
         }, trace_opts_tree
       ];
-      return pp(node);
     } else {
 
     }

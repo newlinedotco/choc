@@ -57,7 +57,7 @@
       code = "console.log('hello')";
       return pp(message(code));
     });
-    return it.only('function calls with annotations', function() {
+    return it('function calls with annotations', function() {
       var before, code, result;
       before = "annotatedfn = () ->\nannotatedfn.__choc_annotation = (args) ->\n  return \"'i was annotated with ' + \" + \"'\" + readable.generateReadableExpression(args[0]) + \"'\"";
       before = coffee.compile(before, {

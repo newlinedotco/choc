@@ -1197,10 +1197,12 @@ EventEmitter.prototype.listeners = function(type) {
       original_function = node.callee.name;
       original_arguments = node["arguments"];
       messagesString = readable.readableNode(node, opts);
+      pp(node);
+      pp(messagesString);
       trace_opts = "var opts = { lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " };";
       trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init;
       node.callee.name = "__choc_trace_call";
-      node["arguments"] = [
+      return node["arguments"] = [
         {
           type: 'ThisExpression'
         }, {
@@ -1214,7 +1216,6 @@ EventEmitter.prototype.listeners = function(type) {
           elements: original_arguments
         }, trace_opts_tree
       ];
-      return pp(node);
     } else {
 
     }
@@ -1438,7 +1439,7 @@ EventEmitter.prototype.listeners = function(type) {
 
 }).call(this);
 
-},{"util":3,"./readable":7,"../../lib/estraverse":6,"esprima":8,"escodegen":9,"esmorph":10,"underscore":11,"debug":12,"deep":13}],8:[function(require,module,exports){
+},{"util":3,"./readable":7,"../../lib/estraverse":6,"esprima":8,"escodegen":9,"esmorph":10,"debug":11,"deep":12,"underscore":13}],8:[function(require,module,exports){
 (function(){/*
   Copyright (C) 2012 Ariya Hidayat <ariya.hidayat@gmail.com>
   Copyright (C) 2012 Mathias Bynens <mathias@qiwi.be>
@@ -5350,6 +5351,132 @@ parseStatement: true, parseSourceElement: true */
 
 })()
 },{}],11:[function(require,module,exports){
+
+/**
+ * Expose `debug()` as the module.
+ */
+
+module.exports = debug;
+
+/**
+ * Create a debugger with the given `name`.
+ *
+ * @param {String} name
+ * @return {Type}
+ * @api public
+ */
+
+function debug(name) {
+  if (!debug.enabled(name)) return function(){};
+
+  return function(fmt){
+    var curr = new Date;
+    var ms = curr - (debug[name] || curr);
+    debug[name] = curr;
+
+    fmt = name
+      + ' '
+      + fmt
+      + ' +' + debug.humanize(ms);
+
+    // This hackery is required for IE8
+    // where `console.log` doesn't have 'apply'
+    window.console
+      && console.log
+      && Function.prototype.apply.call(console.log, console, arguments);
+  }
+}
+
+/**
+ * The currently active debug mode names.
+ */
+
+debug.names = [];
+debug.skips = [];
+
+/**
+ * Enables a debug mode by name. This can include modes
+ * separated by a colon and wildcards.
+ *
+ * @param {String} name
+ * @api public
+ */
+
+debug.enable = function(name) {
+  try {
+    localStorage.debug = name;
+  } catch(e){}
+
+  var split = (name || '').split(/[\s,]+/)
+    , len = split.length;
+
+  for (var i = 0; i < len; i++) {
+    name = split[i].replace('*', '.*?');
+    if (name[0] === '-') {
+      debug.skips.push(new RegExp('^' + name.substr(1) + '$'));
+    }
+    else {
+      debug.names.push(new RegExp('^' + name + '$'));
+    }
+  }
+};
+
+/**
+ * Disable debug output.
+ *
+ * @api public
+ */
+
+debug.disable = function(){
+  debug.enable('');
+};
+
+/**
+ * Humanize the given `ms`.
+ *
+ * @param {Number} m
+ * @return {String}
+ * @api private
+ */
+
+debug.humanize = function(ms) {
+  var sec = 1000
+    , min = 60 * 1000
+    , hour = 60 * min;
+
+  if (ms >= hour) return (ms / hour).toFixed(1) + 'h';
+  if (ms >= min) return (ms / min).toFixed(1) + 'm';
+  if (ms >= sec) return (ms / sec | 0) + 's';
+  return ms + 'ms';
+};
+
+/**
+ * Returns true if the given mode name is enabled, false otherwise.
+ *
+ * @param {String} name
+ * @return {Boolean}
+ * @api public
+ */
+
+debug.enabled = function(name) {
+  for (var i = 0, len = debug.skips.length; i < len; i++) {
+    if (debug.skips[i].test(name)) {
+      return false;
+    }
+  }
+  for (var i = 0, len = debug.names.length; i < len; i++) {
+    if (debug.names[i].test(name)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+// persist
+
+if (window.localStorage) debug.enable(localStorage.debug);
+
+},{}],13:[function(require,module,exports){
 (function(){//     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -6578,132 +6705,6 @@ parseStatement: true, parseSourceElement: true */
 }).call(this);
 
 })()
-},{}],12:[function(require,module,exports){
-
-/**
- * Expose `debug()` as the module.
- */
-
-module.exports = debug;
-
-/**
- * Create a debugger with the given `name`.
- *
- * @param {String} name
- * @return {Type}
- * @api public
- */
-
-function debug(name) {
-  if (!debug.enabled(name)) return function(){};
-
-  return function(fmt){
-    var curr = new Date;
-    var ms = curr - (debug[name] || curr);
-    debug[name] = curr;
-
-    fmt = name
-      + ' '
-      + fmt
-      + ' +' + debug.humanize(ms);
-
-    // This hackery is required for IE8
-    // where `console.log` doesn't have 'apply'
-    window.console
-      && console.log
-      && Function.prototype.apply.call(console.log, console, arguments);
-  }
-}
-
-/**
- * The currently active debug mode names.
- */
-
-debug.names = [];
-debug.skips = [];
-
-/**
- * Enables a debug mode by name. This can include modes
- * separated by a colon and wildcards.
- *
- * @param {String} name
- * @api public
- */
-
-debug.enable = function(name) {
-  try {
-    localStorage.debug = name;
-  } catch(e){}
-
-  var split = (name || '').split(/[\s,]+/)
-    , len = split.length;
-
-  for (var i = 0; i < len; i++) {
-    name = split[i].replace('*', '.*?');
-    if (name[0] === '-') {
-      debug.skips.push(new RegExp('^' + name.substr(1) + '$'));
-    }
-    else {
-      debug.names.push(new RegExp('^' + name + '$'));
-    }
-  }
-};
-
-/**
- * Disable debug output.
- *
- * @api public
- */
-
-debug.disable = function(){
-  debug.enable('');
-};
-
-/**
- * Humanize the given `ms`.
- *
- * @param {Number} m
- * @return {String}
- * @api private
- */
-
-debug.humanize = function(ms) {
-  var sec = 1000
-    , min = 60 * 1000
-    , hour = 60 * min;
-
-  if (ms >= hour) return (ms / hour).toFixed(1) + 'h';
-  if (ms >= min) return (ms / min).toFixed(1) + 'm';
-  if (ms >= sec) return (ms / sec | 0) + 's';
-  return ms + 'ms';
-};
-
-/**
- * Returns true if the given mode name is enabled, false otherwise.
- *
- * @param {String} name
- * @return {Boolean}
- * @api public
- */
-
-debug.enabled = function(name) {
-  for (var i = 0, len = debug.skips.length; i < len; i++) {
-    if (debug.skips[i].test(name)) {
-      return false;
-    }
-  }
-  for (var i = 0, len = debug.names.length; i < len; i++) {
-    if (debug.names[i].test(name)) {
-      return true;
-    }
-  }
-  return false;
-};
-
-// persist
-
-if (window.localStorage) debug.enable(localStorage.debug);
-
 },{}],14:[function(require,module,exports){
 
 },{}],7:[function(require,module,exports){
@@ -6800,6 +6801,8 @@ if (window.localStorage) debug.enable(localStorage.debug);
         return "[ " + msgs.join(", ") + " ]";
       case 'ExpressionStatement':
         return ("[ { lineNumber: " + node.loc.start.line + ", message: ") + generateReadableExpression(node.expression) + " } ]";
+      case 'CallExpression':
+        return ("[ { lineNumber: " + node.loc.start.line + ", message: ") + generateReadableExpression(node) + " } ]";
       case 'WhileStatement':
         conditional = opts.hoistedAttributes ? opts.hoistedAttributes[1] : true;
         return "(function (__conditional) { \n if(__conditional) { \n   var startLine = " + node.loc.start.line + ";\n   var endLine   = " + node.loc.end.line + ";\n   var messages = [ { lineNumber: startLine, message: \"Because \" + " + (generateReadableExpression(node.test)) + " } ]\n   // CodeMirror is ridiculously slow when removing these messages. TODO speed it up and add them back\n   // for(var i=startLine+1; i<= endLine; i++) {\n   //   var message = i == startLine+1 ? \"do this\" : \"and this\";\n   //   messages.push({ lineNumber: i, message: message });\n   // }\n   messages.push( { lineNumber: endLine, message: \"... and try again\" } )\n   // do this\n   // and this\n   // ... and try again\n   return messages;\n } else {\n   // Because -> condition with variables expanded e.g. 0 <= 200 is false\n   // ... stop looping\n   var startLine = " + node.loc.start.line + ";\n   var endLine   = " + node.loc.end.line + ";\n   var messages = [ { lineNumber: startLine, message: \"Because \" + " + (generateReadableExpression(node.test)) + " + \" is false\"} ]\n   messages.push( { lineNumber: endLine, message: \"stop looping\" } )\n   return messages;\n }\n})(" + conditional + ")";
@@ -6820,6 +6823,7 @@ if (window.localStorage) debug.enable(localStorage.debug);
       case 'ExpressionStatement':
       case 'WhileStatement':
       case 'IfStatement':
+      case 'CallExpression':
         return generateReadableStatement(node, opts);
       default:
         return "[]";
@@ -6832,7 +6836,7 @@ if (window.localStorage) debug.enable(localStorage.debug);
 
 }).call(this);
 
-},{"util":3,"esprima":8,"escodegen":9,"esmorph":10,"underscore":11}],15:[function(require,module,exports){
+},{"util":3,"esprima":8,"escodegen":9,"underscore":13,"esmorph":10}],15:[function(require,module,exports){
 module.exports={
   "name": "escodegen",
   "description": "ECMAScript code generator",
@@ -9793,7 +9797,7 @@ module.exports={
 
 
 })()
-},{"esprima":8}],13:[function(require,module,exports){
+},{"esprima":8}],12:[function(require,module,exports){
 // Generated by CoffeeScript 1.6.2
 (function() {
   var deep, _,
@@ -9907,5 +9911,5 @@ module.exports={
 
 }).call(this);
 
-},{"underscore":11}]},{},[1])
+},{"underscore":13}]},{},[1])
 ;
