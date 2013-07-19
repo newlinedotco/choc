@@ -102,7 +102,7 @@
   };
 
   generateCallTrace = function(node, opts) {
-    var line, nodeType, range;
+    var line, messagesString, nodeType, original_arguments, original_function, range, trace_opts, trace_opts_tree;
     if (opts == null) {
       opts = {};
     }
@@ -110,7 +110,27 @@
     line = node.loc.start.line;
     range = node.range;
     if (node.callee.type === "Identifier") {
-
+      original_function = node.callee.name;
+      original_arguments = node["arguments"];
+      messagesString = readable.readableNode(node, opts);
+      trace_opts = "var opts = { lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " };";
+      trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init;
+      node.callee.name = "__choc_trace_call";
+      node["arguments"] = [
+        {
+          type: 'ThisExpression'
+        }, {
+          type: 'Literal',
+          value: null
+        }, {
+          type: 'Identifier',
+          name: original_function
+        }, {
+          type: 'ArrayExpression',
+          elements: original_arguments
+        }, trace_opts_tree
+      ];
+      return pp(node);
     } else {
 
     }
@@ -190,10 +210,7 @@
             innerBlockContainer.push(traceTree);
           }
         } else if (nodeType === 'CallExpression') {
-          pp(["CallExpression", parentPathAttribute]);
-          traceTree = generateTraceTree(node, {
-            hoistedAttributes: [hoister[nodeType], newVariableName]
-          });
+          traceTree = generateCallTrace(node);
         } else if (isPlainStatement(nodeType)) {
           traceTree = generateTraceTree(node);
           if (_.isNumber(parentPathIndex)) {
@@ -220,6 +237,7 @@
       if (options == null) {
         options = {};
       }
+      this.traceCall = __bind(this.traceCall, this);
       this.trace = __bind(this.trace, this);
       this.frameCount = 0;
       this.onMessages = function() {};
@@ -256,6 +274,17 @@
       };
     };
 
+    Tracer.prototype.traceCall = function(tracer) {
+      return function(thisArg, target, fn, args, opts) {
+        tracer(opts);
+        if (target != null) {
+
+        } else {
+          return fn.apply(thisArg, args);
+        }
+      };
+    };
+
     return Tracer;
 
   })();
@@ -263,7 +292,7 @@
   noop = function() {};
 
   scrub = function(source, count, opts) {
-    var afterAll, afterEach, beforeEach, e, executionTerminated, locals, localsStr, newSource, onCodeError, onFrame, onMessages, onTimeline, tracer, __choc_first_message, __choc_trace;
+    var afterAll, afterEach, beforeEach, e, executionTerminated, locals, localsStr, newSource, onCodeError, onFrame, onMessages, onTimeline, tracer, __choc_first_message, __choc_trace, __choc_trace_call;
     onFrame = opts.onFrame || noop;
     beforeEach = opts.beforeEach || noop;
     afterEach = opts.afterEach || noop;
@@ -283,6 +312,7 @@
       __choc_trace = tracer.trace({
         count: count
       });
+      __choc_trace_call = tracer.traceCall(__choc_trace);
       __choc_first_message = function(messages) {
         var _ref1;
         if (_.isNull((_ref1 = messages[0]) != null ? _ref1.message : void 0)) {

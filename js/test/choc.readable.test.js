@@ -31,7 +31,6 @@
         range: true,
         loc: true
       }).body[0];
-      pp(nodes);
       return readable.readableNode(nodes, opts);
     };
     messageE = function(code, opts) {

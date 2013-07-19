@@ -1186,7 +1186,7 @@ EventEmitter.prototype.listeners = function(type) {
   };
 
   generateCallTrace = function(node, opts) {
-    var line, nodeType, range;
+    var line, messagesString, nodeType, original_arguments, original_function, range, trace_opts, trace_opts_tree;
     if (opts == null) {
       opts = {};
     }
@@ -1194,7 +1194,27 @@ EventEmitter.prototype.listeners = function(type) {
     line = node.loc.start.line;
     range = node.range;
     if (node.callee.type === "Identifier") {
-
+      original_function = node.callee.name;
+      original_arguments = node["arguments"];
+      messagesString = readable.readableNode(node, opts);
+      trace_opts = "var opts = { lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " };";
+      trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init;
+      node.callee.name = "__choc_trace_call";
+      node["arguments"] = [
+        {
+          type: 'ThisExpression'
+        }, {
+          type: 'Literal',
+          value: null
+        }, {
+          type: 'Identifier',
+          name: original_function
+        }, {
+          type: 'ArrayExpression',
+          elements: original_arguments
+        }, trace_opts_tree
+      ];
+      return pp(node);
     } else {
 
     }
@@ -1274,10 +1294,7 @@ EventEmitter.prototype.listeners = function(type) {
             innerBlockContainer.push(traceTree);
           }
         } else if (nodeType === 'CallExpression') {
-          pp(["CallExpression", parentPathAttribute]);
-          traceTree = generateTraceTree(node, {
-            hoistedAttributes: [hoister[nodeType], newVariableName]
-          });
+          traceTree = generateCallTrace(node);
         } else if (isPlainStatement(nodeType)) {
           traceTree = generateTraceTree(node);
           if (_.isNumber(parentPathIndex)) {
@@ -1304,6 +1321,7 @@ EventEmitter.prototype.listeners = function(type) {
       if (options == null) {
         options = {};
       }
+      this.traceCall = __bind(this.traceCall, this);
       this.trace = __bind(this.trace, this);
       this.frameCount = 0;
       this.onMessages = function() {};
@@ -1340,6 +1358,17 @@ EventEmitter.prototype.listeners = function(type) {
       };
     };
 
+    Tracer.prototype.traceCall = function(tracer) {
+      return function(thisArg, target, fn, args, opts) {
+        tracer(opts);
+        if (target != null) {
+
+        } else {
+          return fn.apply(thisArg, args);
+        }
+      };
+    };
+
     return Tracer;
 
   })();
@@ -1347,7 +1376,7 @@ EventEmitter.prototype.listeners = function(type) {
   noop = function() {};
 
   scrub = function(source, count, opts) {
-    var afterAll, afterEach, beforeEach, e, executionTerminated, locals, localsStr, newSource, onCodeError, onFrame, onMessages, onTimeline, tracer, __choc_first_message, __choc_trace;
+    var afterAll, afterEach, beforeEach, e, executionTerminated, locals, localsStr, newSource, onCodeError, onFrame, onMessages, onTimeline, tracer, __choc_first_message, __choc_trace, __choc_trace_call;
     onFrame = opts.onFrame || noop;
     beforeEach = opts.beforeEach || noop;
     afterEach = opts.afterEach || noop;
@@ -1367,6 +1396,7 @@ EventEmitter.prototype.listeners = function(type) {
       __choc_trace = tracer.trace({
         count: count
       });
+      __choc_trace_call = tracer.traceCall(__choc_trace);
       __choc_first_message = function(messages) {
         var _ref1;
         if (_.isNull((_ref1 = messages[0]) != null ? _ref1.message : void 0)) {
@@ -6738,7 +6768,6 @@ if (window.localStorage) debug.enable(localStorage.debug);
         message = operators[node.operator] || "";
         return "" + message;
       case 'CallExpression':
-        console.log(node);
         target = ((_ref1 = node.callee) != null ? _ref1.name : void 0) || (node.callee.object.name + "." + node.callee.property.name);
         return "(function() {\n  if(" + target + ".hasOwnProperty(\"__choc_annotation\")) {\n    return eval(" + target + ".__choc_annotation(" + (inspect(node["arguments"], null, 1000)) + "));\n  } else if (" + (((_ref2 = node.callee) != null ? _ref2.name : void 0) != null ? "true" : "false") + ") {\n    return \"call the function <span class='choc-variable'>" + node.callee.name + "</span>\";\n  } else if (" + (((_ref3 = node.callee) != null ? (_ref4 = _ref3.object) != null ? _ref4.name : void 0 : void 0) ? "true" : "false") + ") {\n    return \"tell <span class='choc-variable'>" + ((_ref5 = node.callee) != null ? (_ref6 = _ref5.object) != null ? _ref6.name : void 0 : void 0) + "</span> to <span class='choc-variable'>" + ((_ref7 = node.callee) != null ? (_ref8 = _ref7.property) != null ? _ref8.name : void 0 : void 0) + "</span>\";\n  } else {\n    return \"\";\n  }\n})()";
       case 'Literal':
@@ -6803,7 +6832,7 @@ if (window.localStorage) debug.enable(localStorage.debug);
 
 }).call(this);
 
-},{"util":3,"esprima":8,"escodegen":9,"underscore":11,"esmorph":10}],15:[function(require,module,exports){
+},{"util":3,"esprima":8,"escodegen":9,"esmorph":10,"underscore":11}],15:[function(require,module,exports){
 module.exports={
   "name": "escodegen",
   "description": "ECMAScript code generator",
