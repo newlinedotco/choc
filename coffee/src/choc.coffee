@@ -109,6 +109,9 @@ generateCallTrace = (node, opts={}) ->
     original_arguments = node.arguments
 
     messagesString = readable.readableNode(node, opts)
+    pp node
+    pp messagesString
+
     # TODO craft these directly?
     trace_opts = """
     var opts = { lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} };
@@ -132,7 +135,7 @@ generateCallTrace = (node, opts={}) ->
       },
       trace_opts_tree
     ]
-    pp node
+    # pp node
   # return esprima.parse(signature).body[0]
 
   else

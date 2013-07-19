@@ -89,6 +89,8 @@ generateReadableStatement = (node, opts={}) ->
       "[ " + msgs.join(", ") + " ]"
     when 'ExpressionStatement'
       "[ { lineNumber: #{node.loc.start.line}, message: " + generateReadableExpression(node.expression) + " } ]"
+    when 'CallExpression'
+      "[ { lineNumber: #{node.loc.start.line}, message: " + generateReadableExpression(node) + " } ]"
     when 'WhileStatement'
       conditional = if opts.hoistedAttributes
           opts.hoistedAttributes[1] # TODO
@@ -144,7 +146,7 @@ generateReadableStatement = (node, opts={}) ->
   
 readableNode = (node, opts={}) ->
   switch node.type
-    when 'VariableDeclaration', 'ExpressionStatement', 'WhileStatement', 'IfStatement'
+    when 'VariableDeclaration', 'ExpressionStatement', 'WhileStatement', 'IfStatement', 'CallExpression'
       generateReadableStatement(node, opts)
     else
       "[]"

@@ -19,6 +19,5 @@ describe 'Choc', ->
     """
     newSource   = choc.generateAnnotatedSource(src)
     puts newSource
-
     assert.ok true
  
