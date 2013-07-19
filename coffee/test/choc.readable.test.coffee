@@ -29,7 +29,7 @@ describe 'Readable', ->
     code = "console.log('hello')"
     pp message(code)
 
-  it.only 'function calls with annotations', () ->
+  it 'function calls with annotations', () ->
     before = """
     annotatedfn = () ->
     annotatedfn.__choc_annotation = (args) ->
