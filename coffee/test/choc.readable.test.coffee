@@ -29,7 +29,7 @@ describe 'Readable', ->
     code = "console.log('hello')"
     pp message(code)
 
-  it.only 'function calls with annotations', () ->
+  it 'function calls with annotations', () ->
     before = """
     annotatedfn = () ->
     annotatedfn.__choc_annotation = (args) ->
@@ -39,6 +39,15 @@ describe 'Readable', ->
     code = "annotatedfn('hello')"
     result = messageE(code, before: before)
     result[0].message.should.eql 'i was annotated with hello'
+
+  # it.only 'return statements', () ->
+  #   code =  """
+  #   function a() {
+  #     return(1 + 2);
+  #   }
+  #   """
+  #   before = coffee.compile(before, bare: true)
+  #   pp message(code)
 
 
 

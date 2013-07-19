@@ -141,12 +141,15 @@ generateReadableStatement = (node, opts={}) ->
        }
       })(#{conditional})
     """ 
+    when 'ReturnStatement'
+      pp node
+      "[]"
     else
       "[]"
   
 readableNode = (node, opts={}) ->
   switch node.type
-    when 'VariableDeclaration', 'ExpressionStatement', 'WhileStatement', 'IfStatement', 'CallExpression'
+    when 'VariableDeclaration', 'ExpressionStatement', 'WhileStatement', 'IfStatement', 'ReturnStatement', 'CallExpression'
       generateReadableStatement(node, opts)
     else
       "[]"
