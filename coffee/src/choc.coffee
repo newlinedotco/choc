@@ -87,7 +87,8 @@ generateTraceTree = (node, opts={}) ->
   signature = """
   #{Choc.TRACE_FUNCTION_NAME}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
   """
-  # console.log(signature)
+  #console.log(esprima.parse(signature))
+  # pp esprima.parse(signature)
   return esprima.parse(signature).body[0]
 
 generateCallTrace = (node, opts={}) ->
@@ -102,7 +103,37 @@ generateCallTrace = (node, opts={}) ->
 
   # here you can either generate the tree with generate and a string or you can compose the parser api objects and manipulate them
 
+
   if node.callee.type == "Identifier"
+    original_function = node.callee.name
+    original_arguments = node.arguments
+
+    messagesString = readable.readableNode(node, opts)
+    # TODO craft these directly?
+    trace_opts = """
+    var opts = { lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} };
+    """
+    trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init
+
+    node.callee.name = "__choc_trace_call"
+    node.arguments = [
+      { type: 'ThisExpression' },
+      { 
+        type: 'Literal' 
+        value: null
+      },
+      {
+        type: 'Identifier'
+        name: original_function
+      },
+      {
+        type: 'ArrayExpression'
+        elements: original_arguments
+      },
+      trace_opts_tree
+    ]
+    pp node
+  # return esprima.parse(signature).body[0]
 
   else
 
@@ -190,8 +221,8 @@ generateAnnotatedSource = (source) ->
 
       # TODO case statement
       else if nodeType == 'CallExpression'
-        pp ["CallExpression", parentPathAttribute]
-        traceTree = generateTraceTree(node, hoistedAttributes: [hoister[nodeType], newVariableName])
+        # pp ["CallExpression", parentPathAttribute]
+        traceTree = generateCallTrace(node)
 
       else if isPlainStatement(nodeType)
         traceTree = generateTraceTree(node)
@@ -239,6 +270,15 @@ class Tracer
         error.info = info
         throw error
 
+  traceCall: (tracer) =>
+    (thisArg, target, fn, args, opts) ->
+      tracer(opts)
+      if target?
+        
+      else
+        fn.apply(thisArg, args)
+      
+
 noop = () -> 
 
 scrub = (source, count, opts) ->
@@ -264,6 +304,7 @@ scrub = (source, count, opts) ->
 
     # create a few functions to be used by the eval'd source
     __choc_trace         = tracer.trace(count: count)
+    __choc_trace_call    = tracer.traceCall(__choc_trace)
     __choc_first_message = (messages) -> if _.isNull(messages[0]?.message) then "TODO" else messages[0].message
 
     # add our own local vars

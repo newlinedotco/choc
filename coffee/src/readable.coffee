@@ -47,7 +47,7 @@ generateReadableExpression = (node, opts={}) ->
       message = operators[node.operator] || ""
       "#{message}"
     when 'CallExpression'
-      console.log(node)
+      # console.log(node)
       # tell target to verb with parameters
       # but we want to allow some context specific language here
       # if we annotate the functions themselves, then we might be able to annotate prototypes, but maybe not local functions

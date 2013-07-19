@@ -10,7 +10,6 @@ describe 'Readable', ->
 
   message = (code, opts={}) ->
     nodes = esprima.parse(code, {range: true, loc: true}).body[0]
-    pp nodes
     readable.readableNode(nodes, opts)
 
   messageE = (code, opts={}) ->
