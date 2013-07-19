@@ -7,11 +7,21 @@ _ = require("underscore")
 # The code below is atrocious. Until javascript has macros, this will have to do.
 # I hope you'll be delighted in the interface enough to overlook the warts in the implementation.
 
+generateReadableValue = (node1, node2, opts={}) ->
+  if node1.name
+    "#{node1.name}"
+  else
+    switch node2.type
+      when 'FunctionExpression'
+        "'this function'"
+      else
+        "'TODO'"
+
 generateReadableExpression = (node, opts={}) ->
   switch node.type
     when 'AssignmentExpression'
       operators = 
-        "=":  "'set #{node.left.name} to ' + #{node.left.name}"
+        "=":  "'set ' + #{generateReadableExpression(node.left, {want: "name"})} + ' to ' + #{generateReadableValue(node.left, node.right)}"
         "+=": "'add ' + #{generateReadableExpression(node.right)} + ' to #{node.left.name} and set #{node.left.name} to ' + #{node.left.name}"
         "-=": "'subtract ' + #{generateReadableExpression(node.right)} + ' from #{node.left.name}' + ' and set #{node.left.name} to ' + #{node.left.name}"
         "*=": "'multiply #{node.left.name} by ' + #{generateReadableExpression(node.right)} + ' and set #{node.left.name} to ' + #{node.left.name}"
@@ -68,10 +78,15 @@ generateReadableExpression = (node, opts={}) ->
         }
       })()
       """
+    when "MemberExpression"
+      "'#{node.object.name}\\\'s #{node.property.name}'"
     when 'Literal'
       "#{node.value}"
     when 'Identifier'
-      "#{node.name}"
+      if opts.want == "name"
+        "'#{node.name}'"
+      else
+        "#{node.name}"
     else
       ""
 
@@ -142,8 +157,11 @@ generateReadableStatement = (node, opts={}) ->
       })(#{conditional})
     """ 
     when 'ReturnStatement'
-      pp node
-      "[]"
+      hoistedVar = if opts.hoistedAttributes
+          opts.hoistedAttributes[1] # TODO
+        else 
+          "''" 
+      "[ { lineNumber: #{node.loc.start.line}, message: 'return ' + " + hoistedVar + " } ]"
     else
       "[]"
   

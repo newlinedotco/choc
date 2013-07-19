@@ -9,8 +9,10 @@ coffee = require("coffee-script")
 describe 'Readable', ->
 
   message = (code, opts={}) ->
-    nodes = esprima.parse(code, {range: true, loc: true}).body[0]
-    readable.readableNode(nodes, opts)
+    nodes = esprima.parse(code, {range: true, loc: true})#.body[0]
+    pp nodes
+    readable.readableNode(nodes.body[0], opts)
+
 
   messageE = (code, opts={}) ->
     beforeCode = opts.before || ""
@@ -40,14 +42,24 @@ describe 'Readable', ->
     result = messageE(code, before: before)
     result[0].message.should.eql 'i was annotated with hello'
 
-  # it.only 'return statements', () ->
-  #   code =  """
-  #   function a() {
-  #     return(1 + 2);
-  #   }
-  #   """
-  #   before = coffee.compile(before, bare: true)
-  #   pp message(code)
+  it 'return statements', () ->
+    code =  """
+    function a() {
+      return(1 + 2);
+    }
+    """
+    pp message(code)
 
+  it.only 'member functions', () ->
+    code = """
+      var bob = {}
+      bob.add = function(a, b){
+        return a + b;
+      }
 
+      var x = bob.add(1, 2) + bob.add(3, 4);
+      var y = x;
+    """
+
+    pp message(code)
 
