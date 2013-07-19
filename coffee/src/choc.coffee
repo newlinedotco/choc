@@ -107,17 +107,11 @@ generateCallTrace = (node, opts={}) ->
   if node.callee.type == "Identifier"
     original_function = node.callee.name
     original_arguments = node.arguments
-
     messagesString = readable.readableNode(node, opts)
-    pp node
-    pp messagesString
-
-    # TODO craft these directly?
     trace_opts = """
     var opts = { lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} };
     """
     trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init
-
     node.callee.name = "__choc_trace_call"
     node.arguments = [
       { type: 'ThisExpression' },
@@ -139,13 +133,29 @@ generateCallTrace = (node, opts={}) ->
   # return esprima.parse(signature).body[0]
 
   else
-
-  # messagesString = readable.readableNode(node, opts)
-  # signature = """
-  # __choc_trace_call({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
-  # """
-  # return esprima.parse(signature).body[0]
-
+    original_object = node.callee.object
+    original_property = node.callee.property
+    original_arguments = node.arguments
+    messagesString = readable.readableNode(node, opts)
+    trace_opts = """
+    var opts = { lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} };
+    """
+    trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init
+    node.callee.name = "__choc_trace_call"
+    node.callee.type = "Identifier"
+    node.arguments = [
+      { type: 'ThisExpression' },
+      original_object,
+      { 
+        type: 'Literal',
+        value: original_property.name
+      },
+      {
+        type: 'ArrayExpression'
+        elements: original_arguments
+      },
+      trace_opts_tree
+    ]
 
 generateAnnotatedSource = (source) ->
   try
@@ -277,7 +287,7 @@ class Tracer
     (thisArg, target, fn, args, opts) ->
       tracer(opts)
       if target?
-        
+        target[fn].apply(thisArg, args)
       else
         fn.apply(thisArg, args)
       

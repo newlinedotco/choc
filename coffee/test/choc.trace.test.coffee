@@ -21,3 +21,20 @@ describe 'Choc', ->
     puts newSource
     assert.ok true
  
+
+  it.only 'member functions', () ->
+    src = """
+      var bob = {}
+      bob.add = function(a, b){
+        return a + b;
+      }
+
+      var x = bob.add(1, 2) + bob.add(3, 4);
+      var foo = "hellomom";
+      var y = x;
+    """
+    newSource   = choc.generateAnnotatedSource(src)
+    puts newSource
+    assert.ok true
+ 
+
