@@ -17,7 +17,7 @@
   if ((typeof require !== "undefined" && require !== null) && (require.main === module)) {
     source_todo = "function add(a, b) {\n  var c = 3;\n  return a + b;\n}\n\nvar sub = function(a, b) {\n  var c = 3;\n  return a - b;\n}\nwhile (shift <= 200) {\n  // console.log(shift);\n  var x = add(1, shift);\n  shift += 14; // increment\n}";
     source = "// Life, Universe, and Everything\nvar answer = 6 * 7, question = 3;\nvar foo = \"bar\";\nconsole.log(answer); console.log(foo);\n\n// parabolas\nvar shift = 0;\nwhile (shift <= 200) {\n  // console.log(shift);\n  var foo = shift;\n  foo = shift - 1;\n  shift += 14; // increment\n}";
-    source = "function add(a, b) {\n  return a + b;\n}\n\nvar shift = 0;\nvar x = add(1, shift) + shift.add(1, 2);\nvar y = 1 + x;";
+    source = "function add(a, b) {\n  return a + b;\n}\n\nvar shift = 0;\nvar x = add(1, shift) + add(1, 2);\nvar y = 1 + x;";
     scrubNotify = function(info) {
       return puts(inspect(info));
     };

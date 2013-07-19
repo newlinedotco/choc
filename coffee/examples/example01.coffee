@@ -46,7 +46,7 @@ if require? && (require.main == module)
   }
 
   var shift = 0;
-  var x = add(1, shift) + shift.add(1, 2);
+  var x = add(1, shift) + add(1, 2);
   var y = 1 + x;
   """
 
