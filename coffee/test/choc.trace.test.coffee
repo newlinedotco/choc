@@ -22,7 +22,7 @@ describe 'Choc', ->
     assert.ok true
  
 
-  it.only 'member functions', () ->
+  it 'member functions', () ->
     src = """
       var bob = {}
       bob.add = function(a, b){
@@ -32,6 +32,17 @@ describe 'Choc', ->
       var x = bob.add(1, 2) + bob.add(3, 4);
       var foo = "hellomom";
       var y = x;
+    """
+    newSource   = choc.generateAnnotatedSource(src)
+    puts newSource
+    assert.ok true
+ 
+
+  it.only 'traces functions once', () ->
+    src = """
+      var bob = 1
+      bob = 2;
+      console.log("hi")
     """
     newSource   = choc.generateAnnotatedSource(src)
     puts newSource

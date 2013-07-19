@@ -161,6 +161,7 @@ generateAnnotatedSource = (source) ->
   try
     tree = esprima.parse(source, {range: true, loc: true})
     debug(inspect(tree, null, 100))
+    # pp tree
   catch e
     error = new Error("choc source parsing error")
     error.original = e
@@ -238,14 +239,18 @@ generateAnnotatedSource = (source) ->
         traceTree = generateCallTrace(node)
 
       else if isPlainStatement(nodeType)
-        traceTree = generateTraceTree(node)
-        if _.isNumber(parentPathIndex)
-          newPosition = parentPathIndex + parent.__choc_offset + 1
-          parent[parentPathAttribute].splice(newPosition, 0, traceTree)
-          parent.__choc_offset = parent.__choc_offset + 1
-
+        if nodeType == "ExpressionStatement" && node.expression.type == "CallExpression" # functions have their own tracing
+          true
         else 
-          puts "WARNING: no parent idx"
+
+          traceTree = generateTraceTree(node)
+          if _.isNumber(parentPathIndex)
+            newPosition = parentPathIndex + parent.__choc_offset + 1
+            parent[parentPathAttribute].splice(newPosition, 0, traceTree)
+            parent.__choc_offset = parent.__choc_offset + 1
+
+          else 
+            puts "WARNING: no parent idx"
 
 
   escodegen.generate(tree, format: { compact: false } )
@@ -287,7 +292,7 @@ class Tracer
     (thisArg, target, fn, args, opts) ->
       tracer(opts)
       if target?
-        target[fn].apply(thisArg, args)
+        target[fn].apply(target, args)
       else
         fn.apply(thisArg, args)
       
@@ -306,6 +311,7 @@ scrub = (source, count, opts) ->
 
   newSource   = generateAnnotatedSourceM(source)
   debug(newSource)
+  # console.log(newSource)
 
   tracer = new Tracer()
   tracer.onMessages = onMessages
