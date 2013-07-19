@@ -23,9 +23,16 @@
   coffee = require("coffee-script");
 
   describe('Choc', function() {
-    return it('does something useful', function() {
+    it('does something useful', function() {
       var newSource, src;
       src = "function add(a, b) {\n  return a + b;\n}\n\nvar x = add(1, 2);\nvar y = x;";
+      newSource = choc.generateAnnotatedSource(src);
+      puts(newSource);
+      return assert.ok(true);
+    });
+    return it.only('member functions', function() {
+      var newSource, src;
+      src = "var bob = {}\nbob.add = function(a, b){\n  return a + b;\n}\n\nvar x = bob.add(1, 2) + bob.add(3, 4);\nvar foo = \"hellomom\";\nvar y = x;";
       newSource = choc.generateAnnotatedSource(src);
       puts(newSource);
       return assert.ok(true);

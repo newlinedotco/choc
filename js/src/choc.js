@@ -102,7 +102,7 @@
   };
 
   generateCallTrace = function(node, opts) {
-    var line, messagesString, nodeType, original_arguments, original_function, range, trace_opts, trace_opts_tree;
+    var line, messagesString, nodeType, original_arguments, original_function, original_object, original_property, range, trace_opts, trace_opts_tree;
     if (opts == null) {
       opts = {};
     }
@@ -113,8 +113,6 @@
       original_function = node.callee.name;
       original_arguments = node["arguments"];
       messagesString = readable.readableNode(node, opts);
-      pp(node);
-      pp(messagesString);
       trace_opts = "var opts = { lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " };";
       trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init;
       node.callee.name = "__choc_trace_call";
@@ -133,7 +131,25 @@
         }, trace_opts_tree
       ];
     } else {
-
+      original_object = node.callee.object;
+      original_property = node.callee.property;
+      original_arguments = node["arguments"];
+      messagesString = readable.readableNode(node, opts);
+      trace_opts = "var opts = { lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " };";
+      trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init;
+      node.callee.name = "__choc_trace_call";
+      node.callee.type = "Identifier";
+      return node["arguments"] = [
+        {
+          type: 'ThisExpression'
+        }, original_object, {
+          type: 'Literal',
+          value: original_property.name
+        }, {
+          type: 'ArrayExpression',
+          elements: original_arguments
+        }, trace_opts_tree
+      ];
     }
   };
 
@@ -279,7 +295,7 @@
       return function(thisArg, target, fn, args, opts) {
         tracer(opts);
         if (target != null) {
-
+          return target[fn].apply(thisArg, args);
         } else {
           return fn.apply(thisArg, args);
         }

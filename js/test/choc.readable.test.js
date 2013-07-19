@@ -30,8 +30,9 @@
       nodes = esprima.parse(code, {
         range: true,
         loc: true
-      }).body[0];
-      return readable.readableNode(nodes, opts);
+      });
+      pp(nodes);
+      return readable.readableNode(nodes.body[0], opts);
     };
     messageE = function(code, opts) {
       var beforeCode, toEval;
@@ -57,7 +58,7 @@
       code = "console.log('hello')";
       return pp(message(code));
     });
-    return it('function calls with annotations', function() {
+    it('function calls with annotations', function() {
       var before, code, result;
       before = "annotatedfn = () ->\nannotatedfn.__choc_annotation = (args) ->\n  return \"'i was annotated with ' + \" + \"'\" + readable.generateReadableExpression(args[0]) + \"'\"";
       before = coffee.compile(before, {
@@ -68,6 +69,16 @@
         before: before
       });
       return result[0].message.should.eql('i was annotated with hello');
+    });
+    it('return statements', function() {
+      var code;
+      code = "function a() {\n  return(1 + 2);\n}";
+      return pp(message(code));
+    });
+    return it.only('member functions', function() {
+      var code;
+      code = "var bob = {}\nbob.add = function(a, b){\n  return a + b;\n}\n\nvar x = bob.add(1, 2) + bob.add(3, 4);\nvar y = x;";
+      return pp(message(code));
     });
   });
 

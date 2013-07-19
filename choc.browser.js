@@ -1186,7 +1186,7 @@ EventEmitter.prototype.listeners = function(type) {
   };
 
   generateCallTrace = function(node, opts) {
-    var line, messagesString, nodeType, original_arguments, original_function, range, trace_opts, trace_opts_tree;
+    var line, messagesString, nodeType, original_arguments, original_function, original_object, original_property, range, trace_opts, trace_opts_tree;
     if (opts == null) {
       opts = {};
     }
@@ -1197,8 +1197,6 @@ EventEmitter.prototype.listeners = function(type) {
       original_function = node.callee.name;
       original_arguments = node["arguments"];
       messagesString = readable.readableNode(node, opts);
-      pp(node);
-      pp(messagesString);
       trace_opts = "var opts = { lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " };";
       trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init;
       node.callee.name = "__choc_trace_call";
@@ -1217,7 +1215,25 @@ EventEmitter.prototype.listeners = function(type) {
         }, trace_opts_tree
       ];
     } else {
-
+      original_object = node.callee.object;
+      original_property = node.callee.property;
+      original_arguments = node["arguments"];
+      messagesString = readable.readableNode(node, opts);
+      trace_opts = "var opts = { lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " };";
+      trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init;
+      node.callee.name = "__choc_trace_call";
+      node.callee.type = "Identifier";
+      return node["arguments"] = [
+        {
+          type: 'ThisExpression'
+        }, original_object, {
+          type: 'Literal',
+          value: original_property.name
+        }, {
+          type: 'ArrayExpression',
+          elements: original_arguments
+        }, trace_opts_tree
+      ];
     }
   };
 
@@ -1363,7 +1379,7 @@ EventEmitter.prototype.listeners = function(type) {
       return function(thisArg, target, fn, args, opts) {
         tracer(opts);
         if (target != null) {
-
+          return target[fn].apply(thisArg, args);
         } else {
           return fn.apply(thisArg, args);
         }
@@ -1439,7 +1455,7 @@ EventEmitter.prototype.listeners = function(type) {
 
 }).call(this);
 
-},{"util":3,"./readable":7,"../../lib/estraverse":6,"esprima":8,"escodegen":9,"esmorph":10,"debug":11,"deep":12,"underscore":13}],8:[function(require,module,exports){
+},{"util":3,"./readable":7,"../../lib/estraverse":6,"esprima":8,"escodegen":9,"esmorph":10,"underscore":11,"debug":12,"deep":13}],8:[function(require,module,exports){
 (function(){/*
   Copyright (C) 2012 Ariya Hidayat <ariya.hidayat@gmail.com>
   Copyright (C) 2012 Mathias Bynens <mathias@qiwi.be>
@@ -5351,132 +5367,6 @@ parseStatement: true, parseSourceElement: true */
 
 })()
 },{}],11:[function(require,module,exports){
-
-/**
- * Expose `debug()` as the module.
- */
-
-module.exports = debug;
-
-/**
- * Create a debugger with the given `name`.
- *
- * @param {String} name
- * @return {Type}
- * @api public
- */
-
-function debug(name) {
-  if (!debug.enabled(name)) return function(){};
-
-  return function(fmt){
-    var curr = new Date;
-    var ms = curr - (debug[name] || curr);
-    debug[name] = curr;
-
-    fmt = name
-      + ' '
-      + fmt
-      + ' +' + debug.humanize(ms);
-
-    // This hackery is required for IE8
-    // where `console.log` doesn't have 'apply'
-    window.console
-      && console.log
-      && Function.prototype.apply.call(console.log, console, arguments);
-  }
-}
-
-/**
- * The currently active debug mode names.
- */
-
-debug.names = [];
-debug.skips = [];
-
-/**
- * Enables a debug mode by name. This can include modes
- * separated by a colon and wildcards.
- *
- * @param {String} name
- * @api public
- */
-
-debug.enable = function(name) {
-  try {
-    localStorage.debug = name;
-  } catch(e){}
-
-  var split = (name || '').split(/[\s,]+/)
-    , len = split.length;
-
-  for (var i = 0; i < len; i++) {
-    name = split[i].replace('*', '.*?');
-    if (name[0] === '-') {
-      debug.skips.push(new RegExp('^' + name.substr(1) + '$'));
-    }
-    else {
-      debug.names.push(new RegExp('^' + name + '$'));
-    }
-  }
-};
-
-/**
- * Disable debug output.
- *
- * @api public
- */
-
-debug.disable = function(){
-  debug.enable('');
-};
-
-/**
- * Humanize the given `ms`.
- *
- * @param {Number} m
- * @return {String}
- * @api private
- */
-
-debug.humanize = function(ms) {
-  var sec = 1000
-    , min = 60 * 1000
-    , hour = 60 * min;
-
-  if (ms >= hour) return (ms / hour).toFixed(1) + 'h';
-  if (ms >= min) return (ms / min).toFixed(1) + 'm';
-  if (ms >= sec) return (ms / sec | 0) + 's';
-  return ms + 'ms';
-};
-
-/**
- * Returns true if the given mode name is enabled, false otherwise.
- *
- * @param {String} name
- * @return {Boolean}
- * @api public
- */
-
-debug.enabled = function(name) {
-  for (var i = 0, len = debug.skips.length; i < len; i++) {
-    if (debug.skips[i].test(name)) {
-      return false;
-    }
-  }
-  for (var i = 0, len = debug.names.length; i < len; i++) {
-    if (debug.names[i].test(name)) {
-      return true;
-    }
-  }
-  return false;
-};
-
-// persist
-
-if (window.localStorage) debug.enable(localStorage.debug);
-
-},{}],13:[function(require,module,exports){
 (function(){//     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -6705,12 +6595,138 @@ if (window.localStorage) debug.enable(localStorage.debug);
 }).call(this);
 
 })()
+},{}],12:[function(require,module,exports){
+
+/**
+ * Expose `debug()` as the module.
+ */
+
+module.exports = debug;
+
+/**
+ * Create a debugger with the given `name`.
+ *
+ * @param {String} name
+ * @return {Type}
+ * @api public
+ */
+
+function debug(name) {
+  if (!debug.enabled(name)) return function(){};
+
+  return function(fmt){
+    var curr = new Date;
+    var ms = curr - (debug[name] || curr);
+    debug[name] = curr;
+
+    fmt = name
+      + ' '
+      + fmt
+      + ' +' + debug.humanize(ms);
+
+    // This hackery is required for IE8
+    // where `console.log` doesn't have 'apply'
+    window.console
+      && console.log
+      && Function.prototype.apply.call(console.log, console, arguments);
+  }
+}
+
+/**
+ * The currently active debug mode names.
+ */
+
+debug.names = [];
+debug.skips = [];
+
+/**
+ * Enables a debug mode by name. This can include modes
+ * separated by a colon and wildcards.
+ *
+ * @param {String} name
+ * @api public
+ */
+
+debug.enable = function(name) {
+  try {
+    localStorage.debug = name;
+  } catch(e){}
+
+  var split = (name || '').split(/[\s,]+/)
+    , len = split.length;
+
+  for (var i = 0; i < len; i++) {
+    name = split[i].replace('*', '.*?');
+    if (name[0] === '-') {
+      debug.skips.push(new RegExp('^' + name.substr(1) + '$'));
+    }
+    else {
+      debug.names.push(new RegExp('^' + name + '$'));
+    }
+  }
+};
+
+/**
+ * Disable debug output.
+ *
+ * @api public
+ */
+
+debug.disable = function(){
+  debug.enable('');
+};
+
+/**
+ * Humanize the given `ms`.
+ *
+ * @param {Number} m
+ * @return {String}
+ * @api private
+ */
+
+debug.humanize = function(ms) {
+  var sec = 1000
+    , min = 60 * 1000
+    , hour = 60 * min;
+
+  if (ms >= hour) return (ms / hour).toFixed(1) + 'h';
+  if (ms >= min) return (ms / min).toFixed(1) + 'm';
+  if (ms >= sec) return (ms / sec | 0) + 's';
+  return ms + 'ms';
+};
+
+/**
+ * Returns true if the given mode name is enabled, false otherwise.
+ *
+ * @param {String} name
+ * @return {Boolean}
+ * @api public
+ */
+
+debug.enabled = function(name) {
+  for (var i = 0, len = debug.skips.length; i < len; i++) {
+    if (debug.skips[i].test(name)) {
+      return false;
+    }
+  }
+  for (var i = 0, len = debug.names.length; i < len; i++) {
+    if (debug.names[i].test(name)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+// persist
+
+if (window.localStorage) debug.enable(localStorage.debug);
+
 },{}],14:[function(require,module,exports){
 
 },{}],7:[function(require,module,exports){
 // Generated by CoffeeScript 1.6.3
 (function() {
-  var escodegen, esmorph, esprima, generateReadableExpression, generateReadableStatement, inspect, pp, puts, readableNode, _, _ref;
+  var escodegen, esmorph, esprima, generateReadableExpression, generateReadableStatement, generateReadableValue, inspect, pp, puts, readableNode, _, _ref;
 
   _ref = require("util"), puts = _ref.puts, inspect = _ref.inspect;
 
@@ -6726,6 +6742,22 @@ if (window.localStorage) debug.enable(localStorage.debug);
 
   _ = require("underscore");
 
+  generateReadableValue = function(node1, node2, opts) {
+    if (opts == null) {
+      opts = {};
+    }
+    if (node1.name) {
+      return "" + node1.name;
+    } else {
+      switch (node2.type) {
+        case 'FunctionExpression':
+          return "'this function'";
+        default:
+          return "'TODO'";
+      }
+    }
+  };
+
   generateReadableExpression = function(node, opts) {
     var message, operators, target, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6, _ref7, _ref8;
     if (opts == null) {
@@ -6734,7 +6766,9 @@ if (window.localStorage) debug.enable(localStorage.debug);
     switch (node.type) {
       case 'AssignmentExpression':
         operators = {
-          "=": "'set " + node.left.name + " to ' + " + node.left.name,
+          "=": "'set ' + " + (generateReadableExpression(node.left, {
+            want: "name"
+          })) + " + ' to ' + " + (generateReadableValue(node.left, node.right)),
           "+=": "'add ' + " + (generateReadableExpression(node.right)) + " + ' to " + node.left.name + " and set " + node.left.name + " to ' + " + node.left.name,
           "-=": "'subtract ' + " + (generateReadableExpression(node.right)) + " + ' from " + node.left.name + "' + ' and set " + node.left.name + " to ' + " + node.left.name,
           "*=": "'multiply " + node.left.name + " by ' + " + (generateReadableExpression(node.right)) + " + ' and set " + node.left.name + " to ' + " + node.left.name,
@@ -6771,17 +6805,24 @@ if (window.localStorage) debug.enable(localStorage.debug);
       case 'CallExpression':
         target = ((_ref1 = node.callee) != null ? _ref1.name : void 0) || (node.callee.object.name + "." + node.callee.property.name);
         return "(function() {\n  if(" + target + ".hasOwnProperty(\"__choc_annotation\")) {\n    return eval(" + target + ".__choc_annotation(" + (inspect(node["arguments"], null, 1000)) + "));\n  } else if (" + (((_ref2 = node.callee) != null ? _ref2.name : void 0) != null ? "true" : "false") + ") {\n    return \"call the function <span class='choc-variable'>" + node.callee.name + "</span>\";\n  } else if (" + (((_ref3 = node.callee) != null ? (_ref4 = _ref3.object) != null ? _ref4.name : void 0 : void 0) ? "true" : "false") + ") {\n    return \"tell <span class='choc-variable'>" + ((_ref5 = node.callee) != null ? (_ref6 = _ref5.object) != null ? _ref6.name : void 0 : void 0) + "</span> to <span class='choc-variable'>" + ((_ref7 = node.callee) != null ? (_ref8 = _ref7.property) != null ? _ref8.name : void 0 : void 0) + "</span>\";\n  } else {\n    return \"\";\n  }\n})()";
+      case "MemberExpression":
+        return "'" + node.object.name + "\\\'s " + node.property.name + "'";
       case 'Literal':
         return "" + node.value;
       case 'Identifier':
-        return "" + node.name;
+        if (opts.want === "name") {
+          return "'" + node.name + "'";
+        } else {
+          return "" + node.name;
+        }
+        break;
       default:
         return "";
     }
   };
 
   generateReadableStatement = function(node, opts) {
-    var conditional, i, msgs, sentences;
+    var conditional, hoistedVar, i, msgs, sentences;
     if (opts == null) {
       opts = {};
     }
@@ -6809,6 +6850,9 @@ if (window.localStorage) debug.enable(localStorage.debug);
       case 'IfStatement':
         conditional = opts.hoistedAttributes ? opts.hoistedAttributes[1] : true;
         return "(function (__conditional) { \n var startLine = " + node.loc.start.line + ";\n var endLine   = " + node.loc.end.line + ";\n if(__conditional) { \n   var messages = [ { lineNumber: startLine, message: \"Because \" + " + (generateReadableExpression(node.test)) + " } ]\n   return messages;\n } else {\n   var messages = [ { lineNumber: startLine, message: \"Because \" + " + (generateReadableExpression(node.test)) + " + \" is false\"} ]\n   return messages;\n }\n})(" + conditional + ")";
+      case 'ReturnStatement':
+        hoistedVar = opts.hoistedAttributes ? opts.hoistedAttributes[1] : "''";
+        return ("[ { lineNumber: " + node.loc.start.line + ", message: 'return ' + ") + hoistedVar + " } ]";
       default:
         return "[]";
     }
@@ -6823,6 +6867,7 @@ if (window.localStorage) debug.enable(localStorage.debug);
       case 'ExpressionStatement':
       case 'WhileStatement':
       case 'IfStatement':
+      case 'ReturnStatement':
       case 'CallExpression':
         return generateReadableStatement(node, opts);
       default:
@@ -6836,7 +6881,7 @@ if (window.localStorage) debug.enable(localStorage.debug);
 
 }).call(this);
 
-},{"util":3,"esprima":8,"escodegen":9,"underscore":13,"esmorph":10}],15:[function(require,module,exports){
+},{"util":3,"esprima":8,"escodegen":9,"esmorph":10,"underscore":11}],15:[function(require,module,exports){
 module.exports={
   "name": "escodegen",
   "description": "ECMAScript code generator",
@@ -9797,7 +9842,7 @@ module.exports={
 
 
 })()
-},{"esprima":8}],12:[function(require,module,exports){
+},{"esprima":8}],13:[function(require,module,exports){
 // Generated by CoffeeScript 1.6.2
 (function() {
   var deep, _,
@@ -9911,5 +9956,5 @@ module.exports={
 
 }).call(this);
 
-},{"underscore":13}]},{},[1])
+},{"underscore":11}]},{},[1])
 ;
