@@ -4,9 +4,10 @@ escodegen = require("escodegen")
 esmorph = require("esmorph")
 _ = require("underscore")
 
-# The code below is atrocious. Until javascript has macros, this will have to do.
-# I hope you'll be delighted in the interface enough to overlook the warts in the implementation.
-
+# Javascript isn't homoiconic. So we have two options: 1. Rewrite this in a
+# homoiconic language or 2. use eval. The code below is atrocious. Until
+# javascript has macros, this will have to do. I hope you'll be delighted in
+# the interface enough to overlook the warts in the implementation.
 generateReadableValue = (node1, node2, opts={}) ->
   if node1.name
     "#{node1.name}"
@@ -17,12 +18,14 @@ generateReadableValue = (node1, node2, opts={}) ->
       else
         "'TODO'"
 
+# generateTimeline separately
+
 generateReadableExpression = (node, opts={}) ->
   switch node.type
     when 'AssignmentExpression'
       operators = 
-        "=":  "'set ' + #{generateReadableExpression(node.left, {want: "name"})} + ' to ' + #{generateReadableValue(node.left, node.right)}"
-        "+=": "'add ' + #{generateReadableExpression(node.right)} + ' to #{node.left.name} and set #{node.left.name} to ' + #{node.left.name}"
+        "=":  "'set ' + #{generateReadableExpression(node.left, {want: "name"})} + ' to ' + #{generateReadableValue(node.left, node.right)}, timeline: #{generateReadableValue(node.left, node.right)}"
+        "+=": "'add ' + #{generateReadableExpression(node.right)} + ' to #{node.left.name} and set #{node.left.name} to ' + #{node.left.name}, timeline: #{node.left.name}"
         "-=": "'subtract ' + #{generateReadableExpression(node.right)} + ' from #{node.left.name}' + ' and set #{node.left.name} to ' + #{node.left.name}"
         "*=": "'multiply #{node.left.name} by ' + #{generateReadableExpression(node.right)} + ' and set #{node.left.name} to ' + #{node.left.name}"
         "/=": "'divide #{node.left.name} by ' + #{generateReadableExpression(node.right)} + ' and set #{node.left.name} to ' + #{node.left.name}"
@@ -57,14 +60,7 @@ generateReadableExpression = (node, opts={}) ->
       message = operators[node.operator] || ""
       "#{message}"
     when 'CallExpression'
-      # console.log(node)
-      # tell target to verb with parameters
-      # but we want to allow some context specific language here
-      # if we annotate the functions themselves, then we might be able to annotate prototypes, but maybe not local functions
-      # if we pass a dictionary, then there is variable name ambiguity
-      # node.callee.name || node.property.name
       target = node.callee?.name || (node.callee.object.name + "." + node.callee.property.name)
-      # ew eval() Anyone have any suggestions?
       """
       (function() {
         if(#{target}.hasOwnProperty("__choc_annotation")) {

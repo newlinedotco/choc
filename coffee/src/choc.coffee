@@ -2,7 +2,6 @@
 #
 # References: 
 # 
-#
 {puts,inspect} = require("util"); pp = (x) -> puts inspect(x, null, 1000)
 esprima = require("esprima")
 escodegen = require("escodegen")
@@ -13,17 +12,9 @@ readable = require("./readable")
 debug = require("debug")("choc")
 deep = require("deep")
 
-# TODOs 
-# * return a + b in a function ReturnStatement placement
-# * function returns - i think we're going to need to transform every ReturnStatement to hoist its argument into a variable - then give the language for that variable and pause on that line right before you return it
-# * function calls on the line
-# * return syntax errors for parsing in a digestable way
-
 Choc = 
   VERSION: "0.0.1"
-  TRACE_FUNCTION_NAME: "__choc_trace"
   PAUSE_ERROR_NAME: "__choc_pause"
-  EXECUTION_FINISHED_ERROR_NAME: "__choc_finished"
 
 # Given string nodeType, returns true if the nodeType is (loosely, not strictly)
 # a statement (e.g. unit of interest). Returns false otherwise
@@ -85,7 +76,7 @@ generateTraceTree = (node, opts={}) ->
 
   messagesString = readable.readableNode(node, opts)
   signature = """
-  #{Choc.TRACE_FUNCTION_NAME}({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
+  __choc_trace({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
   """
   #console.log(esprima.parse(signature))
   # pp esprima.parse(signature)
@@ -99,11 +90,7 @@ generateCallTrace = (node, opts={}) ->
   # in the case of an Identifier
   # add(1, 2) => __choc_trace_call(this, null, add, [1, 2], {...}) 
   # in the case of a MemberExpression
-  # obj.add(1, 2) => __choc_trace_call(this, obj, add, [1, 2], {...})
-
-  # here you can either generate the tree with generate and a string or you can compose the parser api objects and manipulate them
-
-
+  # obj.add(1, 2) => __choc_trace_call(obj, obj, add, [1, 2], {...})
   if node.callee.type == "Identifier"
     original_function = node.callee.name
     original_arguments = node.arguments
@@ -129,8 +116,6 @@ generateCallTrace = (node, opts={}) ->
       },
       trace_opts_tree
     ]
-    # pp node
-  # return esprima.parse(signature).body[0]
 
   else
     original_object = node.callee.object
@@ -166,7 +151,7 @@ generateAnnotatedSource = (source) ->
     error = new Error("choc source parsing error")
     error.original = e
     throw error
-  # puts inspect tree, null, 20
+    # puts inspect tree, null, 20
 
   candidates = []
 
