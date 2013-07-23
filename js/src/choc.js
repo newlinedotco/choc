@@ -27,9 +27,7 @@
 
   Choc = {
     VERSION: "0.0.1",
-    TRACE_FUNCTION_NAME: "__choc_trace",
-    PAUSE_ERROR_NAME: "__choc_pause",
-    EXECUTION_FINISHED_ERROR_NAME: "__choc_finished"
+    PAUSE_ERROR_NAME: "__choc_pause"
   };
 
   PLAIN_STATEMENTS = ['BreakStatement', 'ContinueStatement', 'DoWhileStatement', 'DebuggerStatement', 'EmptyStatement', 'ExpressionStatement', 'ForStatement', 'ForInStatement', 'LabeledStatement', 'SwitchStatement', 'ThrowStatement', 'TryStatement', 'WithStatement', 'VariableDeclaration', 'CallExpression'];
@@ -97,7 +95,7 @@
     line = node.loc.start.line;
     range = node.range;
     messagesString = readable.readableNode(node, opts);
-    signature = "" + Choc.TRACE_FUNCTION_NAME + "({ lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " });";
+    signature = "__choc_trace({ lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " });";
     return esprima.parse(signature).body[0];
   };
 
@@ -229,13 +227,17 @@
         } else if (nodeType === 'CallExpression') {
           traceTree = generateCallTrace(node);
         } else if (isPlainStatement(nodeType)) {
-          traceTree = generateTraceTree(node);
-          if (_.isNumber(parentPathIndex)) {
-            newPosition = parentPathIndex + parent.__choc_offset + 1;
-            parent[parentPathAttribute].splice(newPosition, 0, traceTree);
-            parent.__choc_offset = parent.__choc_offset + 1;
+          if (nodeType === "ExpressionStatement" && node.expression.type === "CallExpression") {
+            true;
           } else {
-            puts("WARNING: no parent idx");
+            traceTree = generateTraceTree(node);
+            if (_.isNumber(parentPathIndex)) {
+              newPosition = parentPathIndex + parent.__choc_offset + 1;
+              parent[parentPathAttribute].splice(newPosition, 0, traceTree);
+              parent.__choc_offset = parent.__choc_offset + 1;
+            } else {
+              puts("WARNING: no parent idx");
+            }
           }
         }
       }
@@ -295,7 +297,7 @@
       return function(thisArg, target, fn, args, opts) {
         tracer(opts);
         if (target != null) {
-          return target[fn].apply(thisArg, args);
+          return target[fn].apply(target, args);
         } else {
           return fn.apply(thisArg, args);
         }

@@ -30,9 +30,16 @@
       puts(newSource);
       return assert.ok(true);
     });
-    return it.only('member functions', function() {
+    it('member functions', function() {
       var newSource, src;
       src = "var bob = {}\nbob.add = function(a, b){\n  return a + b;\n}\n\nvar x = bob.add(1, 2) + bob.add(3, 4);\nvar foo = \"hellomom\";\nvar y = x;";
+      newSource = choc.generateAnnotatedSource(src);
+      puts(newSource);
+      return assert.ok(true);
+    });
+    return it.only('traces functions once', function() {
+      var newSource, src;
+      src = "var bob = 1\nbob = 2;\nconsole.log(\"hi\")";
       newSource = choc.generateAnnotatedSource(src);
       puts(newSource);
       return assert.ok(true);

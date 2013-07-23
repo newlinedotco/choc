@@ -1111,9 +1111,7 @@ EventEmitter.prototype.listeners = function(type) {
 
   Choc = {
     VERSION: "0.0.1",
-    TRACE_FUNCTION_NAME: "__choc_trace",
-    PAUSE_ERROR_NAME: "__choc_pause",
-    EXECUTION_FINISHED_ERROR_NAME: "__choc_finished"
+    PAUSE_ERROR_NAME: "__choc_pause"
   };
 
   PLAIN_STATEMENTS = ['BreakStatement', 'ContinueStatement', 'DoWhileStatement', 'DebuggerStatement', 'EmptyStatement', 'ExpressionStatement', 'ForStatement', 'ForInStatement', 'LabeledStatement', 'SwitchStatement', 'ThrowStatement', 'TryStatement', 'WithStatement', 'VariableDeclaration', 'CallExpression'];
@@ -1181,7 +1179,7 @@ EventEmitter.prototype.listeners = function(type) {
     line = node.loc.start.line;
     range = node.range;
     messagesString = readable.readableNode(node, opts);
-    signature = "" + Choc.TRACE_FUNCTION_NAME + "({ lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " });";
+    signature = "__choc_trace({ lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " });";
     return esprima.parse(signature).body[0];
   };
 
@@ -1313,13 +1311,17 @@ EventEmitter.prototype.listeners = function(type) {
         } else if (nodeType === 'CallExpression') {
           traceTree = generateCallTrace(node);
         } else if (isPlainStatement(nodeType)) {
-          traceTree = generateTraceTree(node);
-          if (_.isNumber(parentPathIndex)) {
-            newPosition = parentPathIndex + parent.__choc_offset + 1;
-            parent[parentPathAttribute].splice(newPosition, 0, traceTree);
-            parent.__choc_offset = parent.__choc_offset + 1;
+          if (nodeType === "ExpressionStatement" && node.expression.type === "CallExpression") {
+            true;
           } else {
-            puts("WARNING: no parent idx");
+            traceTree = generateTraceTree(node);
+            if (_.isNumber(parentPathIndex)) {
+              newPosition = parentPathIndex + parent.__choc_offset + 1;
+              parent[parentPathAttribute].splice(newPosition, 0, traceTree);
+              parent.__choc_offset = parent.__choc_offset + 1;
+            } else {
+              puts("WARNING: no parent idx");
+            }
           }
         }
       }
@@ -1379,7 +1381,7 @@ EventEmitter.prototype.listeners = function(type) {
       return function(thisArg, target, fn, args, opts) {
         tracer(opts);
         if (target != null) {
-          return target[fn].apply(thisArg, args);
+          return target[fn].apply(target, args);
         } else {
           return fn.apply(thisArg, args);
         }
@@ -6768,8 +6770,8 @@ if (window.localStorage) debug.enable(localStorage.debug);
         operators = {
           "=": "'set ' + " + (generateReadableExpression(node.left, {
             want: "name"
-          })) + " + ' to ' + " + (generateReadableValue(node.left, node.right)),
-          "+=": "'add ' + " + (generateReadableExpression(node.right)) + " + ' to " + node.left.name + " and set " + node.left.name + " to ' + " + node.left.name,
+          })) + " + ' to ' + " + (generateReadableValue(node.left, node.right)) + ", timeline: " + (generateReadableValue(node.left, node.right)),
+          "+=": "'add ' + " + (generateReadableExpression(node.right)) + " + ' to " + node.left.name + " and set " + node.left.name + " to ' + " + node.left.name + ", timeline: " + node.left.name,
           "-=": "'subtract ' + " + (generateReadableExpression(node.right)) + " + ' from " + node.left.name + "' + ' and set " + node.left.name + " to ' + " + node.left.name,
           "*=": "'multiply " + node.left.name + " by ' + " + (generateReadableExpression(node.right)) + " + ' and set " + node.left.name + " to ' + " + node.left.name,
           "/=": "'divide " + node.left.name + " by ' + " + (generateReadableExpression(node.right)) + " + ' and set " + node.left.name + " to ' + " + node.left.name,

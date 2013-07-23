@@ -42,8 +42,8 @@
         operators = {
           "=": "'set ' + " + (generateReadableExpression(node.left, {
             want: "name"
-          })) + " + ' to ' + " + (generateReadableValue(node.left, node.right)),
-          "+=": "'add ' + " + (generateReadableExpression(node.right)) + " + ' to " + node.left.name + " and set " + node.left.name + " to ' + " + node.left.name,
+          })) + " + ' to ' + " + (generateReadableValue(node.left, node.right)) + ", timeline: " + (generateReadableValue(node.left, node.right)),
+          "+=": "'add ' + " + (generateReadableExpression(node.right)) + " + ' to " + node.left.name + " and set " + node.left.name + " to ' + " + node.left.name + ", timeline: " + node.left.name,
           "-=": "'subtract ' + " + (generateReadableExpression(node.right)) + " + ' from " + node.left.name + "' + ' and set " + node.left.name + " to ' + " + node.left.name,
           "*=": "'multiply " + node.left.name + " by ' + " + (generateReadableExpression(node.right)) + " + ' and set " + node.left.name + " to ' + " + node.left.name,
           "/=": "'divide " + node.left.name + " by ' + " + (generateReadableExpression(node.right)) + " + ' and set " + node.left.name + " to ' + " + node.left.name,
