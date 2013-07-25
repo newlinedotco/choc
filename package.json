@@ -16,7 +16,8 @@
     "esmorph": "git://github.com/ariya/esmorph.git#0b3378f05056778f9ea5f89231372aac8bb03ccc",
     "hogan.js": "~2.0.0",
     "nodemon": "~0.7.8",
-    "deep": "0.0.1"
+    "deep": "0.0.1",
+    "wisp": "~0.8.0"
   },
   "devDependencies": {
     "mocha": "*",
