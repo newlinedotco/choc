@@ -1,5 +1,5 @@
 (ns choc.readable.test
-  (:require [wisp.src.ast :refer [symbol]]
+  (:require [wisp.src.ast :as ast :refer [symbol keyword symbol? keyword?]]
             [wisp.src.sequence :refer [cons conj list list? seq vec empty?
                                        count first second third rest last
                                        butlast take drop repeat concat reverse
@@ -10,7 +10,13 @@
             [wisp.src.reader :refer [read-from-string]] 
             [esprima :as esprima]
             [underscore :refer [has]]
-            [util :refer [puts inspect]]))
+            [util :refer [puts inspect]]
+            [choc.readable.util :refer [to-set set-incl? partition]]
+            ))
+
+(defmacro ..
+  ([x form] `(. ~x ~form))
+  ([x form & more] `(.. (. ~x ~form) ~@more)))
 
 (defn transpile [& forms] (compile-program forms))
 (defn pp [form] (puts (inspect form null 100 true)))
@@ -25,99 +31,78 @@ statements in the body"
 
 (defn pjs [code] (first (parse-js code)))
 
-(defn to-set [col] 
-  (let [pairs (reduce (fn [acc item] (concat acc [item true])) [] col)]
-    (apply dictionary (vec pairs))))
-
-(defn set-incl? [set key]
-  (.hasOwnProperty set key))
-
-(let [items (to-set ["foo" "bar"])]
-  (pp (set-incl? items "foo")))
-
-(defmacro ..
-  ([x form] `(. ~x ~form))
-  ([x form & more] `(.. (. ~x ~form) ~@more)))
-
 (defn readable-node
   ([node] (readable-node node {}))
   ([node opts] 
      (cond 
-       (= (:type node) "VariableDeclaration") 
-       (do 
-         (pp "Its a variable")
-         (pp node)
-         (print (.to-string `(.. node -loc -start -line)))
-         (print (.to-string `(:lineNumber ~(.. node -loc -start -line) :message (str "some message " foo))))
-         )
-       :else (do 
-               (pp "its else")
-               (pp node)
-               ))))
+      (= (:type node) "VariableDeclaration") 
+      (do 
+        (pp "Its a variable")
+        ;(pp node)
+        (map 
+         (fn [dec]
+           (let [name (.. dec -id -name)]
+             `(:lineNumber ~(.. node -loc -start -line) 
+               :message (list ~(str "create the variable <span class='choc-variable'>" name "</span> and set it to <span class='choc-value'>") ~(symbol name) "</span>")
+               :timeline ~(symbol name))
+             )) 
+         (. node -declarations)))
+      :else (do 
+              (pp "its else")
+              (pp node)
+              ))))
 
-(readable-node (pjs "var i = 0;"))
+(defn compile-message [message]
+  (cond
+    (symbol? message) message 
+    (keyword? message) (str (ast.name message)) 
+    (list? message) 1
+    :else message))
 
-;; (defmacro any* [pred expr & matches]
-;;   (let [tests [(fn [x] true) 1 2]]
-;;     tests))
+(defn flatten-once 
+  "poor man's flatten"
+  [lists] (reduce (fn [acc item] (concat acc item)) lists))
 
-;; (cond
-;;  (= x statementsx)
-;;  )
+(defn compile-readable-entry [node]
+  ; (print "compile") 
+  ; (print (.to-string (partition 2 node)))
+  ; (print (count node))
+  ; (pp (apply dictionary (vec node)))
+  (let [compiled-pairs (map (fn [pair]
+                (let [k (first pair) 
+                      v (second pair)
+                      str-key (str (ast.name k))
+                      compiled-message (compile-message v)]
+                  (list str-key compiled-message)))
+              (partition 2 node))
+        ;; flat (flatten-once compiled-pairs)
+        ]
 
-;; (defmacro ->
-;;   [& operations]
-;;   (reduce
-;;    (fn [form operation]
-;;      (cons (first operation)
-;;            (cons form (rest operation))))
-;;    (first operations)
-;;    (rest operations)))
+    (print (.to-string compiled-pairs))
 
-;; (defmacro ->+
-;;   [& operations]
-;;   (reduce
-;;    (fn [form operation]
-;;      (concat operation (list form)))
-;;    (first operations)
-;;    (rest operations)))
+    compiled-pairs))
 
-; (print (cons 1 [2]))
+(defn compile-readable-entries [nodes]
+  (map compile-readable-entry nodes)
+  ;(map (fn []))
+  ;; (print (.to-string (vec node)))
+  ;; (pp (apply dictionary (vec node)))
+  )
 
-;; (defn inc [x] (+ x 1))
-;; (defn even? [x] (== x 2))
+; (print (readable-node (pjs "var i = 0, j = 1;")))
+;(print (.to-string (readable-node (pjs "var i = 0, j = 1;"))))
+(print (.to-string (readable-node (pjs "var i = 0, j = 1;"))))
 
-;; (pp 
-;;  (->
-;;   [1 2 3]
-;;   (map inc)
-;;   (filter even?)))
+(let [readable (readable-node (pjs "var i = 0, j = 1;"))]
+  (print (.to-string readable))
+  ;; here what you need to do is convert the output format to a format that compiles to a format which can be read by choc
+  (pp (compile-readable-entries readable))
+  ;; (print (transpile readable))
+  )
 
-;; (pp "macro")
-
-;; (pp 
-;;  (->+
-;;   [1 2 3]
-;;   (map inc)
-;;   (filter even?)))
-
-; go to ->
-; (filter even? (map inc [1 2 3]))
-
-;; (map
-;;  (fn [x] (fn [y] (+ x y)))
-;;  [1 2 3])
+(print (transpile `(+ "foo" "bar")))
+(print (transpile {"foo" `(+ "bar" bam)}))
+(print (transpile {"foo" `(+ "bar" ((fn [] "hello")))}))
 
 
-; (pp {:foo 1})
-; (pp (parse-js "var foo = 1;"))
-
-;(map (fn [x] (pp x)) [1 2 3])
-;; (pp (any* = "foo" "bing" "bar" "baz"))
-
-;; (let [members (to-set ["foo" "bar" "baz"])]
-;;  (pp (has members "foo"))
-;;  (pp (has members "bring")))
-
-(print "done")
-(print "")
+(print "\n\n")

@@ -50,7 +50,7 @@ describe 'Readable', ->
     """
     pp message(code)
 
-  it.only 'member functions', () ->
+  it 'member functions', () ->
     code = """
       var bob = {}
       bob.add = function(a, b){
