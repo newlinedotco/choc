@@ -8,6 +8,7 @@
     "underscore": "*",
     "underscore.string": "*",
     "forever": "*",
+    "esprima": "~1.0.3",
     "supervisor": "*",
     "debug": "*",
     "wisp": "~0.8.0"
