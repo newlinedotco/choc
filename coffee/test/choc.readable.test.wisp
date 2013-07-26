@@ -1,11 +1,11 @@
 (ns choc.readable.test
   (:require [wisp.src.ast :as ast :refer [symbol keyword symbol? keyword?]]
-            [wisp.src.sequence :refer [cons conj list list? seq vec empty?
+            [wisp.src.sequence :refer [cons conj list list? seq vec empty? sequential?
                                        count first second third rest last
                                        butlast take drop repeat concat reverse
                                        sort map filter reduce assoc]]
             [wisp.src.runtime :refer [str = dictionary]]
-            [wisp.src.compiler :refer [self-evaluating? compile macroexpand
+            [wisp.src.compiler :refer [self-evaluating? compile macroexpand macroexpand-1
                                        compile-program]]
             [wisp.src.reader :refer [read-from-string]] 
             [esprima :as esprima]
@@ -43,7 +43,7 @@ statements in the body"
          (fn [dec]
            (let [name (.. dec -id -name)]
              `(:lineNumber ~(.. node -loc -start -line) 
-               :message (list ~(str "create the variable <span class='choc-variable'>" name "</span> and set it to <span class='choc-value'>") ~(symbol name) "</span>")
+               :message (~(str "create the variable <span class='choc-variable'>" name "</span> and set it to <span class='choc-value'>") ~(symbol name) "</span>")
                :timeline ~(symbol name))
              )) 
          (. node -declarations)))
@@ -52,12 +52,44 @@ statements in the body"
               (pp node)
               ))))
 
+(defmacro foo [thing]
+  ``(+ ~thing "b"))
+
+; (print (.to-string (foo "a")))
+; (print (transpile (foo "a")))
+; (print (transpile (foo f)))
+
+(defmacro appendify-form 
+  ; given ("a" "b" "c" "d")
+  ; expands to (+ (+ (+ "a" "b") "c") "d")
+  ([x form] ``(+ ~x ~form))
+  ([x form & more] `(appendify-form (+ ~x ~form) ~@more)))
+
+
+(print "HERE")
+(print (.to-string (macroexpand-1 `(appendify-form "a" "b" "c" "d"))))
+(print (.to-string (macroexpand `(appendify-form "a" "b" "c" "d"))))
+
+(print (appendify-form "a" "b" "c" "d"))
+(print (.to-string (appendify-form "a" "b" "c" "d")))
+(print (transpile (appendify-form "a" "b" "c" "d" f)))
+(print (eval (transpile (appendify-form "a" "b" "c" "d"))))
+; (print (.to-string (macro-expand `(appendify-form ("a" "b" "c" "d")))))
+(print "HERE")
+
+
 (defn compile-message [message]
   (cond
-    (symbol? message) message 
-    (keyword? message) (str (ast.name message)) 
-    (list? message) 1
-    :else message))
+   (symbol? message) message 
+   (keyword? message) (str (ast.name message)) 
+   (list? message) (do
+                     ;(print (.to-string message))
+                     ;; (print (.to-string 
+                     ;;         (reduce (fn [acc element]
+                     ;;                   (+ acc element)
+                     ;;                   ) message)))
+                     1)
+   :else message))
 
 (defn flatten-once 
   "poor man's flatten"
