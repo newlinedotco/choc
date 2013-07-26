@@ -8,8 +8,8 @@ escodegen = require("escodegen")
 esmorph = require("esmorph")
 estraverse = require('../../lib/estraverse')
 _ = require("underscore")
-readable = require("./readable")
-wread = require("choc-readable")
+# readable = require("./readable")
+readable = require("choc-readable")
 
 debug = require("debug")("choc")
 deep = require("deep")
@@ -76,7 +76,9 @@ generateTraceTree = (node, opts={}) ->
   line = node.loc.start.line
   range = node.range
 
-  messagesString = readable.readableNode(node, opts)
+
+  messagesString = readable.readableJsStr(node, opts)
+  console.log(messagesString)
   signature = """
   __choc_trace({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
   """
@@ -96,7 +98,7 @@ generateCallTrace = (node, opts={}) ->
   if node.callee.type == "Identifier"
     original_function = node.callee.name
     original_arguments = node.arguments
-    messagesString = readable.readableNode(node, opts)
+    messagesString = readable.readableJsStr(node, opts)
     trace_opts = """
     var opts = { lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} };
     """
@@ -123,7 +125,7 @@ generateCallTrace = (node, opts={}) ->
     original_object = node.callee.object
     original_property = node.callee.property
     original_arguments = node.arguments
-    messagesString = readable.readableNode(node, opts)
+    messagesString = readable.readableJsStr(node, opts)
     trace_opts = """
     var opts = { lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} };
     """
