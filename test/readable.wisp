@@ -15,17 +15,21 @@
             [choc.src.readable :refer [readable-node compile-readable-entries readable-js-str]]
             ))
 
-
 (defn assert-message [js wanted & opts]
   (let [o (apply dictionary opts)
         parsed (first (parse-js js))
+        ; _ (pp parsed)
         readable (readable-node parsed)
+        ; _ (pp readable)
+        ; _ (print (.to-string readable))
         compiled (first (compile-readable-entries readable))
         ; _ (pp compiled)
         transpiled (transpile compiled)
-        ; _ (puts transpiled)
-        _ (eval js)
-        message (eval (str "var __msg = " transpiled))]
+        ; _ (puts transpiled) 
+        ]
+    (if (.hasOwnProperty o :before) (eval (:before o)))
+    (eval js)
+    (eval (str "var __msg = " transpiled))
     (assert (identical? (:message __msg) wanted) (str "message does not equal '" wanted "'"))))
 
 (defn assert-message-code [js wanted & opts]
@@ -36,9 +40,13 @@
 (print "variable declarations")
 
 (assert-message 
-  "var i = 0" 
-  "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>0</span>")
+ "var i = 0" 
+ "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>0</span>")
 
-(print "handling unknowns")
-(assert-message-code "a += 1" "[]")
+; (print "handling unknowns")
+; (assert-message-code "a += 1" "[]")
+
+(print "assignments")
+(assert-message "foo = 1 + bar" "axb"
+                :before "var bar = 2, foo = 0;")
 

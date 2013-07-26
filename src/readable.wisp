@@ -22,19 +22,26 @@
 (defn readable-node
   ([node] (readable-node node {}))
   ([node opts] 
-     ; (pp node)
      (cond 
       (= (:type node) "VariableDeclaration") 
       (map 
        (fn [dec]
          (let [name (.. dec -id -name)]
-           `(:lineNumber ~(.. node -loc -start -line) 
-             :message (~(str "Create the variable <span class='choc-variable'>" name "</span> and set it to <span class='choc-value'>") ~(symbol name) "</span>")
-             :timeline ~(symbol name)))) 
+           (list 
+            :lineNumber (.. node -loc -start -line) 
+            :message (list (str "Create the variable <span class='choc-variable'>" name "</span> and set it to <span class='choc-value'>") (symbol name) "</span>")
+            :timeline (symbol name)))) 
        (. node -declarations))
+
+      (= (:type node) "ExpressionStatement") 
+      (list 
+       (list 
+        :lineNumber (.. node -loc -start -line)
+        :message (list "axb")))
+
       :else (do 
               (pp "its else")
-              ; (pp node)
+              (pp node)
               `()
               ))))
 
@@ -62,7 +69,9 @@
     []
     (map compile-readable-entry nodes)))
 
-(defn readable-js-str [node]
+(defn readable-js-str 
+  "This API is a little weird. Given an esprima parsed code tree, returns a string of js code. Maybe this should just return an esprima tree."
+  [node]
   (let [readable (readable-node node)
         compiled (compile-readable-entries readable)
         transpiled (transpile compiled)]
