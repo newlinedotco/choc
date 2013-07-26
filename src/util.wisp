@@ -63,4 +63,15 @@ statements in the body"
               (list (cons `+ (concat acc (list item))))) 
             (list (first ~items)) (rest ~items))))
 
+(defmacro when
+  "Evaluates test. If logical true, evaluates body in an implicit do."
+  [test & body]
+  (list 'if test (cons 'do body)))
+
+(defmacro condp [pred expr & clauses]
+  (when (not (empty? clauses))
+    (list 'if `(~pred ~expr ~(first clauses))
+          (second clauses)
+          (cons 'condp (cons pred (cons expr (rest (rest clauses))))))))
+
 

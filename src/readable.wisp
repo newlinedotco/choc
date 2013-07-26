@@ -12,18 +12,24 @@
             [underscore :refer [has]]
             [util :refer [puts inspect]]
             [choc.readable.util :refer [to-set set-incl? partition pp transpile
-                                        flatten-once parse-js appendify-form]]
+                                        flatten-once parse-js appendify-form when condp]]
             ))
 
 (defmacro ..
   ([x form] `(. ~x ~form))
   ([x form & more] `(.. (. ~x ~form) ~@more)))
 
+(defn generate-readable-expression 
+  ([node] (generate-readable-expression node {}))
+  ([node opts]
+     (condp = (:type node) 
+      "AssignmentExpression" 1)))
+
 (defn readable-node
   ([node] (readable-node node {}))
   ([node opts] 
-     (cond 
-      (= (:type node) "VariableDeclaration") 
+     (condp = (:type node) 
+      "VariableDeclaration"
       (map 
        (fn [dec]
          (let [name (.. dec -id -name)]
@@ -33,11 +39,12 @@
             :timeline (symbol name)))) 
        (. node -declarations))
 
-      (= (:type node) "ExpressionStatement") 
-      (list 
+      "ExpressionStatement"
+      (let [expression (generate-readable-expression (:expression node))]
        (list 
-        :lineNumber (.. node -loc -start -line)
-        :message (list "axb")))
+        (list 
+         :lineNumber (.. node -loc -start -line)
+         :message (list "axb"))))
 
       :else (do 
               (pp "its else")
