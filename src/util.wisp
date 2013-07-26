@@ -68,10 +68,35 @@ statements in the body"
   [test & body]
   (list 'if test (cons 'do body)))
 
-(defmacro condp [pred expr & clauses]
-  (when (not (empty? clauses))
-    (list 'if `(~pred ~expr ~(first clauses))
-          (second clauses)
-          (cons 'condp (cons pred (cons expr (rest (rest clauses))))))))
+;; (defn bar [] "hello")
+;; (defmacro foo [form]
+;;   (print (bar))
+;;   form)
+;; (foo "bam")
+
+;; (defn foo [] 1)
+
+;; (defmacro condp [pred expr & clauses]
+;;   (reduce 
+;;    (fn [acc clause] 
+;;      (let [group (first acc)
+;;            form (rest acc)]
+;;        (if (= (count group) 1)
+;;          (cons (cons (first clause) group) form)
+;;          (list 'if (cons pred (cons expr (list clause)))))))
+;;    (list)
+;;    clauses)
+;;   )
+
+;;   ;; (if (not (empty? clauses))
+;;   ;;   (list 'if (cons pred (cons expr (list (first clauses))))
+;;   ;;         (second clauses)
+;;   ;;         (list 'condp pred expr)))
+
+;;   ;; (when (not (empty? clauses))
+;;   ;;   (list if `(pred expr (first clauses))
+;;   ;;         (second clauses)
+;;   ;;         (condp (cons pred (cons expr (rest (rest clauses)))))))
+;;   )
 
 

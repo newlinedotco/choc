@@ -11,7 +11,7 @@
             [esprima :as esprima]
             [underscore :refer [has]]
             [util :refer [puts inspect]]
-            [choc.src.util :refer [to-set set-incl? partition transpile pp parse-js]]
+            [choc.src.util :refer [to-set set-incl? partition transpile pp parse-js when ]]
             [choc.src.readable :refer [readable-node compile-readable-entries readable-js-str]]
             ))
 
@@ -21,7 +21,7 @@
         ; _ (pp parsed)
         readable (readable-node parsed)
         ; _ (pp readable)
-        ; _ (print (.to-string readable))
+        _ (print (.to-string readable))
         compiled (first (compile-readable-entries readable))
         ; _ (pp compiled)
         transpiled (transpile compiled)
@@ -37,16 +37,32 @@
         code (readable-js-str (first (parse-js js)))]
     (assert (identical? code wanted) (str "code does not equal '" wanted "'"))))
 
-(print "variable declarations")
+;; (print "variable declarations")
 
-(assert-message 
- "var i = 0" 
- "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>0</span>")
+;; (assert-message 
+;;  "var i = 0" 
+;;  "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>0</span>")
 
 ; (print "handling unknowns")
-; (assert-message-code "a += 1" "[]")
+;; ; (assert-message-code "a += 1" "[]")
 
-(print "assignments")
-(assert-message "foo = 1 + bar" "axb"
-                :before "var bar = 2, foo = 0;")
+;; (print "AssignmentExpression")
+;; (assert-message 
+;;  "foo = 1 + bar" 
+;;  "set foo to 3"
+;;  :before "var bar = 2, foo = 0;")
+
+;; (assert-message 
+;;  "foo += 1 + bar" 
+;;  "add 3 to foo and set foo to 5"
+;;  :before "var bar = 2, foo = 2;")
+
+;; (assert-message 
+;;  "bar + 1" 
+;;  ""
+;;  :before "var bar = 2;")
+
+(assert-message 
+ "console.log(\"hello\")" 
+ "asdf")
 
