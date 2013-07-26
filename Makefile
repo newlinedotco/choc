@@ -14,10 +14,13 @@ TEST_JS   := $(patsubst $(WISP_TEST_DIR)/%,$(JS_DIR)/test/%,$(patsubst %.wisp,%.
 
 WISP := wisp
 
-.PHONY: clean compile
+.PHONY: clean compile test
 
-# test:
-# 	./node_modules/.bin/mocha $(TEST_FILES)
+test:
+	$(WISP) test/readable.wisp
+
+watchtest:
+	./node_modules/.bin/supervisor --watch src,test --extensions wisp --exec 'make' --no-restart-on exit test
 
 watch:
 	./node_modules/.bin/supervisor --watch src,test --extensions wisp --exec 'make' --no-restart-on exit compile
