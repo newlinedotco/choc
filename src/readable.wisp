@@ -11,22 +11,13 @@
             [esprima :as esprima]
             [underscore :refer [has]]
             [util :refer [puts inspect]]
-            [choc.readable.util :refer [to-set set-incl? partition pp transpile flatten-once]]
+            [choc.readable.util :refer [to-set set-incl? partition pp transpile
+                                        flatten-once parse-js appendify-form]]
             ))
 
 (defmacro ..
   ([x form] `(. ~x ~form))
   ([x form & more] `(.. (. ~x ~form) ~@more)))
-
-(defn parse-js 
-  "parses a string code of javascript into a parse tree. Returns an array of the
-statements in the body"
-  ([code] (parse-js code {:range true :loc true}))
-  ([code opts]
-     (let [program (.parse esprima code opts)]
-       (:body program))))
-
-(defn pjs [code] (first (parse-js code)))
 
 (defn readable-node
   ([node] (readable-node node {}))
@@ -46,15 +37,6 @@ statements in the body"
               ; (pp node)
               `()
               ))))
-
-(defmacro appendify-form 
-  ; given ("a" "b" "c" "d")
-  ; expands to (+ (+ (+ "a" "b") "c") "d")
-  [items] 
-  `(first 
-    (reduce (fn [acc item] 
-              (list (cons `+ (concat acc (list item))))) 
-            (list (first ~items)) (rest ~items))))
 
 (defn compile-message [message]
   (cond

@@ -11,8 +11,8 @@
             [esprima :as esprima]
             [underscore :refer [has]]
             [util :refer [puts inspect]]
-            [choc.src.util :refer [to-set set-incl? partition transpile pp]]
-            [choc.src.readable :refer [readable-node parse-js compile-readable-entries readable-js-str]]
+            [choc.src.util :refer [to-set set-incl? partition transpile pp parse-js]]
+            [choc.src.readable :refer [readable-node compile-readable-entries readable-js-str]]
             ))
 
 

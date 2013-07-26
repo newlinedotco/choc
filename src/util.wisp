@@ -46,3 +46,21 @@
   ([n step pad coll]
    (partition n step (concat coll pad))))
 
+(defn parse-js 
+  "parses a string code of javascript into a parse tree. Returns an array of the
+statements in the body"
+  ([code] (parse-js code {:range true :loc true}))
+  ([code opts]
+     (let [program (.parse esprima code opts)]
+       (:body program))))
+
+(defmacro appendify-form 
+  ; given ("a" "b" "c" "d")
+  ; expands to (+ (+ (+ "a" "b") "c") "d")
+  [items] 
+  `(first 
+    (reduce (fn [acc item] 
+              (list (cons `+ (concat acc (list item))))) 
+            (list (first ~items)) (rest ~items))))
+
+
