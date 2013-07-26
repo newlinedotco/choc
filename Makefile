@@ -41,6 +41,8 @@ tree:
 	tree -I node_modules
 
 develop:
+	pushd ../choc-readable && make develop
+	npm link choc-readable
 	npm install
 	npm link
 

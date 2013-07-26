@@ -9,6 +9,8 @@ esmorph = require("esmorph")
 estraverse = require('../../lib/estraverse')
 _ = require("underscore")
 readable = require("./readable")
+wread = require("choc-readable")
+
 debug = require("debug")("choc")
 deep = require("deep")
 
