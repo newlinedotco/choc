@@ -88,20 +88,7 @@ statements in the body"
   (cond
    (symbol? message) message 
    (keyword? message) (str (ast.name message)) 
-   (list? message) (do
-                     (pp "MESSAGE IS:")
-                     (pp message)
-                     (appendify-form message)
-                     ;1
-                     ; (appendify-form message)
-                     )
-   ;; (do
-                   ;;   ;(print (.to-string message))
-                   ;;   ;; (print (.to-string 
-                   ;;   ;;         (reduce (fn [acc element]
-                   ;;   ;;                   (+ acc element)
-                   ;;   ;;                   ) message)))
-                   ;;   1)
+   (list? message) (appendify-form message)
    :else message))
 
 (defn flatten-once 
@@ -120,12 +107,14 @@ statements in the body"
                       compiled-message (compile-message v)]
                   (list str-key compiled-message)))
               (partition 2 node))
-        ;; flat (flatten-once compiled-pairs)
-        ]
+        flat (flatten-once compiled-pairs)
+        as-dict (apply dictionary (vec flat))]
 
-    (print (.to-string compiled-pairs))
-
-    compiled-pairs))
+    ;(print (.to-string compiled-pairs))
+    ;(print (.to-string flat))
+    ;(pp (apply dictionary (vec flat)))
+    ;(print (transpile (apply dictionary (vec flat))))
+    as-dict))
 
 (defn compile-readable-entries [nodes]
   (map compile-readable-entry nodes)
@@ -142,7 +131,7 @@ statements in the body"
   (print (.to-string readable))
   ;; here what you need to do is convert the output format to a format that compiles to a format which can be read by choc
 
-  (pp (compile-readable-entries readable))
+  (compile-readable-entries readable)
   ;; (print (transpile readable))
   )
 
