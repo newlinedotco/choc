@@ -127,4 +127,6 @@ var parseJs = function parseJs(code, opts) {
 };
 exports.parseJs = parseJs;
 
+undefined;
+
 undefined

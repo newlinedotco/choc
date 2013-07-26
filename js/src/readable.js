@@ -58,26 +58,103 @@ var pp = choc_readable_util.pp;
 var transpile = choc_readable_util.transpile;
 var flattenOnce = choc_readable_util.flattenOnce;
 var parseJs = choc_readable_util.parseJs;
-var appendifyForm = choc_readable_util.appendifyForm;;;
+var appendifyForm = choc_readable_util.appendifyForm;
+var when = choc_readable_util.when;;;
 
 undefined;
+
+var generateReadableValue = function generateReadableValue(node1, node2, opts) {
+  switch (arguments.length) {
+    case 2:
+      return generateReadableValue(node1, node2, {});
+    case 3:
+      return node1.hasOwnProperty("name") ?
+        symbol((node1 || 0)["name"]) :
+      isEqual("FunctionExpression", (node2 || 0)["type"]) ?
+        "this function" :
+      "else" ?
+        "TODO" :
+        void(0);
+
+    default:
+      (function() { throw Error("Invalid arity"); })()
+  };
+  return void(0);
+};
+exports.generateReadableValue = generateReadableValue;
+
+var generateReadableExpression = function generateReadableExpression(node) {
+  switch (arguments.length) {
+    case 1:
+      return generateReadableExpression(node, {});
+
+    default:
+      var opts = Array.prototype.slice.call(arguments, 1);
+      pp(node);
+      return (function() {
+        var o = dictionary.apply(dictionary, opts);
+        var type = (node || 0)["type"];
+        var op = (node || 0)["operator"];
+        return isEqual(type, "AssignmentExpression") ?
+          isEqual("=", op) ?
+            list("set ", generateReadableExpression((node || 0)["left"], "want", "name"), " to ", generateReadableValue((node || 0)["left"], (node || 0)["right"])) :
+          isEqual("+=", op) ?
+            list("add ", generateReadableExpression((node || 0)["right"]), " to ", generateReadableExpression((node || 0)["left"], "want", "name"), " and set ", generateReadableExpression((node || 0)["left"], "want", "name"), " to ", generateReadableValue((node || 0)["left"], (node || 0)["right"])) :
+            void(0) :
+        isEqual(type, "BinaryExpression") ?
+          (function() {
+            return void(0);
+          })() :
+        isEqual(type, "CallExpression") ?
+          (function() {
+            console.log("CALLEXPRESS");
+            return list(list(list(symbol(void(0), "fn"), [], list(symbol(void(0), "if"), true, list(symbol(void(0), "list"), "tell foo to bar")))));
+          })() :
+        isEqual(type, "MemberExpression") ?
+          (function() {
+            console.log("MEMBER");
+            pp(node);
+            return list("TODO");
+          })() :
+        isEqual(type, "Literal") ?
+          (node || 0)["value"] :
+        isEqual(type, "Identifier") ?
+          isEqual((o || 0)["want"], "name") ?
+            (node || 0)["name"] :
+            symbol((node || 0)["name"]) :
+          void(0);
+      })();
+  };
+  return void(0);
+};
+exports.generateReadableExpression = generateReadableExpression;
 
 var readableNode = function readableNode(node, opts) {
   switch (arguments.length) {
     case 1:
       return readableNode(node, {});
     case 2:
-      return isEqual((node || 0)["type"], "VariableDeclaration") ?
-        map(function(dec) {
-          var name = (dec.id).name;
-          return list("꞉lineNumber", ((node.loc).start).line, "꞉message", list("" + "Create the variable <span class='choc-variable'>" + name + "</span> and set it to <span class='choc-value'>", symbol(name), "</span>"), "꞉timeline", symbol(name));
-        }, node.declarations) :
-      "else" ?
-        (function() {
-          pp("its else");
-          return list();
-        })() :
-        void(0);
+      pp(node);
+      return (function() {
+        var t = (node || 0)["type"];
+        return isEqual("VariableDeclaration", t) ?
+          map(function(dec) {
+            var name = (dec.id).name;
+            return list("lineNumber", ((node.loc).start).line, "message", list("" + "Create the variable <span class='choc-variable'>" + name + "</span> and set it to <span class='choc-value'>", symbol(name), "</span>"), "timeline", symbol(name));
+          }, node.declarations) :
+        isEqual("ExpressionStatement", t) ?
+          (function() {
+            var expression = (generateReadableExpression((node || 0)["expression"])) || (list(""));
+            return list(list("lineNumber", ((node.loc).start).line, "message", expression));
+          })() :
+        "else" ?
+          (function() {
+            pp("its else");
+            pp(node);
+            return list();
+          })() :
+          void(0);
+      })();
 
     default:
       (function() { throw Error("Invalid arity"); })()
