@@ -60,6 +60,24 @@ var isSetIncl = function isSetIncl(set, key) {
 };
 exports.isSetIncl = isSetIncl;
 
+var pp = function pp(form) {
+  return puts(inspect(form, null, 100, true));
+};
+exports.pp = pp;
+
+var transpile = function transpile() {
+  var forms = Array.prototype.slice.call(arguments, 0);
+  return compileProgram(forms);
+};
+exports.transpile = transpile;
+
+var flattenOnce = function flattenOnce(lists) {
+  return reduce(function(acc, item) {
+    return concat(acc, item);
+  }, lists);
+};
+exports.flattenOnce = flattenOnce;
+
 var partition = function partition(n, step, pad, coll) {
   switch (arguments.length) {
     case 2:
@@ -87,4 +105,26 @@ var partition = function partition(n, step, pad, coll) {
   };
   return void(0);
 };
-exports.partition = partition
+exports.partition = partition;
+
+var parseJs = function parseJs(code, opts) {
+  switch (arguments.length) {
+    case 1:
+      return parseJs(code, {
+        "range": true,
+        "loc": true
+      });
+    case 2:
+      return (function() {
+        var program = esprima.parse(code, opts);
+        return (program || 0)["body"];
+      })();
+
+    default:
+      (function() { throw Error("Invalid arity"); })()
+  };
+  return void(0);
+};
+exports.parseJs = parseJs;
+
+undefined

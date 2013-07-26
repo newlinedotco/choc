@@ -53,52 +53,14 @@ var inspect = util.inspect;;
 var choc_readable_util = require("./util");
 var toSet = choc_readable_util.toSet;
 var isSetIncl = choc_readable_util.isSetIncl;
-var partition = choc_readable_util.partition;;;
+var partition = choc_readable_util.partition;
+var pp = choc_readable_util.pp;
+var transpile = choc_readable_util.transpile;
+var flattenOnce = choc_readable_util.flattenOnce;
+var parseJs = choc_readable_util.parseJs;
+var appendifyForm = choc_readable_util.appendifyForm;;;
 
 undefined;
-
-var flattenOnce = function flattenOnce(lists) {
-  return reduce(function(acc, item) {
-    return concat(acc, item);
-  }, lists);
-};
-exports.flattenOnce = flattenOnce;
-
-var transpile = function transpile() {
-  var forms = Array.prototype.slice.call(arguments, 0);
-  return compileProgram(forms);
-};
-exports.transpile = transpile;
-
-var pp = function pp(form) {
-  return puts(inspect(form, null, 100, true));
-};
-exports.pp = pp;
-
-var parseJs = function parseJs(code, opts) {
-  switch (arguments.length) {
-    case 1:
-      return parseJs(code, {
-        "range": true,
-        "loc": true
-      });
-    case 2:
-      return (function() {
-        var program = esprima.parse(code, opts);
-        return (program || 0)["body"];
-      })();
-
-    default:
-      (function() { throw Error("Invalid arity"); })()
-  };
-  return void(0);
-};
-exports.parseJs = parseJs;
-
-var pjs = function pjs(code) {
-  return first(parseJs(code));
-};
-exports.pjs = pjs;
 
 var readableNode = function readableNode(node, opts) {
   switch (arguments.length) {
@@ -113,7 +75,7 @@ var readableNode = function readableNode(node, opts) {
       "else" ?
         (function() {
           pp("its else");
-          return pp(node);
+          return list();
         })() :
         void(0);
 
@@ -124,17 +86,13 @@ var readableNode = function readableNode(node, opts) {
 };
 exports.readableNode = readableNode;
 
-undefined;
-
 var compileMessage = function compileMessage(message) {
   return isSymbol(message) ?
     message :
   isKeyword(message) ?
     "" + (ast.name(message)) :
   isList(message) ?
-    first(reduce(function(acc, item) {
-      return list(cons(symbol(void(0), "+"), concat(acc, list(item))));
-    }, list(first(message)), rest(message))) :
+    appendifyForm(message) :
   "else" ?
     message :
     void(0);
@@ -156,15 +114,16 @@ var compileReadableEntry = function compileReadableEntry(node) {
 exports.compileReadableEntry = compileReadableEntry;
 
 var compileReadableEntries = function compileReadableEntries(nodes) {
-  return map(compileReadableEntry, nodes);
+  return isEmpty(nodes) ?
+    [] :
+    map(compileReadableEntry, nodes);
 };
 exports.compileReadableEntries = compileReadableEntries;
 
-(function() {
-  var readable = readableNode(pjs("var i = 0, j = 1;"));
-  console.log(readable.toString());
-  compileReadableEntries(readable);
-  return console.log(transpile(compileReadableEntries(readable)));
-})();
-
-console.log("\n\n")
+var readableJsStr = function readableJsStr(node) {
+  var readable = readableNode(node);
+  var compiled = compileReadableEntries(readable);
+  var transpiled = transpile(compiled);
+  return transpiled;
+};
+exports.readableJsStr = readableJsStr
