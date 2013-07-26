@@ -1,13 +1,13 @@
 (ns choc.readable.util
-  (:require [wisp.src.ast :refer [symbol keyword]]
-            [wisp.src.sequence :refer [cons conj list list? seq vec empty?
+  (:require [wisp.ast :refer [symbol keyword]]
+            [wisp.sequence :refer [cons conj list list? seq vec empty?
                                        count first second third rest last
                                        butlast take drop repeat concat reverse
                                        sort map filter reduce assoc]]
-            [wisp.src.runtime :refer [str = dictionary]]
-            [wisp.src.compiler :refer [self-evaluating? compile macroexpand
+            [wisp.runtime :refer [str = dictionary]]
+            [wisp.compiler :refer [self-evaluating? compile macroexpand
                                        compile-program]]
-            [wisp.src.reader :refer [read-from-string]] 
+            [wisp.reader :refer [read-from-string]] 
             [esprima :as esprima]
             [underscore :refer [has]]
             [util :refer [puts inspect]]))
