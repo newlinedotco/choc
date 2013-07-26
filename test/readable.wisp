@@ -12,22 +12,33 @@
             [underscore :refer [has]]
             [util :refer [puts inspect]]
             [choc.src.util :refer [to-set set-incl? partition transpile pp]]
-            [choc.src.readable :refer [readable-node parse-js compile-readable-entries]]
+            [choc.src.readable :refer [readable-node parse-js compile-readable-entries readable-js-str]]
             ))
+
 
 (defn assert-message [js wanted & opts]
   (let [o (apply dictionary opts)
         parsed (first (parse-js js))
         readable (readable-node parsed)
         compiled (first (compile-readable-entries readable))
+        ; _ (pp compiled)
         transpiled (transpile compiled)
+        ; _ (puts transpiled)
         _ (eval js)
         message (eval (str "var __msg = " transpiled))]
     (assert (identical? (:message __msg) wanted) (str "message does not equal '" wanted "'"))))
+
+(defn assert-message-code [js wanted & opts]
+  (let [o (apply dictionary opts)
+        code (readable-js-str (first (parse-js js)))]
+    (assert (identical? code wanted) (str "code does not equal '" wanted "'"))))
 
 (print "variable declarations")
 
 (assert-message 
   "var i = 0" 
   "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>0</span>")
+
+(print "handling unknowns")
+(assert-message-code "a += 1" "[]")
 

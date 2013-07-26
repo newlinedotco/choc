@@ -11,19 +11,12 @@
             [esprima :as esprima]
             [underscore :refer [has]]
             [util :refer [puts inspect]]
-            [choc.readable.util :refer [to-set set-incl? partition]]
+            [choc.readable.util :refer [to-set set-incl? partition pp transpile flatten-once]]
             ))
 
 (defmacro ..
   ([x form] `(. ~x ~form))
   ([x form & more] `(.. (. ~x ~form) ~@more)))
-
-(defn flatten-once 
-  "poor man's flatten"
-  [lists] (reduce (fn [acc item] (concat acc item)) lists))
-
-(defn transpile [& forms] (compile-program forms))
-(defn pp [form] (puts (inspect form null 100 true)))
 
 (defn parse-js 
   "parses a string code of javascript into a parse tree. Returns an array of the
@@ -38,6 +31,7 @@ statements in the body"
 (defn readable-node
   ([node] (readable-node node {}))
   ([node opts] 
+     ; (pp node)
      (cond 
       (= (:type node) "VariableDeclaration") 
       (map 
@@ -49,7 +43,8 @@ statements in the body"
        (. node -declarations))
       :else (do 
               (pp "its else")
-              (pp node)
+              ; (pp node)
+              `()
               ))))
 
 (defmacro appendify-form 
@@ -81,19 +76,12 @@ statements in the body"
     as-dict))
 
 (defn compile-readable-entries [nodes]
-  (map compile-readable-entry nodes))
+  (if (empty? nodes)
+    []
+    (map compile-readable-entry nodes)))
 
-(let [readable (readable-node (pjs "var i = 0, j = 1;"))]
-  (print (.to-string readable))
-  ;; here what you need to do is convert the output format to a format that compiles to a format which can be read by choc
-
-  (compile-readable-entries readable)
-  (print (transpile (compile-readable-entries readable)))
-  ;; (print (transpile readable))
-  )
-
-; (print (transpile `(+ "foo" "bar")))
-; (print (transpile {"foo" `(+ "bar" bam)}))
-; (print (transpile {"foo" `(+ "bar" ((fn [] "hello")))}))
-
-(print "\n\n")
+(defn readable-js-str [node]
+  (let [readable (readable-node node)
+        compiled (compile-readable-entries readable)
+        transpiled (transpile compiled)]
+    transpiled))

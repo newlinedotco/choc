@@ -19,6 +19,14 @@
 (defn set-incl? [set key]
   (.hasOwnProperty set key))
 
+(defn pp [form] (puts (inspect form null 100 true)))
+
+(defn transpile [& forms] (compile-program forms))
+
+(defn flatten-once 
+  "poor man's flatten"
+  [lists] (reduce (fn [acc item] (concat acc item)) lists))
+
 (defn partition
   "Returns a lazy sequence of lists of n items each, at offsets step
   apart. If step is not supplied, defaults to n, i.e. the partitions
