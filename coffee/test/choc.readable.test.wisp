@@ -59,36 +59,49 @@ statements in the body"
 ; (print (transpile (foo "a")))
 ; (print (transpile (foo f)))
 
+;; (defmacro appendify-form-old 
+;;   ; given ("a" "b" "c" "d")
+;;   ; expands to (+ (+ (+ "a" "b") "c") "d")
+;;   ([x form] ``(+ ~x ~form))
+;;   ([x form & more] `(appendify-form (+ ~x ~form) ~@more)))
+
 (defmacro appendify-form 
   ; given ("a" "b" "c" "d")
   ; expands to (+ (+ (+ "a" "b") "c") "d")
-  ([x form] ``(+ ~x ~form))
-  ([x form & more] `(appendify-form (+ ~x ~form) ~@more)))
+  [items] 
+  `(print (count ~items))
+  `(first 
+    (reduce (fn [acc item] 
+              (list (cons `+ (concat acc (list item))))) 
+            (list (first ~items)) (rest ~items))))
 
 
-(print "HERE")
-(print (.to-string (macroexpand-1 `(appendify-form "a" "b" "c" "d"))))
-(print (.to-string (macroexpand `(appendify-form "a" "b" "c" "d"))))
-
-(print (appendify-form "a" "b" "c" "d"))
-(print (.to-string (appendify-form "a" "b" "c" "d")))
-(print (transpile (appendify-form "a" "b" "c" "d" f)))
-(print (eval (transpile (appendify-form "a" "b" "c" "d"))))
-; (print (.to-string (macro-expand `(appendify-form ("a" "b" "c" "d")))))
-(print "HERE")
-
+(print "HERE--v")
+(print (.to-string (macroexpand-1 `(appendify-form (list "hello" "foo" "c" "d")))))
+(print (.to-string (macroexpand `(appendify-form (list "hello" "foo" "c" "d")))))
+(print (.to-string (appendify-form (list "hello" "foo" "c" "d"))))
+(print (transpile (appendify-form (list "hello" "foo" "c" "d" `f))))
+(print (eval (transpile (appendify-form (list "hello" "foo" "c" "d")))))
+(print "^--HERE")
 
 (defn compile-message [message]
   (cond
    (symbol? message) message 
    (keyword? message) (str (ast.name message)) 
    (list? message) (do
-                     ;(print (.to-string message))
-                     ;; (print (.to-string 
-                     ;;         (reduce (fn [acc element]
-                     ;;                   (+ acc element)
-                     ;;                   ) message)))
-                     1)
+                     (pp "MESSAGE IS:")
+                     (pp message)
+                     (appendify-form message)
+                     ;1
+                     ; (appendify-form message)
+                     )
+   ;; (do
+                   ;;   ;(print (.to-string message))
+                   ;;   ;; (print (.to-string 
+                   ;;   ;;         (reduce (fn [acc element]
+                   ;;   ;;                   (+ acc element)
+                   ;;   ;;                   ) message)))
+                   ;;   1)
    :else message))
 
 (defn flatten-once 
@@ -123,18 +136,19 @@ statements in the body"
 
 ; (print (readable-node (pjs "var i = 0, j = 1;")))
 ;(print (.to-string (readable-node (pjs "var i = 0, j = 1;"))))
-(print (.to-string (readable-node (pjs "var i = 0, j = 1;"))))
+; (print (.to-string (readable-node (pjs "var i = 0, j = 1;"))))
 
 (let [readable (readable-node (pjs "var i = 0, j = 1;"))]
   (print (.to-string readable))
   ;; here what you need to do is convert the output format to a format that compiles to a format which can be read by choc
+
   (pp (compile-readable-entries readable))
   ;; (print (transpile readable))
   )
 
-(print (transpile `(+ "foo" "bar")))
-(print (transpile {"foo" `(+ "bar" bam)}))
-(print (transpile {"foo" `(+ "bar" ((fn [] "hello")))}))
+; (print (transpile `(+ "foo" "bar")))
+; (print (transpile {"foo" `(+ "bar" bam)}))
+; (print (transpile {"foo" `(+ "bar" ((fn [] "hello")))}))
 
 
 (print "\n\n")
