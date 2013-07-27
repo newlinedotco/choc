@@ -1,4 +1,4 @@
-{puts,inspect} = require("util")
+{puts,inspect} = require("util"); pp = (thing) -> puts(inspect(thing, null, 100, true))
 esprima = require("esprima")
 escodegen = require("escodegen")
 esmorph = require("esmorph")
@@ -54,4 +54,8 @@ if require? && (require.main == module)
     puts inspect info
 
   choc.scrub(source, 10, notify: scrubNotify)
+
+readable = require("choc-readable-cljs")
+pp readable.choc_readable.util.parse_js("var i = 1;")
+
 
