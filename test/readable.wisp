@@ -46,10 +46,10 @@
     (assert (identical? code wanted) (str "code does not equal '" wanted "'"))))
 
 
-;; (print "variable declarations")
-;; (assert-message 
-;;  "var i = 2" 
-;;  "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>2</span>")
+(print "variable declarations")
+(assert-message 
+ "var i = 2" 
+ "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>2</span>")
 
 ;; (print "AssignmentExpression")
 ;; (assert-message 

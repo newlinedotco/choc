@@ -4,7 +4,7 @@
                                        count first second third rest last
                                        butlast take drop repeat concat reverse
                                        sort map filter reduce assoc]]
-            [wisp.runtime :refer [str = dictionary fn?]]
+            [wisp.runtime :refer [str = dictionary dictionary? fn?]]
             [wisp.compiler :refer [self-evaluating? compile macroexpand macroexpand-1
                                        compile-program]]
             [wisp.reader :refer [read-from-string]] 
@@ -33,7 +33,7 @@
   ([node] (generate-readable-expression node {}))
   ([node & opts]
      ; (pp node)
-     (let [o (apply dictionary (vec opts))
+     (let [o (if (dictionary? opts) opts (apply dictionary (vec opts)))
            type (:type node)
            op (:operator node)
            is-or-not (if (:negation o) " is not" " is")]
@@ -196,14 +196,15 @@
 (defn readable-js-str 
   "This API is a little weird. Given an esprima parsed code tree, returns a string of js code. Maybe this should just return an esprima tree."
   [node opts]
+  (print opts)
   (let [readable (readable-node node opts)
-        compiled (compile-readable-entries readable)
-        _ (print "compiled")
-        _ (print compiled)
-        transpiled (transpile compiled)
+        ; compiled (compile-readable-entries readable)
+        ; _ (print "compiled")
+        ; _ (print compiled)
+        transpiled (transpile readable)
         _ (print "transpiled")
         _ (print transpiled)
-        result (if compiled
+        result (if readable
                  transpiled
                  "''")
         _ (print "result")
