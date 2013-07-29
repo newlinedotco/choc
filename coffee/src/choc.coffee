@@ -9,7 +9,7 @@ esmorph = require("esmorph")
 estraverse = require('../../lib/estraverse')
 _ = require("underscore")
 # readable = require("./readable")
-# readable = require("choc-readable")
+readable = require("choc-readable")
 
 debug = require("debug")("choc")
 deep = require("deep")
@@ -76,7 +76,7 @@ generateTraceTree = (node, opts={}) ->
   line = node.loc.start.line
   range = node.range
 
-  messagesString = "''" # readable.readableJsStr(node, opts)
+  messagesString = readable.readableJsStr(node, opts)
   signature = """
   __choc_trace({ lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} });
   """
@@ -96,7 +96,7 @@ generateCallTrace = (node, opts={}) ->
   if node.callee.type == "Identifier"
     original_function = node.callee.name
     original_arguments = node.arguments
-    messagesString = "''" # readable.readableJsStr(node, opts)
+    messagesString = readable.readableJsStr(node, opts)
     trace_opts = """
     var opts = { lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} };
     """
@@ -123,7 +123,7 @@ generateCallTrace = (node, opts={}) ->
     original_object = node.callee.object
     original_property = node.callee.property
     original_arguments = node.arguments
-    messagesString = "''" # readable.readableJsStr(node, opts)
+    messagesString = readable.readableJsStr(node, opts)
     trace_opts = """
     var opts = { lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} };
     """
@@ -240,7 +240,9 @@ generateAnnotatedSource = (source) ->
             puts "WARNING: no parent idx"
 
 
-  escodegen.generate(tree, format: { compact: false } )
+  newSource = escodegen.generate(tree, format: { compact: false } )
+  # console.log(newSource)
+  newSource
 
 # TODO - use an LRU memoize if you're planning on doing a lot of editing
 generateAnnotatedSourceM = _.memoize(generateAnnotatedSource)
@@ -348,4 +350,4 @@ scrub = (source, count, opts) ->
 
 exports.scrub = scrub
 exports.generateAnnotatedSource = generateAnnotatedSource
-# exports.readable = readable
+exports.readable = readable
