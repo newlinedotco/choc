@@ -58,7 +58,6 @@ var pp = choc_readable_util.pp;
 var transpile = choc_readable_util.transpile;
 var flattenOnce = choc_readable_util.flattenOnce;
 var parseJs = choc_readable_util.parseJs;
-var appendifyForm = choc_readable_util.appendifyForm;
 var when = choc_readable_util.when;;;
 
 undefined;
@@ -169,7 +168,7 @@ var compileMessage = function compileMessage(message) {
   isKeyword(message) ?
     "" + (ast.name(message)) :
   isList(message) ?
-    appendifyForm(message) :
+    message :
   "else" ?
     message :
     void(0);

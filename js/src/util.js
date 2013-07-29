@@ -128,15 +128,4 @@ var parseJs = function parseJs(code, opts) {
 };
 exports.parseJs = parseJs;
 
-undefined;
-
-var bob = function bob(forms) {
-  return bob(first(forms));
-};
-exports.bob = bob;
-
-installMacro("bob", bob);
-
-console.log(bob(list("a", "b", list("hi", "mom", "person"), "c", "d")).toString());
-
 undefined
