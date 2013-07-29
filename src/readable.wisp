@@ -76,7 +76,7 @@
 (defn readable-node
   ([node] (readable-node node {}))
   ([node opts] 
-     (pp node)
+     ; (pp node)
      (let [t (:type node)] 
        (cond
         (= "VariableDeclaration" t) 
@@ -89,12 +89,12 @@
               :timeline (symbol name)))) 
          (. node -declarations))
 
-        (= "ExpressionStatement" t)
-        (let [expression (or (generate-readable-expression (:expression node)) (list ""))]
-          (list 
-           (list 
-            :lineNumber (.. node -loc -start -line)
-            :message expression)))
+        ;; (= "ExpressionStatement" t)
+        ;; (let [expression (or (generate-readable-expression (:expression node)) (list ""))]
+        ;;   (list 
+        ;;    (list 
+        ;;     :lineNumber (.. node -loc -start -line)
+        ;;     :message expression)))
 
         ;; (= "CallExpression" t)
         ;; (let [expression (or (generate-readable-expression node) (list ""))]
@@ -104,11 +104,13 @@
         ;;     :message expression)))
 
 
-        :else (do 
-                (pp "its else")
-                (pp node)
-                `()
-                )))))
+        ;; :else
+        ;; (do 
+        ;;         (pp "its else")
+        ;;         (pp node)
+        ;;         `()
+        ;;         )
+        ))))
 
 
 ; given ("a" "b" "c" "d")
@@ -159,5 +161,14 @@
   [node]
   (let [readable (readable-node node)
         compiled (compile-readable-entries readable)
-        transpiled (transpile compiled)]
-    transpiled))
+        _ (print "compiled")
+        _ (print compiled)
+        transpiled (transpile compiled)
+        _ (print "transpiled")
+        _ (print transpiled)
+        result (if compiled
+                 transpiled
+                 "''")
+        _ (print "result")
+        _ (print result)]
+   result))

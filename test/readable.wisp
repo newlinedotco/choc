@@ -20,8 +20,7 @@
         parsed (first (parse-js js))
         ; _ (pp parsed)
         readable (readable-node parsed)
-        ; _ (pp readable)
-        _ (print (.to-string readable))
+        ; _ (print (.to-string readable))
         compiled (first (compile-readable-entries readable))
         ; _ (pp compiled)
         transpiled (transpile compiled)
@@ -38,23 +37,21 @@
         code (readable-js-str (first (parse-js js)))]
     (assert (identical? code wanted) (str "code does not equal '" wanted "'"))))
 
-;; (print "variable declarations")
-
+(print "variable declarations")
 (assert-message 
- "var i = 0" 
- "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>0</span>")
-
-; (print "\n")
-
-
-;; (print "handling unknowns")
-; (assert-message-code "a += 1" "[]")
+ "var i = 2" 
+ "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>2</span>")
 
 ;; (print "AssignmentExpression")
 ;; (assert-message 
 ;;  "foo = 1 + bar" 
 ;;  "set foo to 3"
 ;;  :before "var bar = 2, foo = 0;")
+
+;; --------------
+
+;; (print "handling unknowns")
+; (assert-message-code "a += 1" "[]")
 
 ;; (assert-message 
 ;;  "foo += 1 + bar" 
@@ -69,4 +66,44 @@
 ;; (assert-message 
 ;;  "console.log(\"hello\")" 
 ;;  "asdf")
+
+; "3 >= a"
+
+; while(shift <= 200) {
+;
+; 
+
+
+
+;; it 'function calls with annotations', () ->
+;;   before = """
+;;   annotatedfn = () ->
+;;   annotatedfn.__choc_annotation = (args) ->
+;;     return "'i was annotated with ' + " + "'" + readable.generateReadableExpression(args[0]) + "'"
+;;   """
+;;   before = coffee.compile(before, bare: true)
+;;   code = "annotatedfn('hello')"
+;;   result = messageE(code, before: before)
+;;   result[0].message.should.eql 'i was annotated with hello'
+
+;; it 'return statements', () ->
+;;   code =  """
+;;   function a() {
+;;     return(1 + 2);
+;;   }
+;;   """
+;;   pp message(code)
+
+;; it 'member functions', () ->
+;;   code = """
+;;     var bob = {}
+;;     bob.add = function(a, b){
+;;       return a + b;
+;;     }
+
+;;     var x = bob.add(1, 2) + bob.add(3, 4);
+;;     var y = x;
+;;   """
+
+;;   pp message(code)
 
