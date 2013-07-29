@@ -129,4 +129,13 @@ var parseJs = function parseJs(code, opts) {
 };
 exports.parseJs = parseJs;
 
-undefined
+undefined;
+
+var appendifyForm = function appendifyForm(items) {
+  return first(reduce(function(acc, item) {
+    return list(cons(symbol(void(0), "+"), concat(acc, isList(item) ?
+      list(appendifyForm(item)) :
+      list(item))));
+  }, list(first(items)), rest(items)));
+};
+exports.appendifyForm = appendifyForm

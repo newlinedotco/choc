@@ -35,7 +35,9 @@ var assoc = wisp_sequence.assoc;;
 var wisp_runtime = require("wisp/runtime");
 var str = wisp_runtime.str;
 var isEqual = wisp_runtime.isEqual;
-var dictionary = wisp_runtime.dictionary;;
+var dictionary = wisp_runtime.dictionary;
+var isDictionary = wisp_runtime.isDictionary;
+var isFn = wisp_runtime.isFn;;
 var wisp_compiler = require("wisp/compiler");
 var isSelfEvaluating = wisp_compiler.isSelfEvaluating;
 var compile = wisp_compiler.compile;
@@ -58,7 +60,8 @@ var pp = choc_readable_util.pp;
 var transpile = choc_readable_util.transpile;
 var flattenOnce = choc_readable_util.flattenOnce;
 var parseJs = choc_readable_util.parseJs;
-var when = choc_readable_util.when;;;
+var when = choc_readable_util.when;
+var appendifyForm = choc_readable_util.appendifyForm;;;
 
 undefined;
 
@@ -89,11 +92,15 @@ var generateReadableExpression = function generateReadableExpression(node) {
 
     default:
       var opts = Array.prototype.slice.call(arguments, 1);
-      pp(node);
       return (function() {
-        var o = dictionary.apply(dictionary, opts);
+        var o = isDictionary(opts) ?
+          opts :
+          dictionary.apply(dictionary, vec(opts));
         var type = (node || 0)["type"];
         var op = (node || 0)["operator"];
+        var isOrNot = (o || 0)["negation"] ?
+          " is not" :
+          " is";
         return isEqual(type, "AssignmentExpression") ?
           isEqual("=", op) ?
             list("set ", generateReadableExpression((node || 0)["left"], "want", "name"), " to ", generateReadableValue((node || 0)["left"], (node || 0)["right"])) :
@@ -102,7 +109,9 @@ var generateReadableExpression = function generateReadableExpression(node) {
             void(0) :
         isEqual(type, "BinaryExpression") ?
           (function() {
-            return void(0);
+            return isEqual("<=", op) ?
+              list(generateReadableExpression((node || 0)["left"]), isOrNot, " less than or equal to ", generateReadableExpression((node || 0)["right"])) :
+              void(0);
           })() :
         isEqual(type, "CallExpression") ?
           (function() {
@@ -121,6 +130,8 @@ var generateReadableExpression = function generateReadableExpression(node) {
           isEqual((o || 0)["want"], "name") ?
             (node || 0)["name"] :
             symbol((node || 0)["name"]) :
+        true ?
+          list("") :
           void(0);
       })();
   };
@@ -128,34 +139,37 @@ var generateReadableExpression = function generateReadableExpression(node) {
 };
 exports.generateReadableExpression = generateReadableExpression;
 
-var readableNode = function readableNode(node, opts) {
+var readableNode = function readableNode(node) {
   switch (arguments.length) {
     case 1:
       return readableNode(node, {});
-    case 2:
-      return (function() {
-        var t = (node || 0)["type"];
-        return isEqual("VariableDeclaration", t) ?
-          map(function(dec) {
-            var name = (dec.id).name;
-            return list("lineNumber", ((node.loc).start).line, "message", list("" + "Create the variable <span class='choc-variable'>" + name + "</span> and set it to <span class='choc-value'>", symbol(name), "</span>"), "timeline", symbol(name));
-          }, node.declarations) :
-          void(0);
-      })();
 
     default:
-      (function() { throw Error("Invalid arity"); })()
+      var opts = Array.prototype.slice.call(arguments, 1);
+      return (function() {
+        var o = dictionary.apply(dictionary, vec.apply(vec, opts));
+        var t = (node || 0)["type"];
+        return isEqual("VariableDeclaration", t) ?
+          (function() {
+            var messages = vec(map(function(dec) {
+              var name = (dec.id).name;
+              return compileEntry(list("lineNumber", ((node.loc).start).line, "message", list("" + "Create the variable <span class='choc-variable'>" + name + "</span> and set it to <span class='choc-value'>", symbol(name), "</span>"), "timeline", symbol(name)));
+            }, node.declarations));
+            return list(list(symbol(void(0), "fn"), [], messages));
+          })() :
+        isEqual("WhileStatement", t) ?
+          (function() {
+            var conditional = ((o || 0)["hoistedName"]) || true;
+            var trueMessages = [compileEntry(list("lineNumber", ((node.loc).start).line, "message", list("Because ", generateReadableExpression((node || 0)["test"])), "timeline", "t")), compileEntry(list("lineNumber", ((node.loc).end).line, "message", list("... and try again"), "timeline", ""))];
+            var falseMessages = [compileEntry(list("lineNumber", ((node.loc).start).line, "message", list("Because ", generateReadableExpression((node || 0)["test"], "negation", true)), "timeline", "f")), compileEntry(list("lineNumber", ((node.loc).end).line, "message", list("... and stop looping"), "timeline", ""))];
+            return list(list(symbol(void(0), "fn"), vec([symbol(void(0), "condition")]), list(symbol(void(0), "if"), symbol(void(0), "condition"), trueMessages, falseMessages)), conditional);
+          })() :
+          void(0);
+      })();
   };
   return void(0);
 };
 exports.readableNode = readableNode;
-
-var appendifyForm = function appendifyForm(items) {
-  return first(reduce(function(acc, item) {
-    return list(cons(symbol(void(0), "+"), concat(acc, list(item))));
-  }, list(first(items)), rest(items)));
-};
-exports.appendifyForm = appendifyForm;
 
 var compileMessage = function compileMessage(message) {
   return isSymbol(message) ?
@@ -170,7 +184,7 @@ var compileMessage = function compileMessage(message) {
 };
 exports.compileMessage = compileMessage;
 
-var compileReadableEntry = function compileReadableEntry(node) {
+var compileEntry = function compileEntry(node) {
   var compiledPairs = map(function(pair) {
     var k = first(pair);
     var v = second(pair);
@@ -178,32 +192,37 @@ var compileReadableEntry = function compileReadableEntry(node) {
     var compiledMessage = compileMessage(v);
     return list(strKey, compiledMessage);
   }, partition(2, node));
+  var _ = console.log(compiledPairs.toString());
   var flat = flattenOnce(compiledPairs);
+  var _ = console.log(flat.toString());
   var asDict = dictionary.apply(dictionary, vec(flat));
+  var _ = pp(asDict);
   return asDict;
 };
-exports.compileReadableEntry = compileReadableEntry;
+exports.compileEntry = compileEntry;
 
 var compileReadableEntries = function compileReadableEntries(nodes) {
-  return isEmpty(nodes) ?
+  return isFn(nodes) ?
+    nodes :
+  isEmpty(nodes) ?
     [] :
-    map(compileReadableEntry, nodes);
+    map(compileEntry, nodes);
 };
 exports.compileReadableEntries = compileReadableEntries;
 
-var readableJsStr = function readableJsStr(node) {
-  var readable = readableNode(node);
-  var compiled = compileReadableEntries(readable);
-  var _ = console.log("compiled");
-  var _ = console.log(compiled);
-  var transpiled = transpile(compiled);
-  var _ = console.log("transpiled");
-  var _ = console.log(transpiled);
-  var result = compiled ?
-    transpiled :
-    "''";
-  var _ = console.log("result");
-  var _ = console.log(result);
-  return result;
+var readableJsStr = function readableJsStr(node, opts) {
+  console.log(opts);
+  return (function() {
+    var readable = readableNode(node, opts);
+    var transpiled = transpile(readable);
+    var _ = console.log("transpiled");
+    var _ = console.log(transpiled);
+    var result = readable ?
+      transpiled :
+      "''";
+    var _ = console.log("result");
+    var _ = console.log(result);
+    return result;
+  })();
 };
 exports.readableJsStr = readableJsStr
