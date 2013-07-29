@@ -24,6 +24,7 @@ var drop = wisp_sequence.drop;
 var repeat = wisp_sequence.repeat;
 var concat = wisp_sequence.concat;
 var reverse = wisp_sequence.reverse;
+var isSequential = wisp_sequence.isSequential;
 var sort = wisp_sequence.sort;
 var map = wisp_sequence.map;
 var filter = wisp_sequence.filter;

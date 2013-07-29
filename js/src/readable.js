@@ -133,7 +133,6 @@ var readableNode = function readableNode(node, opts) {
     case 1:
       return readableNode(node, {});
     case 2:
-      pp(node);
       return (function() {
         var t = (node || 0)["type"];
         return isEqual("VariableDeclaration", t) ?
@@ -141,17 +140,6 @@ var readableNode = function readableNode(node, opts) {
             var name = (dec.id).name;
             return list("lineNumber", ((node.loc).start).line, "message", list("" + "Create the variable <span class='choc-variable'>" + name + "</span> and set it to <span class='choc-value'>", symbol(name), "</span>"), "timeline", symbol(name));
           }, node.declarations) :
-        isEqual("ExpressionStatement", t) ?
-          (function() {
-            var expression = (generateReadableExpression((node || 0)["expression"])) || (list(""));
-            return list(list("lineNumber", ((node.loc).start).line, "message", expression));
-          })() :
-        "else" ?
-          (function() {
-            pp("its else");
-            pp(node);
-            return list();
-          })() :
           void(0);
       })();
 
@@ -162,13 +150,20 @@ var readableNode = function readableNode(node, opts) {
 };
 exports.readableNode = readableNode;
 
+var appendifyForm = function appendifyForm(items) {
+  return first(reduce(function(acc, item) {
+    return list(cons(symbol(void(0), "+"), concat(acc, list(item))));
+  }, list(first(items)), rest(items)));
+};
+exports.appendifyForm = appendifyForm;
+
 var compileMessage = function compileMessage(message) {
   return isSymbol(message) ?
     message :
   isKeyword(message) ?
     "" + (ast.name(message)) :
   isList(message) ?
-    message :
+    appendifyForm(message) :
   "else" ?
     message :
     void(0);
@@ -199,7 +194,16 @@ exports.compileReadableEntries = compileReadableEntries;
 var readableJsStr = function readableJsStr(node) {
   var readable = readableNode(node);
   var compiled = compileReadableEntries(readable);
+  var _ = console.log("compiled");
+  var _ = console.log(compiled);
   var transpiled = transpile(compiled);
-  return transpiled;
+  var _ = console.log("transpiled");
+  var _ = console.log(transpiled);
+  var result = compiled ?
+    transpiled :
+    "''";
+  var _ = console.log("result");
+  var _ = console.log(result);
+  return result;
 };
 exports.readableJsStr = readableJsStr
