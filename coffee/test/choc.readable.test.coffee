@@ -13,7 +13,6 @@ describe 'Readable', ->
     pp nodes
     readable.readableNode(nodes.body[0], opts)
 
-
   messageE = (code, opts={}) ->
     beforeCode = opts.before || ""
     toEval = beforeCode + ";" + code + "; " + message(code, opts)

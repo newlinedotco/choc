@@ -241,7 +241,7 @@ generateAnnotatedSource = (source) ->
 
 
   newSource = escodegen.generate(tree, format: { compact: false } )
-  # console.log(newSource)
+  console.log(newSource)
   newSource
 
 # TODO - use an LRU memoize if you're planning on doing a lot of editing
