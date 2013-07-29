@@ -18,12 +18,13 @@
 (defn assert-message [js wanted & opts]
   (let [o (apply dictionary opts)
         parsed (first (parse-js js))
-        ; _ (pp parsed)
-        readable (readable-node parsed)
-        _ (print (.to-string readable))
-        compiled (first (compile-readable-entries readable))
-        _ (pp compiled)
-        transpiled (transpile compiled)
+                                        ; _ (pp parsed)
+        readable (readable-node parsed opts)
+        ;_ (print (.to-string readable))
+        ; _ (pp readable)
+        ;; compiled (first (compile-readable-entries readable))
+        ;; _ (pp compiled)
+        transpiled (transpile readable)
         _ (puts transpiled) 
         safe-js (str "try { " js " } catch(err) { 
           if(err.message != \"pause\") {
@@ -34,8 +35,10 @@
     (if (.hasOwnProperty o :before) (eval (:before o)))
     (eval safe-js)
     (eval (str "var __msg = " transpiled))
-    (assert (identical? (:message __msg) wanted) (str "message does not equal '" wanted "'")))
-    (print (str "✓ " wanted)))
+    (assert (identical? (:message (first __msg)) wanted) (str "message does not equal '" wanted "'"))
+    ;; (print (str "✓ " wanted))
+    (print "")
+    ))
 
 (defn assert-message-code [js wanted & opts]
   (let [o (apply dictionary opts)
@@ -54,21 +57,22 @@
 ;;  "set foo to 3"
 ;;  :before "var bar = 2, foo = 0;")
 
-(print "while statements")
-
-(assert-message 
- "while (shift <= 200) {
-   throw new Error(\"pause\");
- }" 
- "Because 4 is less than or equal to 200"
- :before "var shift = 4;")
+;; (print "while statements")
 
 ;; (assert-message 
 ;;  "while (shift <= 200) {
 ;;    throw new Error(\"pause\");
 ;;  }" 
-;;  "Because 300 is not less than or equal to 200"
-;;  :before "var shift = 300;")
+;;  "Because 4 is less than or equal to 200"
+;;  :before "var shift = 4;")
+
+(assert-message 
+ "while (shift <= 200) {
+   throw new Error(\"pause\");
+ }" 
+ "Because 300 is not less than or equal to 200"
+ :before "var shift = 300; var __cond = shift <= 200;"
+ :hoistedName '__cond)
 
 
 ;(print (.to-string (appendify-form `())))

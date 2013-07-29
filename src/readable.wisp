@@ -4,7 +4,7 @@
                                        count first second third rest last
                                        butlast take drop repeat concat reverse
                                        sort map filter reduce assoc]]
-            [wisp.runtime :refer [str = dictionary]]
+            [wisp.runtime :refer [str = dictionary fn?]]
             [wisp.compiler :refer [self-evaluating? compile macroexpand macroexpand-1
                                        compile-program]]
             [wisp.reader :refer [read-from-string]] 
@@ -33,7 +33,7 @@
   ([node] (generate-readable-expression node {}))
   ([node & opts]
      ; (pp node)
-     (let [o (apply dictionary opts)
+     (let [o (apply dictionary (vec opts))
            type (:type node)
            op (:operator node)
            is-or-not (if (:negation o) " is not" " is")]
@@ -79,38 +79,61 @@
 
         ))))
 
+; return a fn of a compiled entry everytime
+
 (defn readable-node
   ([node] (readable-node node {}))
-  ([node opts] 
-                                        ; (pp node)
-     (let [t (:type node)] 
+  ([node & opts] 
+     (let [o (apply dictionary (apply vec opts))
+           t (:type node)] 
        (cond
         (= "VariableDeclaration" t) 
-        (map 
-         (fn [dec]
-           (let [name (.. dec -id -name)]
-             (list 
-              :lineNumber (.. node -loc -start -line) 
-              :message (list (str "Create the variable <span class='choc-variable'>" name 
-                                  "</span> and set it to <span class='choc-value'>") (symbol name) 
-                                  "</span>")
-              :timeline (symbol name)))) 
-         (. node -declarations))
+        (let [messages (vec 
+                        (map 
+                         (fn [dec]
+                           (let [name (.. dec -id -name)]
+                             (compile-entry 
+                              (list 
+                               :lineNumber (.. node -loc -start -line) 
+                               :message (list (str "Create the variable <span class='choc-variable'>" name 
+                                                   "</span> and set it to <span class='choc-value'>") (symbol name) 
+                                                   "</span>")
+                               :timeline (symbol name))))) 
+                         (. node -declarations)))] 
+          `((fn []
+              ~messages)))
 
-        (= "WhileStatement" t) 
-        (let [conditional true
-              test-message (generate-readable-expression (:test node))
-              ; _ (pp test-message)
+        (= "WhileStatement" t)
+        (let [conditional (or (:hoistedName o) true)
+              true-messages [(compile-entry 
+                              (list
+                               :lineNumber (.. node -loc -start -line) 
+                               :message (list "Because " (generate-readable-expression (:test node)) )
+                               :timeline "t"
+                               ))
+                             (compile-entry 
+                              (list
+                               :lineNumber (.. node -loc -end -line) 
+                               :message (list "... and try again")
+                               :timeline ""))
+                             ]
+              false-messages [(compile-entry 
+                               (list
+                                :lineNumber (.. node -loc -start -line) 
+                                :message (list "Because " (generate-readable-expression (:test node) :negation true) )
+                                :timeline "f"
+                                ))
+                             (compile-entry 
+                              (list
+                               :lineNumber (.. node -loc -end -line) 
+                               :message (list "... and stop looping")
+                               :timeline ""))
+                              ]
               ]
-
-          (list
-            (list
-             :lineNumber (.. node -loc -start -line) 
-             :message (list "Because " test-message )
-             :timeline "*"
-             ))
-
-          )
+          `((fn [condition]
+              (if condition
+                ~true-messages
+                ~false-messages)) ~conditional))
         
 
         ;; (= "ExpressionStatement" t)
@@ -144,7 +167,9 @@
    (list? message) (appendify-form message)
    :else message))
 
-(defn compile-readable-entry [node]
+(defn compile-entry 
+  "converts a list of kv pairs into a compiled javascript object"
+  [node]
   (let [compiled-pairs (map (fn [pair]
                 (let [k (first pair) 
                       v (second pair)
@@ -152,14 +177,21 @@
                       compiled-message (compile-message v)]
                   (list str-key compiled-message)))
               (partition 2 node))
+        _ (print (.to-string compiled-pairs))
         flat (flatten-once compiled-pairs)
-        as-dict (apply dictionary (vec flat))]
+        _ (print (.to-string flat))
+        as-dict (apply dictionary (vec flat))
+        _ (pp as-dict)
+        ]
     as-dict))
 
 (defn compile-readable-entries [nodes]
-  (if (empty? nodes)
-    []
-    (map compile-readable-entry nodes)))
+  (if (fn? nodes)
+    nodes
+    (if (empty? nodes)
+      []
+      (map compile-entry nodes)))
+  )
 
 (defn readable-js-str 
   "This API is a little weird. Given an esprima parsed code tree, returns a string of js code. Maybe this should just return an esprima tree."
