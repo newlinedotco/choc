@@ -6,7 +6,7 @@
                                        sort map filter reduce assoc]]
             [wisp.runtime :refer [str = dictionary]]
             [wisp.compiler :refer [self-evaluating? compile macroexpand
-                                       compile-program]]
+                                       compile-program install-macro]]
             [wisp.reader :refer [read-from-string]] 
             [esprima :as esprima]
             [underscore :refer [has]]
@@ -62,6 +62,15 @@ statements in the body"
     (reduce (fn [acc item] 
               (list (cons `+ (concat acc (list item))))) 
             (list (first ~items)) (rest ~items))))
+
+;(print (.to-string (appendify-form `("a" "b" ("hi" "mom" "person") "c" "d"))))
+
+(defn bob [forms]
+  (bob (first forms)))
+
+(install-macro :bob  bob)
+
+(print (.to-string (bob `("a" "b" ("hi" "mom" "person") "c" "d"))))
 
 (defmacro when
   "Evaluates test. If logical true, evaluates body in an implicit do."

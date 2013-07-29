@@ -37,7 +37,8 @@ var wisp_compiler = require("wisp/compiler");
 var isSelfEvaluating = wisp_compiler.isSelfEvaluating;
 var compile = wisp_compiler.compile;
 var macroexpand = wisp_compiler.macroexpand;
-var compileProgram = wisp_compiler.compileProgram;;
+var compileProgram = wisp_compiler.compileProgram;
+var installMacro = wisp_compiler.installMacro;;
 var wisp_reader = require("wisp/reader");
 var readFromString = wisp_reader.readFromString;;
 var esprima = require("esprima");;
@@ -128,5 +129,14 @@ var parseJs = function parseJs(code, opts) {
 exports.parseJs = parseJs;
 
 undefined;
+
+var bob = function bob(forms) {
+  return bob(first(forms));
+};
+exports.bob = bob;
+
+installMacro("bob", bob);
+
+console.log(bob(list("a", "b", list("hi", "mom", "person"), "c", "d")).toString());
 
 undefined
