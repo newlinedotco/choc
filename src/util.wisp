@@ -109,3 +109,27 @@ statements in the body"
 ;;   )
 
 
+; given ("a" "b" "c" "d")
+; expands to (+ (+ (+ "a" "b") "c") "d")
+; (print (.to-string (appendify-form `("a" "b" ("c" "d" "e" ("f" "g")) "h"))))
+(defn appendify-form 
+  [items] 
+  (first 
+   (reduce (fn [acc item] 
+             (list (cons `+ 
+                         (concat acc 
+                                 (if (list? item)
+                                   (list (appendify-form item))
+                                   (list item)))))) 
+           (list (first items)) (rest items))))
+
+;; (defn appendify-list [source]
+;;   (loop [result []
+;;          list source]
+;;     (if (empty? list)
+;;       result
+;;       (recur
+;;         (do (.push result (first list)) result)
+;;         (rest list)))))
+
+

@@ -11,7 +11,7 @@
             [esprima :as esprima]
             [underscore :refer [has]]
             [util :refer [puts inspect]]
-            [choc.src.util :refer [to-set set-incl? partition transpile pp parse-js when ]]
+            [choc.src.util :refer [to-set set-incl? partition transpile pp parse-js when appendify-form]]
             [choc.src.readable :refer [readable-node compile-readable-entries readable-js-str]]
             ))
 
@@ -20,14 +20,19 @@
         parsed (first (parse-js js))
         ; _ (pp parsed)
         readable (readable-node parsed)
-        ; _ (print (.to-string readable))
+        _ (print (.to-string readable))
         compiled (first (compile-readable-entries readable))
-        ; _ (pp compiled)
+        _ (pp compiled)
         transpiled (transpile compiled)
-        ; _ (puts transpiled) 
+        _ (puts transpiled) 
+        safe-js (str "try { " js " } catch(err) { 
+          if(err.message != \"pause\") {
+            throw err;
+          }
+        }")
         ]
     (if (.hasOwnProperty o :before) (eval (:before o)))
-    (eval js)
+    (eval safe-js)
     (eval (str "var __msg = " transpiled))
     (assert (identical? (:message __msg) wanted) (str "message does not equal '" wanted "'")))
     (print (str "✓ " wanted)))
@@ -37,16 +42,37 @@
         code (readable-js-str (first (parse-js js)))]
     (assert (identical? code wanted) (str "code does not equal '" wanted "'"))))
 
-(print "variable declarations")
-(assert-message 
- "var i = 2" 
- "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>2</span>")
+
+;; (print "variable declarations")
+;; (assert-message 
+;;  "var i = 2" 
+;;  "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>2</span>")
 
 ;; (print "AssignmentExpression")
 ;; (assert-message 
 ;;  "foo = 1 + bar" 
 ;;  "set foo to 3"
 ;;  :before "var bar = 2, foo = 0;")
+
+(print "while statements")
+
+(assert-message 
+ "while (shift <= 200) {
+   throw new Error(\"pause\");
+ }" 
+ "Because 4 is less than or equal to 200"
+ :before "var shift = 4;")
+
+;; (assert-message 
+;;  "while (shift <= 200) {
+;;    throw new Error(\"pause\");
+;;  }" 
+;;  "Because 300 is not less than or equal to 200"
+;;  :before "var shift = 300;")
+
+
+;(print (.to-string (appendify-form `())))
+
 
 ;; --------------
 

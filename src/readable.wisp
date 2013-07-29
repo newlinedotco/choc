@@ -12,7 +12,7 @@
             [underscore :refer [has]]
             [util :refer [puts inspect]]
             [choc.readable.util :refer [to-set set-incl? partition pp transpile
-                                        flatten-once parse-js when]]
+                                        flatten-once parse-js when appendify-form]]
             ))
 ; TODO implement condp in wisp and apply throughout
 
@@ -32,10 +32,11 @@
 (defn generate-readable-expression 
   ([node] (generate-readable-expression node {}))
   ([node & opts]
-     (pp node)
+     ; (pp node)
      (let [o (apply dictionary opts)
            type (:type node)
-           op (:operator node)]
+           op (:operator node)
+           is-or-not (if (:negation o) " is not" " is")]
        (cond 
         (= type "AssignmentExpression") 
         (cond 
@@ -51,7 +52,10 @@
         (do
           ;(pp node)
           (cond
-         ;(= "+" op) (symbol (:name (:left node)))
+          (= "<=" op) (list (generate-readable-expression (:left node)) 
+                            is-or-not
+                            " less than or equal to " 
+                            (generate-readable-expression (:right node)))
            ))
 
         (= type "CallExpression")
@@ -71,12 +75,14 @@
                                 (:name node)
                                 (symbol (:name node)))
 
+        true `("")
+
         ))))
 
 (defn readable-node
   ([node] (readable-node node {}))
   ([node opts] 
-     ; (pp node)
+                                        ; (pp node)
      (let [t (:type node)] 
        (cond
         (= "VariableDeclaration" t) 
@@ -85,9 +91,27 @@
            (let [name (.. dec -id -name)]
              (list 
               :lineNumber (.. node -loc -start -line) 
-              :message (list (str "Create the variable <span class='choc-variable'>" name "</span> and set it to <span class='choc-value'>") (symbol name) "</span>")
+              :message (list (str "Create the variable <span class='choc-variable'>" name 
+                                  "</span> and set it to <span class='choc-value'>") (symbol name) 
+                                  "</span>")
               :timeline (symbol name)))) 
          (. node -declarations))
+
+        (= "WhileStatement" t) 
+        (let [conditional true
+              test-message (generate-readable-expression (:test node))
+              ; _ (pp test-message)
+              ]
+
+          (list
+            (list
+             :lineNumber (.. node -loc -start -line) 
+             :message (list "Because " test-message )
+             :timeline "*"
+             ))
+
+          )
+        
 
         ;; (= "ExpressionStatement" t)
         ;; (let [expression (or (generate-readable-expression (:expression node)) (list ""))]
@@ -111,25 +135,6 @@
         ;;         `()
         ;;         )
         ))))
-
-
-; given ("a" "b" "c" "d")
-; expands to (+ (+ (+ "a" "b") "c") "d")
-(defn appendify-form 
-  [items] 
-  (first 
-   (reduce (fn [acc item] 
-             (list (cons `+ (concat acc (list item))))) 
-           (list (first items)) (rest items))))
-
-;; (defn appendify-list [source]
-;;   (loop [result []
-;;          list source]
-;;     (if (empty? list)
-;;       result
-;;       (recur
-;;         (do (.push result (first list)) result)
-;;         (rest list)))))
 
 
 (defn compile-message [message]
@@ -158,8 +163,8 @@
 
 (defn readable-js-str 
   "This API is a little weird. Given an esprima parsed code tree, returns a string of js code. Maybe this should just return an esprima tree."
-  [node]
-  (let [readable (readable-node node)
+  [node opts]
+  (let [readable (readable-node node opts)
         compiled (compile-readable-entries readable)
         _ (print "compiled")
         _ (print compiled)
