@@ -2,7 +2,7 @@
   (:require [wisp.ast :refer [symbol keyword]]
             [wisp.sequence :refer [cons conj list list? seq vec empty?
                                        count first second third rest last
-                                       butlast take drop repeat concat reverse
+                                       butlast take drop repeat concat reverse sequential?
                                        sort map filter reduce assoc]]
             [wisp.runtime :refer [str = dictionary]]
             [wisp.compiler :refer [self-evaluating? compile macroexpand
@@ -54,23 +54,23 @@ statements in the body"
      (let [program (.parse esprima code opts)]
        (:body program))))
 
-(defmacro appendify-form 
-  ; given ("a" "b" "c" "d")
-  ; expands to (+ (+ (+ "a" "b") "c") "d")
-  [items] 
-  `(first 
-    (reduce (fn [acc item] 
-              (list (cons `+ (concat acc (list item))))) 
-            (list (first ~items)) (rest ~items))))
+;; (defmacro appendify-form 
+;;   ; given ("a" "b" "c" "d")
+;;   ; expands to (+ (+ (+ "a" "b") "c") "d")
+;;   [items] 
+;;   `(first 
+;;     (reduce (fn [acc item] 
+;;               (list (cons `+ (concat acc (list item))))) 
+;;             (list (first ~items)) (rest ~items))))
 
 ;(print (.to-string (appendify-form `("a" "b" ("hi" "mom" "person") "c" "d"))))
 
-(defn bob [forms]
-  (bob (first forms)))
+;; (defn bob [forms]
+;;   (bob (first forms)))
 
-(install-macro :bob  bob)
+;; (install-macro :bob bob)
 
-(print (.to-string (bob `("a" "b" ("hi" "mom" "person") "c" "d"))))
+;; (print (.to-string (bob `("a" "b" ("hi" "mom" "person") "c" "d"))))
 
 (defmacro when
   "Evaluates test. If logical true, evaluates body in an implicit do."

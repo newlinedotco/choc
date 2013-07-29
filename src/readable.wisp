@@ -12,7 +12,7 @@
             [underscore :refer [has]]
             [util :refer [puts inspect]]
             [choc.readable.util :refer [to-set set-incl? partition pp transpile
-                                        flatten-once parse-js appendify-form when]]
+                                        flatten-once parse-js when]]
             ))
 ; TODO implement condp in wisp and apply throughout
 
@@ -51,7 +51,7 @@
         (do
           ;(pp node)
           (cond
-          ;(= "+" op) (symbol (:name (:left node)))
+         ;(= "+" op) (symbol (:name (:left node)))
            ))
 
         (= type "CallExpression")
@@ -109,6 +109,26 @@
                 (pp node)
                 `()
                 )))))
+
+
+; given ("a" "b" "c" "d")
+; expands to (+ (+ (+ "a" "b") "c") "d")
+(defn appendify-form 
+  [items] 
+  (first 
+   (reduce (fn [acc item] 
+             (list (cons `+ (concat acc (list item))))) 
+           (list (first items)) (rest items))))
+
+;; (defn appendify-list [source]
+;;   (loop [result []
+;;          list source]
+;;     (if (empty? list)
+;;       result
+;;       (recur
+;;         (do (.push result (first list)) result)
+;;         (rest list)))))
+
 
 (defn compile-message [message]
   (cond

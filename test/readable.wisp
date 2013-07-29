@@ -30,7 +30,8 @@
     (if (.hasOwnProperty o :before) (eval (:before o)))
     (eval js)
     (eval (str "var __msg = " transpiled))
-    (assert (identical? (:message __msg) wanted) (str "message does not equal '" wanted "'"))))
+    (assert (identical? (:message __msg) wanted) (str "message does not equal '" wanted "'")))
+    (print (str "✓ " wanted)))
 
 (defn assert-message-code [js wanted & opts]
   (let [o (apply dictionary opts)
@@ -39,12 +40,15 @@
 
 ;; (print "variable declarations")
 
-;; (assert-message 
-;;  "var i = 0" 
-;;  "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>0</span>")
+(assert-message 
+ "var i = 0" 
+ "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>0</span>")
 
-; (print "handling unknowns")
-;; ; (assert-message-code "a += 1" "[]")
+; (print "\n")
+
+
+;; (print "handling unknowns")
+; (assert-message-code "a += 1" "[]")
 
 ;; (print "AssignmentExpression")
 ;; (assert-message 
@@ -62,7 +66,7 @@
 ;;  ""
 ;;  :before "var bar = 2;")
 
-(assert-message 
- "console.log(\"hello\")" 
- "asdf")
+;; (assert-message 
+;;  "console.log(\"hello\")" 
+;;  "asdf")
 
