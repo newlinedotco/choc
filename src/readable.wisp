@@ -56,13 +56,25 @@
                             is-or-not
                             " less than or equal to " 
                             (generate-readable-expression (:right node)))
-           ))
+          (= "+" op) (list (generate-readable-expression (:left node)) 
+                            " plus " 
+                            (generate-readable-expression (:right node)))))
 
         (= type "CallExpression")
-        (do
-          (print "CALLEXPRESS")
-          `(((fn [] 
-               (if true (list "tell foo to bar"))))))
+        (cond
+         (.. node -callee -object) ; on a member object
+         (list "tell "
+               (generate-readable-expression (.. node -callee -object) :want "name")
+               " to "
+               (generate-readable-expression (.. node -callee -property) :want "name"))
+
+         (.. node -callee -name) ; plain function call
+         (list "call the function "
+               (generate-readable-expression (.. node -callee) :want "name")))
+
+        ;; `(((fn [] 
+        ;;      (if true (list "tell foo to bar")))))
+        
 
         (= type "MemberExpression") 
         (do
@@ -84,6 +96,7 @@
 (defn readable-node
   ([node] (readable-node node {}))
   ([node & opts] 
+     (pp node)
      (let [o (apply dictionary (apply vec opts))
            t (:type node)] 
        (cond
@@ -123,11 +136,11 @@
                                 :message (list "Because " (generate-readable-expression (:test node) :negation true) )
                                 :timeline "f"
                                 ))
-                             (compile-entry 
-                              (list
-                               :lineNumber (.. node -loc -end -line) 
-                               :message (list "... and stop looping")
-                               :timeline ""))
+                              (compile-entry 
+                               (list
+                                :lineNumber (.. node -loc -end -line) 
+                                :message (list "... and stop looping")
+                                :timeline ""))
                               ]
               ]
           `((fn [condition]
@@ -135,13 +148,12 @@
                 ~true-messages
                 ~false-messages)) ~conditional))
         
-
-        ;; (= "ExpressionStatement" t)
-        ;; (let [expression (or (generate-readable-expression (:expression node)) (list ""))]
-        ;;   (list 
-        ;;    (list 
-        ;;     :lineNumber (.. node -loc -start -line)
-        ;;     :message expression)))
+        (= "ExpressionStatement" t)
+        (let [messages [(compile-entry 
+                          (list 
+                           :lineNumber (.. node -loc -start -line)
+                           :message (generate-readable-expression (:expression node))))]]
+          `((fn [] ~messages)))
 
         ;; (= "CallExpression" t)
         ;; (let [expression (or (generate-readable-expression node) (list ""))]
