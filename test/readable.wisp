@@ -18,12 +18,7 @@
 (defn assert-message [js wanted & opts]
   (let [o (apply dictionary opts)
         parsed (first (parse-js js))
-                                        ; _ (pp parsed)
         readable (readable-node parsed opts)
-        ;_ (print (.to-string readable))
-        ; _ (pp readable)
-        ;; compiled (first (compile-readable-entries readable))
-        ;; _ (pp compiled)
         transpiled (transpile readable)
         _ (puts transpiled) 
         safe-js (str "try { " js " } catch(err) { 
@@ -36,7 +31,6 @@
     (eval safe-js)
     (eval (str "var __msg = " transpiled))
     (assert (identical? (:message (first __msg)) wanted) (str "message does not equal '" wanted "'"))
-    ;; (print (str "✓ " wanted))
     (print "")
     ))
 

@@ -32,7 +32,7 @@
 (defn generate-readable-expression 
   ([node] (generate-readable-expression node {}))
   ([node & opts]
-     ; (pp node)
+                                        ; (pp node)
      (let [o (if (dictionary? opts) opts (apply dictionary (vec opts)))
            type (:type node)
            op (:operator node)
@@ -50,30 +50,36 @@
          )
         (= type "BinaryExpression")
         (do
-          ;(pp node)
+                                        ;(pp node)
           (cond
-          (= "<=" op) (list (generate-readable-expression (:left node)) 
-                            is-or-not
-                            " less than or equal to " 
-                            (generate-readable-expression (:right node)))
-          (= "+" op) (list (generate-readable-expression (:left node)) 
+           (= "<=" op) (list (generate-readable-expression (:left node)) 
+                             is-or-not
+                             " less than or equal to " 
+                             (generate-readable-expression (:right node)))
+           (= "+" op) (list (generate-readable-expression (:left node)) 
                             " plus " 
                             (generate-readable-expression (:right node)))))
 
         (= type "CallExpression")
-        (cond
-         (.. node -callee -object) ; on a member object
-         (list "tell "
-               (generate-readable-expression (.. node -callee -object) :want "name")
-               " to "
-               (generate-readable-expression (.. node -callee -property) :want "name"))
+        (let [] 
+          (cond
+           (.. node -callee -object)    ; on a member object
+           (list "tell "
+                 (generate-readable-expression (.. node -callee -object) :want "name")
+                 " to "
+                 (generate-readable-expression (.. node -callee -property) :want "name"))
 
-         (.. node -callee -name) ; plain function call
-         (list "call the function "
-               (generate-readable-expression (.. node -callee) :want "name")))
+           (.. node -callee -name)      ; plain function call
+           (list "call the function "
+                 (generate-readable-expression (.. node -callee) :want "name")))
 
-        ;; `(((fn [] 
-        ;;      (if true (list "tell foo to bar")))))
+          ; how can we evaluate target annotations
+          ; essentially, below we need to return a wisp function that writes to
+          ; javascript the original readable function. you have to inspect the target object at runtime
+          ; there is no other way
+          ; but we might not have to eval if you can get the arguments right
+          `(((fn [] 
+               (if true "tell foo to bar")))))
         
 
         (= type "MemberExpression") 
