@@ -67,7 +67,7 @@
                             " plus " 
                             (generate-readable-expression (:right node)))))
 
-        (= type "CallExpressionXX")
+        (= type "CallExpression")
         (let [target (or (.. node -callee -name) 
                          (str (.. node -callee -object -name) "." (.. node -callee -property -name)))] 
           (cond
@@ -112,11 +112,16 @@
 
 ; return a fn of a compiled entry everytime
 
+(defn make-opts [opts]
+  (if (dictionary? opts) 
+    opts 
+    (apply dictionary (vec opts)))) ; apply vec opts?
+
 (defn readable-node
   ([node] (readable-node node {}))
-  ([node & opts] 
+  ([node opts] 
      (pp node)
-     (let [o (apply dictionary (apply vec opts))
+     (let [o (make-opts opts)
            t (:type node)] 
        (cond
         (= "VariableDeclaration" t) 
@@ -136,7 +141,9 @@
               ~messages)))
 
         (= "WhileStatement" t)
-        (let [conditional (or (:hoistedName o) true)
+        (let [conditional (if (:hoistedName o) 
+                            (symbol (:hoistedName o))
+                            true)
               true-messages [(compile-entry 
                               (list
                                :lineNumber (.. node -loc -start -line) 
