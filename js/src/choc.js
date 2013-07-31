@@ -30,7 +30,7 @@
     PAUSE_ERROR_NAME: "__choc_pause"
   };
 
-  PLAIN_STATEMENTS = ['BreakStatement', 'ContinueStatement', 'DoWhileStatement', 'DebuggerStatement', 'EmptyStatement', 'ExpressionStatement', 'ForStatement', 'ForInStatement', 'LabeledStatement', 'SwitchStatement', 'ThrowStatement', 'TryStatement', 'WithStatement', 'VariableDeclaration', 'CallExpression'];
+  PLAIN_STATEMENTS = ['BreakStatement', 'ContinueStatement', 'DoWhileStatement', 'DebuggerStatement', 'EmptyStatement', 'ForStatement', 'ForInStatement', 'LabeledStatement', 'SwitchStatement', 'ThrowStatement', 'TryStatement', 'WithStatement', 'ExpressionStatement', 'VariableDeclaration', 'CallExpression'];
 
   HOIST_STATEMENTS = ['ReturnStatement', 'WhileStatement', 'IfStatement'];
 
@@ -132,6 +132,8 @@
       original_object = node.callee.object;
       original_property = node.callee.property;
       original_arguments = node["arguments"];
+      console.log(node);
+      console.log(opts);
       messagesString = readable.readableJsStr(node, opts);
       trace_opts = "var opts = { lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " };";
       trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init;
@@ -203,7 +205,8 @@
           newCodeTree = generateVariableDeclaration(originalExpression);
           newVariableName = newCodeTree.declarations[0].id.name;
           traceTree = generateTraceTree(node, {
-            hoistedAttributes: [hoister[nodeType], newVariableName]
+            hoistedName: newVariableName,
+            hoistedOriginal: originalExpression
           });
           parent[parentPathAttribute].splice(parentPathIndex + parent.__choc_offset, 0, newCodeTree);
           node[hoister[node.type]] = {
@@ -297,9 +300,15 @@
 
     Tracer.prototype.traceCall = function(tracer) {
       return function(thisArg, target, fn, args, opts) {
+        var propDesc;
         tracer(opts);
         if (target != null) {
-          return target[fn].apply(target, args);
+          propDesc = Object.getOwnPropertyDescriptor(target, fn);
+          if (propDesc) {
+            return propDesc.set.apply(target, args);
+          } else {
+            return target[fn].apply(target, args);
+          }
         } else {
           return fn.apply(thisArg, args);
         }

@@ -19,7 +19,7 @@ install:
 	npm install
 
 watch:
-	./node_modules/.bin/supervisor --watch coffee/ --extensions coffee --exec 'make' --no-restart-on exit build
+	./node_modules/.bin/supervisor --watch coffee/,node_modules/choc-readable/ --extensions 'coffee|js' --exec 'make' --no-restart-on exit build
 
 js: clean
 	coffee -c -o ./js ./coffee

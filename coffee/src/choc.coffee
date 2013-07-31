@@ -23,12 +23,12 @@ Choc =
 
 PLAIN_STATEMENTS = [
  'BreakStatement', 'ContinueStatement', 'DoWhileStatement',
- 'DebuggerStatement', 'EmptyStatement', 'ExpressionStatement',
+ 'DebuggerStatement', 'EmptyStatement', 
  'ForStatement', 'ForInStatement',  'LabeledStatement',
  'SwitchStatement', 'ThrowStatement', 'TryStatement',
  'WithStatement',
- 'VariableDeclaration',
- 'CallExpression'
+
+ 'ExpressionStatement', 'VariableDeclaration', 'CallExpression'
 ]
 
 HOIST_STATEMENTS = [
@@ -96,6 +96,7 @@ generateCallTrace = (node, opts={}) ->
   if node.callee.type == "Identifier"
     original_function = node.callee.name
     original_arguments = node.arguments
+   
     messagesString = readable.readableJsStr(node, opts)
     trace_opts = """
     var opts = { lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} };
@@ -123,6 +124,10 @@ generateCallTrace = (node, opts={}) ->
     original_object = node.callee.object
     original_property = node.callee.property
     original_arguments = node.arguments
+
+    console.log(node)
+    console.log(opts)
+ 
     messagesString = readable.readableJsStr(node, opts)
     trace_opts = """
     var opts = { lineNumber: #{line}, range: [ #{range[0]}, #{range[1]} ], type: '#{nodeType}', messages: #{messagesString} };
@@ -196,7 +201,7 @@ generateAnnotatedSource = (source) ->
         newVariableName = newCodeTree.declarations[0].id.name
 
         # generate the trace tree before we actually perform the hoisting
-        traceTree = generateTraceTree(node, hoistedAttributes: [hoister[nodeType], newVariableName])
+        traceTree = generateTraceTree(node, hoistedName: newVariableName, hoistedOriginal: originalExpression)
 
         parent[parentPathAttribute].splice(parentPathIndex + parent.__choc_offset, 0, newCodeTree)
 
@@ -281,7 +286,11 @@ class Tracer
     (thisArg, target, fn, args, opts) ->
       tracer(opts)
       if target?
-        target[fn].apply(target, args)
+        propDesc = Object.getOwnPropertyDescriptor(target, fn)
+        if propDesc
+          propDesc.set.apply(target, args) # ?
+        else
+          target[fn].apply(target, args)
       else
         fn.apply(thisArg, args)
       

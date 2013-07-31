@@ -1114,7 +1114,7 @@ EventEmitter.prototype.listeners = function(type) {
     PAUSE_ERROR_NAME: "__choc_pause"
   };
 
-  PLAIN_STATEMENTS = ['BreakStatement', 'ContinueStatement', 'DoWhileStatement', 'DebuggerStatement', 'EmptyStatement', 'ExpressionStatement', 'ForStatement', 'ForInStatement', 'LabeledStatement', 'SwitchStatement', 'ThrowStatement', 'TryStatement', 'WithStatement', 'VariableDeclaration', 'CallExpression'];
+  PLAIN_STATEMENTS = ['BreakStatement', 'ContinueStatement', 'DoWhileStatement', 'DebuggerStatement', 'EmptyStatement', 'ForStatement', 'ForInStatement', 'LabeledStatement', 'SwitchStatement', 'ThrowStatement', 'TryStatement', 'WithStatement', 'ExpressionStatement', 'VariableDeclaration', 'CallExpression'];
 
   HOIST_STATEMENTS = ['ReturnStatement', 'WhileStatement', 'IfStatement'];
 
@@ -1216,6 +1216,8 @@ EventEmitter.prototype.listeners = function(type) {
       original_object = node.callee.object;
       original_property = node.callee.property;
       original_arguments = node["arguments"];
+      console.log(node);
+      console.log(opts);
       messagesString = readable.readableJsStr(node, opts);
       trace_opts = "var opts = { lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " };";
       trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init;
@@ -1287,7 +1289,8 @@ EventEmitter.prototype.listeners = function(type) {
           newCodeTree = generateVariableDeclaration(originalExpression);
           newVariableName = newCodeTree.declarations[0].id.name;
           traceTree = generateTraceTree(node, {
-            hoistedAttributes: [hoister[nodeType], newVariableName]
+            hoistedName: newVariableName,
+            hoistedOriginal: originalExpression
           });
           parent[parentPathAttribute].splice(parentPathIndex + parent.__choc_offset, 0, newCodeTree);
           node[hoister[node.type]] = {
@@ -1381,9 +1384,15 @@ EventEmitter.prototype.listeners = function(type) {
 
     Tracer.prototype.traceCall = function(tracer) {
       return function(thisArg, target, fn, args, opts) {
+        var propDesc;
         tracer(opts);
         if (target != null) {
-          return target[fn].apply(target, args);
+          propDesc = Object.getOwnPropertyDescriptor(target, fn);
+          if (propDesc) {
+            return propDesc.set.apply(target, args);
+          } else {
+            return target[fn].apply(target, args);
+          }
         } else {
           return fn.apply(thisArg, args);
         }
@@ -5370,132 +5379,6 @@ parseStatement: true, parseSourceElement: true */
 /* vim: set sw=4 ts=4 et tw=80 : */
 
 })()
-},{}],11:[function(require,module,exports){
-
-/**
- * Expose `debug()` as the module.
- */
-
-module.exports = debug;
-
-/**
- * Create a debugger with the given `name`.
- *
- * @param {String} name
- * @return {Type}
- * @api public
- */
-
-function debug(name) {
-  if (!debug.enabled(name)) return function(){};
-
-  return function(fmt){
-    var curr = new Date;
-    var ms = curr - (debug[name] || curr);
-    debug[name] = curr;
-
-    fmt = name
-      + ' '
-      + fmt
-      + ' +' + debug.humanize(ms);
-
-    // This hackery is required for IE8
-    // where `console.log` doesn't have 'apply'
-    window.console
-      && console.log
-      && Function.prototype.apply.call(console.log, console, arguments);
-  }
-}
-
-/**
- * The currently active debug mode names.
- */
-
-debug.names = [];
-debug.skips = [];
-
-/**
- * Enables a debug mode by name. This can include modes
- * separated by a colon and wildcards.
- *
- * @param {String} name
- * @api public
- */
-
-debug.enable = function(name) {
-  try {
-    localStorage.debug = name;
-  } catch(e){}
-
-  var split = (name || '').split(/[\s,]+/)
-    , len = split.length;
-
-  for (var i = 0; i < len; i++) {
-    name = split[i].replace('*', '.*?');
-    if (name[0] === '-') {
-      debug.skips.push(new RegExp('^' + name.substr(1) + '$'));
-    }
-    else {
-      debug.names.push(new RegExp('^' + name + '$'));
-    }
-  }
-};
-
-/**
- * Disable debug output.
- *
- * @api public
- */
-
-debug.disable = function(){
-  debug.enable('');
-};
-
-/**
- * Humanize the given `ms`.
- *
- * @param {Number} m
- * @return {String}
- * @api private
- */
-
-debug.humanize = function(ms) {
-  var sec = 1000
-    , min = 60 * 1000
-    , hour = 60 * min;
-
-  if (ms >= hour) return (ms / hour).toFixed(1) + 'h';
-  if (ms >= min) return (ms / min).toFixed(1) + 'm';
-  if (ms >= sec) return (ms / sec | 0) + 's';
-  return ms + 'ms';
-};
-
-/**
- * Returns true if the given mode name is enabled, false otherwise.
- *
- * @param {String} name
- * @return {Boolean}
- * @api public
- */
-
-debug.enabled = function(name) {
-  for (var i = 0, len = debug.skips.length; i < len; i++) {
-    if (debug.skips[i].test(name)) {
-      return false;
-    }
-  }
-  for (var i = 0, len = debug.names.length; i < len; i++) {
-    if (debug.names[i].test(name)) {
-      return true;
-    }
-  }
-  return false;
-};
-
-// persist
-
-if (window.localStorage) debug.enable(localStorage.debug);
-
 },{}],10:[function(require,module,exports){
 (function(){//     Underscore.js 1.4.4
 //     http://underscorejs.org
@@ -6725,6 +6608,132 @@ if (window.localStorage) debug.enable(localStorage.debug);
 }).call(this);
 
 })()
+},{}],11:[function(require,module,exports){
+
+/**
+ * Expose `debug()` as the module.
+ */
+
+module.exports = debug;
+
+/**
+ * Create a debugger with the given `name`.
+ *
+ * @param {String} name
+ * @return {Type}
+ * @api public
+ */
+
+function debug(name) {
+  if (!debug.enabled(name)) return function(){};
+
+  return function(fmt){
+    var curr = new Date;
+    var ms = curr - (debug[name] || curr);
+    debug[name] = curr;
+
+    fmt = name
+      + ' '
+      + fmt
+      + ' +' + debug.humanize(ms);
+
+    // This hackery is required for IE8
+    // where `console.log` doesn't have 'apply'
+    window.console
+      && console.log
+      && Function.prototype.apply.call(console.log, console, arguments);
+  }
+}
+
+/**
+ * The currently active debug mode names.
+ */
+
+debug.names = [];
+debug.skips = [];
+
+/**
+ * Enables a debug mode by name. This can include modes
+ * separated by a colon and wildcards.
+ *
+ * @param {String} name
+ * @api public
+ */
+
+debug.enable = function(name) {
+  try {
+    localStorage.debug = name;
+  } catch(e){}
+
+  var split = (name || '').split(/[\s,]+/)
+    , len = split.length;
+
+  for (var i = 0; i < len; i++) {
+    name = split[i].replace('*', '.*?');
+    if (name[0] === '-') {
+      debug.skips.push(new RegExp('^' + name.substr(1) + '$'));
+    }
+    else {
+      debug.names.push(new RegExp('^' + name + '$'));
+    }
+  }
+};
+
+/**
+ * Disable debug output.
+ *
+ * @api public
+ */
+
+debug.disable = function(){
+  debug.enable('');
+};
+
+/**
+ * Humanize the given `ms`.
+ *
+ * @param {Number} m
+ * @return {String}
+ * @api private
+ */
+
+debug.humanize = function(ms) {
+  var sec = 1000
+    , min = 60 * 1000
+    , hour = 60 * min;
+
+  if (ms >= hour) return (ms / hour).toFixed(1) + 'h';
+  if (ms >= min) return (ms / min).toFixed(1) + 'm';
+  if (ms >= sec) return (ms / sec | 0) + 's';
+  return ms + 'ms';
+};
+
+/**
+ * Returns true if the given mode name is enabled, false otherwise.
+ *
+ * @param {String} name
+ * @return {Boolean}
+ * @api public
+ */
+
+debug.enabled = function(name) {
+  for (var i = 0, len = debug.skips.length; i < len; i++) {
+    if (debug.skips[i].test(name)) {
+      return false;
+    }
+  }
+  for (var i = 0, len = debug.names.length; i < len; i++) {
+    if (debug.names[i].test(name)) {
+      return true;
+    }
+  }
+  return false;
+};
+
+// persist
+
+if (window.localStorage) debug.enable(localStorage.debug);
+
 },{}],14:[function(require,module,exports){
 
 },{}],12:[function(require,module,exports){
@@ -10509,6 +10518,12 @@ var generateReadableValue = function generateReadableValue(node1, node2, opts) {
 };
 exports.generateReadableValue = generateReadableValue;
 
+var generateReadableExpressionPlus = function generateReadableExpressionPlus(node) {
+  var xp = compileMessage(generateReadableExpression(node));
+  return 1;
+};
+exports.generateReadableExpressionPlus = generateReadableExpressionPlus;
+
 var generateReadableExpression = function generateReadableExpression(node) {
   switch (arguments.length) {
     case 1:
@@ -10535,17 +10550,53 @@ var generateReadableExpression = function generateReadableExpression(node) {
           (function() {
             return isEqual("<=", op) ?
               list(generateReadableExpression((node || 0)["left"]), isOrNot, " less than or equal to ", generateReadableExpression((node || 0)["right"])) :
+            isEqual("+", op) ?
+              list(generateReadableExpression((node || 0)["left"]), " plus ", generateReadableExpression((node || 0)["right"])) :
               void(0);
           })() :
-        isEqual(type, "CallExpression") ?
+        isEqual(type, "CallExpressionXX") ?
           (function() {
-            console.log("CALLEXPRESS");
-            return list(list(list(symbol(void(0), "fn"), [], list(symbol(void(0), "if"), true, list(symbol(void(0), "list"), "tell foo to bar")))));
+            var target = (node.callee ?
+              (node.callee).name :
+              void(0)) || ("" + ((node.callee).object ?
+              ((node.callee).object).name :
+              void(0)) + "." + ((node.callee).property ?
+              ((node.callee).property).name :
+              void(0)));
+            node.callee ?
+              (node.callee).object :
+              void(0) ?
+              list("tell ", generateReadableExpression(node.callee ?
+                (node.callee).object :
+                void(0), "want", "name"), " to ", generateReadableExpression(node.callee ?
+                (node.callee).property :
+                void(0), "want", "name")) :
+            node.callee ?
+              (node.callee).name :
+              void(0) ?
+              list("call the function ", generateReadableExpression(node ?
+                node.callee :
+                void(0), "want", "name")) :
+              void(0);
+            return list(list(list(symbol(void(0), "fn"), [], list(symbol(void(0), "cond"), list(symbol(void(0), ".hasOwnProperty"), symbol(target), "__choc_annotation"), list(symbol(void(0), ".__choc_annotation"), symbol(target), node.arguments), node.callee ?
+              (node.callee).name :
+              void(0) ?
+              true :
+              false, list(symbol(void(0), "str"), "call the function ", node.callee ?
+              (node.callee).name :
+              void(0)), (node.callee).object ?
+              ((node.callee).object).name :
+              void(0) ?
+              true :
+              false, list(symbol(void(0), "str"), "tell ", (node.callee).object ?
+              ((node.callee).object).name :
+              void(0), " to ", (node.callee).property ?
+              ((node.callee).property).name :
+              void(0)), true, ""))));
           })() :
         isEqual(type, "MemberExpression") ?
           (function() {
             console.log("MEMBER");
-            pp(node);
             return list("TODO");
           })() :
         isEqual(type, "Literal") ?
@@ -10570,23 +10621,57 @@ var readableNode = function readableNode(node) {
 
     default:
       var opts = Array.prototype.slice.call(arguments, 1);
+      pp(node);
       return (function() {
         var o = dictionary.apply(dictionary, vec.apply(vec, opts));
         var t = (node || 0)["type"];
         return isEqual("VariableDeclaration", t) ?
           (function() {
             var messages = vec(map(function(dec) {
-              var name = (dec.id).name;
-              return compileEntry(list("lineNumber", ((node.loc).start).line, "message", list("" + "Create the variable <span class='choc-variable'>" + name + "</span> and set it to <span class='choc-value'>", symbol(name), "</span>"), "timeline", symbol(name)));
+              var name = dec.id ?
+                (dec.id).name :
+                void(0);
+              return compileEntry(list("lineNumber", (node.loc).start ?
+                ((node.loc).start).line :
+                void(0), "message", list("" + "Create the variable <span class='choc-variable'>" + name + "</span> and set it to <span class='choc-value'>", symbol(name), "</span>"), "timeline", symbol(name)));
             }, node.declarations));
             return list(list(symbol(void(0), "fn"), [], messages));
           })() :
         isEqual("WhileStatement", t) ?
           (function() {
             var conditional = ((o || 0)["hoistedName"]) || true;
-            var trueMessages = [compileEntry(list("lineNumber", ((node.loc).start).line, "message", list("Because ", generateReadableExpression((node || 0)["test"])), "timeline", "t")), compileEntry(list("lineNumber", ((node.loc).end).line, "message", list("... and try again"), "timeline", ""))];
-            var falseMessages = [compileEntry(list("lineNumber", ((node.loc).start).line, "message", list("Because ", generateReadableExpression((node || 0)["test"], "negation", true)), "timeline", "f")), compileEntry(list("lineNumber", ((node.loc).end).line, "message", list("... and stop looping"), "timeline", ""))];
+            var trueMessages = [compileEntry(list("lineNumber", (node.loc).start ?
+              ((node.loc).start).line :
+              void(0), "message", list("Because ", generateReadableExpression((node || 0)["test"])), "timeline", "t")), compileEntry(list("lineNumber", (node.loc).end ?
+              ((node.loc).end).line :
+              void(0), "message", list("... and try again"), "timeline", ""))];
+            var falseMessages = [compileEntry(list("lineNumber", (node.loc).start ?
+              ((node.loc).start).line :
+              void(0), "message", list("Because ", generateReadableExpression((node || 0)["test"], "negation", true)), "timeline", "f")), compileEntry(list("lineNumber", (node.loc).end ?
+              ((node.loc).end).line :
+              void(0), "message", list("... and stop looping"), "timeline", ""))];
             return list(list(symbol(void(0), "fn"), vec([symbol(void(0), "condition")]), list(symbol(void(0), "if"), symbol(void(0), "condition"), trueMessages, falseMessages)), conditional);
+          })() :
+        isEqual("ExpressionStatement", t) ?
+          (function() {
+            var messages = [compileEntry(list("lineNumber", (node.loc).start ?
+              ((node.loc).start).line :
+              void(0), "message", generateReadableExpression((node || 0)["expression"])))];
+            return list(list(symbol(void(0), "fn"), [], messages));
+          })() :
+        isEqual("ReturnStatement", t) ?
+          (function() {
+            var messages = [compileEntry(list("lineNumber", (node.loc).start ?
+              ((node.loc).start).line :
+              void(0), "message", list("return ", symbol((o || 0)["hoistedName"]))))];
+            return list(list(symbol(void(0), "fn"), [], messages));
+          })() :
+        isEqual("CallExpression", t) ?
+          (function() {
+            var messages = [compileEntry(list("lineNumber", (node.loc).start ?
+              ((node.loc).start).line :
+              void(0), "message", generateReadableExpression(node)))];
+            return list(list(symbol(void(0), "fn"), [], messages));
           })() :
           void(0);
       })();
@@ -10616,11 +10701,8 @@ var compileEntry = function compileEntry(node) {
     var compiledMessage = compileMessage(v);
     return list(strKey, compiledMessage);
   }, partition(2, node));
-  var _ = console.log(compiledPairs.toString());
   var flat = flattenOnce(compiledPairs);
-  var _ = console.log(flat.toString());
   var asDict = dictionary.apply(dictionary, vec(flat));
-  var _ = pp(asDict);
   return asDict;
 };
 exports.compileEntry = compileEntry;
@@ -10635,22 +10717,15 @@ var compileReadableEntries = function compileReadableEntries(nodes) {
 exports.compileReadableEntries = compileReadableEntries;
 
 var readableJsStr = function readableJsStr(node, opts) {
-  console.log(opts);
-  return (function() {
-    var readable = readableNode(node, opts);
-    var transpiled = transpile(readable);
-    var _ = console.log("transpiled");
-    var _ = console.log(transpiled);
-    var result = readable ?
-      transpiled :
-      "''";
-    var _ = console.log("result");
-    var _ = console.log(result);
-    return result;
-  })();
+  var readable = readableNode(node, opts);
+  var transpiled = transpile(readable);
+  var result = readable ?
+    transpiled :
+    "''";
+  return result;
 };
 exports.readableJsStr = readableJsStr
-},{"util":3,"./util":19,"wisp/ast":20,"wisp/sequence":21,"wisp/runtime":18,"wisp/reader":22,"wisp/compiler":23,"esprima":24,"underscore":25}],20:[function(require,module,exports){
+},{"util":3,"./util":19,"wisp/ast":20,"wisp/sequence":21,"wisp/runtime":18,"wisp/compiler":22,"wisp/reader":23,"esprima":24,"underscore":25}],20:[function(require,module,exports){
 var _ns_ = {
   "id": "wisp.ast"
 };
@@ -11435,6 +11510,1049 @@ var repeat = function repeat(n, x) {
 };
 exports.repeat = repeat
 },{"./runtime":18}],22:[function(require,module,exports){
+var _ns_ = {
+  "id": "wisp.compiler",
+  "doc": "wisp language compiler"
+};
+var wisp_reader = require("./reader");
+var readFromString = wisp_reader.readFromString;;
+var wisp_ast = require("./ast");
+var meta = wisp_ast.meta;
+var withMeta = wisp_ast.withMeta;
+var isSymbol = wisp_ast.isSymbol;
+var symbol = wisp_ast.symbol;
+var isKeyword = wisp_ast.isKeyword;
+var keyword = wisp_ast.keyword;
+var namespace = wisp_ast.namespace;
+var isUnquote = wisp_ast.isUnquote;
+var isUnquoteSplicing = wisp_ast.isUnquoteSplicing;
+var isQuote = wisp_ast.isQuote;
+var isSyntaxQuote = wisp_ast.isSyntaxQuote;
+var name = wisp_ast.name;
+var gensym = wisp_ast.gensym;
+var prStr = wisp_ast.prStr;;
+var wisp_sequence = require("./sequence");
+var isEmpty = wisp_sequence.isEmpty;
+var count = wisp_sequence.count;
+var isList = wisp_sequence.isList;
+var list = wisp_sequence.list;
+var first = wisp_sequence.first;
+var second = wisp_sequence.second;
+var third = wisp_sequence.third;
+var rest = wisp_sequence.rest;
+var cons = wisp_sequence.cons;
+var conj = wisp_sequence.conj;
+var reverse = wisp_sequence.reverse;
+var reduce = wisp_sequence.reduce;
+var vec = wisp_sequence.vec;
+var last = wisp_sequence.last;
+var repeat = wisp_sequence.repeat;
+var map = wisp_sequence.map;
+var filter = wisp_sequence.filter;
+var take = wisp_sequence.take;
+var concat = wisp_sequence.concat;
+var isSeq = wisp_sequence.isSeq;;
+var wisp_runtime = require("./runtime");
+var isOdd = wisp_runtime.isOdd;
+var isDictionary = wisp_runtime.isDictionary;
+var dictionary = wisp_runtime.dictionary;
+var merge = wisp_runtime.merge;
+var keys = wisp_runtime.keys;
+var vals = wisp_runtime.vals;
+var isContainsVector = wisp_runtime.isContainsVector;
+var mapDictionary = wisp_runtime.mapDictionary;
+var isString = wisp_runtime.isString;
+var isNumber = wisp_runtime.isNumber;
+var isVector = wisp_runtime.isVector;
+var isBoolean = wisp_runtime.isBoolean;
+var subs = wisp_runtime.subs;
+var reFind = wisp_runtime.reFind;
+var isTrue = wisp_runtime.isTrue;
+var isFalse = wisp_runtime.isFalse;
+var isNil = wisp_runtime.isNil;
+var isRePattern = wisp_runtime.isRePattern;
+var inc = wisp_runtime.inc;
+var dec = wisp_runtime.dec;
+var str = wisp_runtime.str;
+var char = wisp_runtime.char;
+var int = wisp_runtime.int;
+var isEqual = wisp_runtime.isEqual;
+var isStrictEqual = wisp_runtime.isStrictEqual;;
+var wisp_string = require("./string");
+var split = wisp_string.split;
+var join = wisp_string.join;
+var upperCase = wisp_string.upperCase;
+var replace = wisp_string.replace;;
+var wisp_backend_javascript_writer = require("./backend/javascript/writer");
+var writeReference = wisp_backend_javascript_writer.writeReference;
+var writeKeywordReference = wisp_backend_javascript_writer.writeKeywordReference;
+var writeKeyword = wisp_backend_javascript_writer.writeKeyword;
+var writeSymbol = wisp_backend_javascript_writer.writeSymbol;
+var writeNil = wisp_backend_javascript_writer.writeNil;
+var writeComment = wisp_backend_javascript_writer.writeComment;
+var writeNumber = wisp_backend_javascript_writer.writeNumber;
+var writeString = wisp_backend_javascript_writer.writeString;
+var writeBoolean = wisp_backend_javascript_writer.writeBoolean;;;
+
+var isSelfEvaluating = function isSelfEvaluating(form) {
+  return (isNumber(form)) || ((isString(form)) && (!(isSymbol(form))) && (!(isKeyword(form)))) || (isBoolean(form)) || (isNil(form)) || (isRePattern(form));
+};
+exports.isSelfEvaluating = isSelfEvaluating;
+
+var __macros__ = {};
+exports.__macros__ = __macros__;
+
+var executeMacro = function executeMacro(name, form) {
+  return (__macros__ || 0)[name].apply((__macros__ || 0)[name], vec(form));
+};
+exports.executeMacro = executeMacro;
+
+var installMacro = function installMacro(name, macroFn) {
+  return (__macros__ || 0)[name] = macroFn;
+};
+exports.installMacro = installMacro;
+
+var isMacro = function isMacro(name) {
+  return (isSymbol(name)) && ((__macros__ || 0)[name]) && true;
+};
+exports.isMacro = isMacro;
+
+var makeMacro = function makeMacro(pattern, body) {
+  var macroFn = concat(list(symbol(void(0), "fn"), pattern), body);
+  return eval("" + "(" + (compile(macroexpand(macroFn))) + ")");
+};
+exports.makeMacro = makeMacro;
+
+installMacro(symbol(void(0), "defmacro"), function(name, signature) {
+  var body = Array.prototype.slice.call(arguments, 2);
+  return installMacro(name, makeMacro(signature, body));
+});
+
+var __specials__ = {};
+exports.__specials__ = __specials__;
+
+var installSpecial = function installSpecial(name, f, validator) {
+  return (__specials__ || 0)[name] = function(form) {
+    validator ?
+      validator(form) :
+      void(0);
+    return f(withMeta(rest(form), meta(form)));
+  };
+};
+exports.installSpecial = installSpecial;
+
+var isSpecial = function isSpecial(name) {
+  return (isSymbol(name)) && ((__specials__ || 0)[name]) && true;
+};
+exports.isSpecial = isSpecial;
+
+var executeSpecial = function executeSpecial(name, form) {
+  return ((__specials__ || 0)[name])(form);
+};
+exports.executeSpecial = executeSpecial;
+
+var opt = function opt(argument, fallback) {
+  return (isNil(argument)) || (isEmpty(argument)) ?
+    fallback :
+    first(argument);
+};
+exports.opt = opt;
+
+var applyForm = function applyForm(fnName, form, isQuoted) {
+  return cons(fnName, isQuoted ?
+    map(function(e) {
+      return list(symbol(void(0), "quote"), e);
+    }, form) :
+    form, form);
+};
+exports.applyForm = applyForm;
+
+var applyUnquotedForm = function applyUnquotedForm(fnName, form) {
+  return cons(fnName, map(function(e) {
+    return isUnquote(e) ?
+      second(e) :
+    (isList(e)) && (isKeyword(first(e))) ?
+      list(symbol(void(0), "syntax-quote"), second(e)) :
+      list(symbol(void(0), "syntax-quote"), e);
+  }, form));
+};
+exports.applyUnquotedForm = applyUnquotedForm;
+
+var splitSplices = function splitSplices(form, fnName) {
+  var makeSplice = function makeSplice(form) {
+    return (isSelfEvaluating(form)) || (isSymbol(form)) ?
+      applyUnquotedForm(fnName, list(form)) :
+      applyUnquotedForm(fnName, form);
+  };
+  return (function loop(nodes, slices, acc) {
+    var recur = loop;
+    while (recur === loop) {
+      recur = isEmpty(nodes) ?
+      reverse(isEmpty(acc) ?
+        slices :
+        cons(makeSplice(reverse(acc)), slices)) :
+      (function() {
+        var node = first(nodes);
+        return isUnquoteSplicing(node) ?
+          (nodes = rest(nodes), slices = cons(second(node), isEmpty(acc) ?
+            slices :
+            cons(makeSplice(reverse(acc)), slices)), acc = list(), loop) :
+          (nodes = rest(nodes), slices = slices, acc = cons(node, acc), loop);
+      })();
+    };
+    return recur;
+  })(form, list(), list());
+};
+exports.splitSplices = splitSplices;
+
+var syntaxQuoteSplit = function syntaxQuoteSplit(appendName, fnName, form) {
+  var slices = splitSplices(form, fnName);
+  var n = count(slices);
+  return n === 0 ?
+    list(fnName) :
+  n === 1 ?
+    first(slices) :
+  "default" ?
+    applyForm(appendName, slices) :
+    void(0);
+};
+exports.syntaxQuoteSplit = syntaxQuoteSplit;
+
+var compileObject = function compileObject(form, isQuoted) {
+  return isKeyword(form) ?
+    writeKeyword(form) :
+  isSymbol(form) ?
+    writeSymbol(form) :
+  isNumber(form) ?
+    writeNumber(form) :
+  isString(form) ?
+    writeString(form) :
+  isBoolean(form) ?
+    writeBoolean(form) :
+  isNil(form) ?
+    writeNil(form) :
+  isRePattern(form) ?
+    compileRePattern(form) :
+  isVector(form) ?
+    compile(applyForm(symbol(void(0), "vector"), list.apply(list, form), isQuoted)) :
+  isList(form) ?
+    compile(applyForm(symbol(void(0), "list"), form, isQuoted)) :
+  isDictionary(form) ?
+    compileDictionary(isQuoted ?
+      mapDictionary(form, function(x) {
+        return list(symbol(void(0), "quote"), x);
+      }) :
+      form) :
+    void(0);
+};
+exports.compileObject = compileObject;
+
+var compileSyntaxQuotedVector = function compileSyntaxQuotedVector(form) {
+  var concatForm = syntaxQuoteSplit(symbol(void(0), "concat"), symbol(void(0), "vector"), list.apply(list, form));
+  return compile(count(concatForm) > 1 ?
+    list(symbol(void(0), "vec"), concatForm) :
+    concatForm);
+};
+exports.compileSyntaxQuotedVector = compileSyntaxQuotedVector;
+
+var compileSyntaxQuoted = function compileSyntaxQuoted(form) {
+  return isList(form) ?
+    compile(syntaxQuoteSplit(symbol(void(0), "concat"), symbol(void(0), "list"), form)) :
+  isVector(form) ?
+    compileSyntaxQuotedVector(form) :
+  "else" ?
+    compileObject(form) :
+    void(0);
+};
+exports.compileSyntaxQuoted = compileSyntaxQuoted;
+
+var compile = function compile(form) {
+  return isSelfEvaluating(form) ?
+    compileObject(form) :
+  isSymbol(form) ?
+    writeReference(form) :
+  isKeyword(form) ?
+    writeKeywordReference(form) :
+  isVector(form) ?
+    compileObject(form) :
+  isDictionary(form) ?
+    compileObject(form) :
+  isList(form) ?
+    (function() {
+      var head = first(form);
+      return isEmpty(form) ?
+        compileObject(form, true) :
+      isQuote(form) ?
+        compileObject(second(form), true) :
+      isSyntaxQuote(form) ?
+        compileSyntaxQuoted(second(form)) :
+      isSpecial(head) ?
+        executeSpecial(head, form) :
+      isKeyword(head) ?
+        compile(list(symbol(void(0), "get"), second(form), head)) :
+      "else" ?
+        (function() {
+          return !((isSymbol(head)) || (isList(head))) ?
+            (function() { throw compilerError(form, "" + "operator is not a procedure: " + head); })() :
+            compileInvoke(form);
+        })() :
+        void(0);
+    })() :
+    void(0);
+};
+exports.compile = compile;
+
+var compile_ = function compile_(forms) {
+  return reduce(function(result, form) {
+    return "" + result + (isEmpty(result) ?
+      "" :
+      ";\n\n") + (compile(isList(form) ?
+      withMeta(macroexpand(form), conj({
+        "top": true
+      }, meta(form))) :
+      form));
+  }, "", forms);
+};
+exports.compile_ = compile_;
+
+var compileProgram = function compileProgram(forms) {
+  return reduce(function(result, form) {
+    return "" + result + (isEmpty(result) ?
+      "" :
+      ";\n\n") + (compile(isList(form) ?
+      withMeta(macroexpand(form), conj({
+        "top": true
+      }, meta(form))) :
+      form));
+  }, "", forms);
+};
+exports.compileProgram = compileProgram;
+
+var macroexpand1 = function macroexpand1(form) {
+  return isList(form) ?
+    (function() {
+      var op = first(form);
+      var id = isSymbol(op) ?
+        name(op) :
+        void(0);
+      return isSpecial(op) ?
+        form :
+      isMacro(op) ?
+        executeMacro(op, rest(form)) :
+      (isSymbol(op)) && (!(id === ".")) ?
+        first(id) === "." ?
+          count(form) < 2 ?
+            (function() { throw Error("Malformed member expression, expecting (.member target ...)"); })() :
+            cons(symbol(void(0), "."), cons(second(form), cons(symbol(subs(id, 1)), rest(rest(form))))) :
+        last(id) === "." ?
+          cons(symbol(void(0), "new"), cons(symbol(subs(id, 0, dec(count(id)))), rest(form))) :
+          form :
+      "else" ?
+        form :
+        void(0);
+    })() :
+    form;
+};
+exports.macroexpand1 = macroexpand1;
+
+var macroexpand = function macroexpand(form) {
+  return (function loop(original, expanded) {
+    var recur = loop;
+    while (recur === loop) {
+      recur = original === expanded ?
+      original :
+      (original = expanded, expanded = macroexpand1(expanded), loop);
+    };
+    return recur;
+  })(form, macroexpand1(form));
+};
+exports.macroexpand = macroexpand;
+
+var _lineBreakPattern_ = /\n(?=[^\n])/m;
+exports._lineBreakPattern_ = _lineBreakPattern_;
+
+var indent = function indent(code, indentation) {
+  return join(indentation, split(code, _lineBreakPattern_));
+};
+exports.indent = indent;
+
+var compileTemplate = function compileTemplate(form) {
+  var indentPattern = /\n *$/;
+  var getIndentation = function(code) {
+    return (reFind(indentPattern, code)) || "\n";
+  };
+  return (function loop(code, parts, values) {
+    var recur = loop;
+    while (recur === loop) {
+      recur = count(parts) > 1 ?
+      (code = "" + code + (first(parts)) + (indent("" + (first(values)), getIndentation(first(parts)))), parts = rest(parts), values = rest(values), loop) :
+      "" + code + (first(parts));
+    };
+    return recur;
+  })("", split(first(form), "~{}"), rest(form));
+};
+exports.compileTemplate = compileTemplate;
+
+var compileDef = function compileDef(form) {
+  var id = first(form);
+  var isExport = ((((meta(form)) || {}) || 0)["top"]) && (!((((meta(id)) || {}) || 0)["private"]));
+  var attribute = symbol(namespace(id), "" + "-" + (name(id)));
+  return isExport ?
+    compileTemplate(list("var ~{};\n~{}", compile(cons(symbol(void(0), "set!"), form)), compile(list(symbol(void(0), "set!"), list(symbol(void(0), "."), symbol(void(0), "exports"), attribute), id)))) :
+    compileTemplate(list("var ~{}", compile(cons(symbol(void(0), "set!"), form))));
+};
+exports.compileDef = compileDef;
+
+var compileIfElse = function compileIfElse(form) {
+  var condition = macroexpand(first(form));
+  var thenExpression = macroexpand(second(form));
+  var elseExpression = macroexpand(third(form));
+  return compileTemplate(list((isList(elseExpression)) && (isEqual(first(elseExpression), symbol(void(0), "if"))) ?
+    "~{} ?\n  ~{} :\n~{}" :
+    "~{} ?\n  ~{} :\n  ~{}", compile(condition), compile(thenExpression), compile(elseExpression)));
+};
+exports.compileIfElse = compileIfElse;
+
+var compileDictionary = function compileDictionary(form) {
+  var body = (function loop(body, names) {
+    var recur = loop;
+    while (recur === loop) {
+      recur = isEmpty(names) ?
+      body :
+      (body = "" + (isNil(body) ?
+        "" :
+        "" + body + ",\n") + (compileTemplate(list("~{}: ~{}", compile(first(names)), compile(macroexpand((form || 0)[first(names)]))))), names = rest(names), loop);
+    };
+    return recur;
+  })(void(0), keys(form));
+  return isNil(body) ?
+    "{}" :
+    compileTemplate(list("{\n  ~{}\n}", body));
+};
+exports.compileDictionary = compileDictionary;
+
+var desugarFnName = function desugarFnName(form) {
+  return (isSymbol(first(form))) || (isNil(first(form))) ?
+    form :
+    cons(void(0), form);
+};
+exports.desugarFnName = desugarFnName;
+
+var desugarFnDoc = function desugarFnDoc(form) {
+  return (isString(second(form))) || (isNil(second(form))) ?
+    form :
+    cons(first(form), cons(void(0), rest(form)));
+};
+exports.desugarFnDoc = desugarFnDoc;
+
+var desugarFnAttrs = function desugarFnAttrs(form) {
+  return (isDictionary(third(form))) || (isNil(third(form))) ?
+    form :
+    cons(first(form), cons(second(form), cons(void(0), rest(rest(form)))));
+};
+exports.desugarFnAttrs = desugarFnAttrs;
+
+var compileDesugaredFn = function compileDesugaredFn(name, doc, attrs, params, body) {
+  return compileTemplate(isNil(name) ?
+    list("function(~{}) {\n  ~{}\n}", join(", ", map(compile, (params || 0)["names"])), compileFnBody(map(macroexpand, body), params)) :
+    list("function ~{}(~{}) {\n  ~{}\n}", compile(name), join(", ", map(compile, (params || 0)["names"])), compileFnBody(map(macroexpand, body), params)));
+};
+exports.compileDesugaredFn = compileDesugaredFn;
+
+var compileStatements = function compileStatements(form, prefix) {
+  return (function loop(result, expression, expressions) {
+    var recur = loop;
+    while (recur === loop) {
+      recur = isEmpty(expressions) ?
+      "" + result + (isNil(prefix) ?
+        "" :
+        prefix) + (compile(macroexpand(expression))) + ";" :
+      (result = "" + result + (compile(macroexpand(expression))) + ";\n", expression = first(expressions), expressions = rest(expressions), loop);
+    };
+    return recur;
+  })("", first(form), rest(form));
+};
+exports.compileStatements = compileStatements;
+
+var compileFnBody = function compileFnBody(form, params) {
+  return (isDictionary(params)) && ((params || 0)["rest"]) ?
+    compileStatements(cons(list(symbol(void(0), "def"), (params || 0)["rest"], list(symbol(void(0), "Array.prototype.slice.call"), symbol(void(0), "arguments"), (params || 0)["arity"])), form), "return ") :
+  (count(form) === 1) && (isList(first(form))) && (isEqual(first(first(form)), symbol(void(0), "do"))) ?
+    compileFnBody(rest(first(form)), params) :
+    compileStatements(form, "return ");
+};
+exports.compileFnBody = compileFnBody;
+
+var desugarParams = function desugarParams(params) {
+  return (function loop(names, params) {
+    var recur = loop;
+    while (recur === loop) {
+      recur = isEmpty(params) ?
+      {
+        "names": names,
+        "arity": count(names),
+        "rest": void(0)
+      } :
+    isEqual(first(params), symbol(void(0), "&")) ?
+      isEqual(count(params), 1) ?
+        {
+          "names": names,
+          "arity": count(names),
+          "rest": void(0)
+        } :
+      isEqual(count(params), 2) ?
+        {
+          "names": names,
+          "arity": count(names),
+          "rest": second(params)
+        } :
+      "else" ?
+        (function() { throw TypeError("Unexpected number of parameters after &"); })() :
+        void(0) :
+    "else" ?
+      (names = conj(names, first(params)), params = rest(params), loop) :
+      void(0);
+    };
+    return recur;
+  })([], params);
+};
+exports.desugarParams = desugarParams;
+
+var analyzeOverloadedFn = function analyzeOverloadedFn(name, doc, attrs, overloads) {
+  return map(function(overload) {
+    var params = desugarParams(first(overload));
+    return {
+      "rest": (params || 0)["rest"],
+      "names": (params || 0)["names"],
+      "arity": (params || 0)["arity"],
+      "body": rest(overload)
+    };
+  }, overloads);
+};
+exports.analyzeOverloadedFn = analyzeOverloadedFn;
+
+var compileOverloadedFn = function compileOverloadedFn(name, doc, attrs, overloads) {
+  var methods = analyzeOverloadedFn(name, doc, attrs, overloads);
+  var fixedMethods = filter(function(method) {
+    return !((method || 0)["rest"]);
+  }, methods);
+  var variadic = first(filter(function(method) {
+    return (method || 0)["rest"];
+  }, methods));
+  var names = reduce(function(names, params) {
+    return count(names) > (params || 0)["arity"] ?
+      names :
+      (params || 0)["names"];
+  }, [], methods);
+  return list(symbol(void(0), "fn"), name, doc, attrs, names, list(symbol(void(0), "raw*"), compileSwitch(symbol(void(0), "arguments.length"), map(function(method) {
+    return cons((method || 0)["arity"], list(symbol(void(0), "raw*"), compileFnBody(concat(compileRebind(names, (method || 0)["names"]), (method || 0)["body"]))));
+  }, fixedMethods), isNil(variadic) ?
+    list(symbol(void(0), "throw"), list(symbol(void(0), "Error"), "Invalid arity")) :
+    list(symbol(void(0), "raw*"), compileFnBody(concat(compileRebind(cons(list(symbol(void(0), "Array.prototype.slice.call"), symbol(void(0), "arguments"), (variadic || 0)["arity"]), names), cons((variadic || 0)["rest"], (variadic || 0)["names"])), (variadic || 0)["body"]))))), void(0));
+};
+exports.compileOverloadedFn = compileOverloadedFn;
+
+var compileRebind = function compileRebind(bindings, names) {
+  return (function loop(form, bindings, names) {
+    var recur = loop;
+    while (recur === loop) {
+      recur = isEmpty(names) ?
+      reverse(form) :
+      (form = isEqual(first(names), first(bindings)) ?
+        form :
+        cons(list(symbol(void(0), "def"), first(names), first(bindings)), form), bindings = rest(bindings), names = rest(names), loop);
+    };
+    return recur;
+  })(list(), bindings, names);
+};
+exports.compileRebind = compileRebind;
+
+var compileSwitchCases = function compileSwitchCases(cases) {
+  return reduce(function(form, caseExpression) {
+    return "" + form + (compileTemplate(list("case ~{}:\n  ~{}\n", compile(macroexpand(first(caseExpression))), compile(macroexpand(rest(caseExpression))))));
+  }, "", cases);
+};
+exports.compileSwitchCases = compileSwitchCases;
+
+var compileSwitch = function compileSwitch(value, cases, defaultCase) {
+  return compileTemplate(list("switch (~{}) {\n  ~{}\n  default:\n    ~{}\n}", compile(macroexpand(value)), compileSwitchCases(cases), compile(macroexpand(defaultCase))));
+};
+exports.compileSwitch = compileSwitch;
+
+var compileFn = function compileFn(form) {
+  var signature = desugarFnAttrs(desugarFnDoc(desugarFnName(form)));
+  var name = first(signature);
+  var doc = second(signature);
+  var attrs = third(signature);
+  return isVector(third(rest(signature))) ?
+    compileDesugaredFn(name, doc, attrs, desugarParams(third(rest(signature))), rest(rest(rest(rest(signature))))) :
+    compile(compileOverloadedFn(name, doc, attrs, rest(rest(rest(signature)))));
+};
+exports.compileFn = compileFn;
+
+var compileInvoke = function compileInvoke(form) {
+  return compileTemplate(list(isList(first(form)) ?
+    "(~{})(~{})" :
+    "~{}(~{})", compile(first(form)), compileGroup(rest(form))));
+};
+exports.compileInvoke = compileInvoke;
+
+var compileGroup = function compileGroup(form, wrap) {
+  return wrap ?
+    "" + "(" + (compileGroup(form)) + ")" :
+    join(", ", vec(map(compile, map(macroexpand, form))));
+};
+exports.compileGroup = compileGroup;
+
+var compileDo = function compileDo(form) {
+  return compile(list(cons(symbol(void(0), "fn"), cons([], form))));
+};
+exports.compileDo = compileDo;
+
+var defineBindings = function defineBindings(form) {
+  return (function loop(defs, bindings) {
+    var recur = loop;
+    while (recur === loop) {
+      recur = count(bindings) === 0 ?
+      reverse(defs) :
+      (defs = cons(list(symbol(void(0), "def"), (bindings || 0)[0], (bindings || 0)[1]), defs), bindings = rest(rest(bindings)), loop);
+    };
+    return recur;
+  })(list(), form);
+};
+exports.defineBindings = defineBindings;
+
+var compileThrow = function compileThrow(form) {
+  return compileTemplate(list("(function() { throw ~{}; })()", compile(macroexpand(first(form)))));
+};
+exports.compileThrow = compileThrow;
+
+var compileSet = function compileSet(form) {
+  return compileTemplate(list("~{} = ~{}", compile(macroexpand(first(form))), compile(macroexpand(second(form)))));
+};
+exports.compileSet = compileSet;
+
+var compileVector = function compileVector(form) {
+  return compileTemplate(list("[~{}]", compileGroup(form)));
+};
+exports.compileVector = compileVector;
+
+var compileTry = function compileTry(form) {
+  return (function loop(tryExprs, catchExprs, finallyExprs, exprs) {
+    var recur = loop;
+    while (recur === loop) {
+      recur = isEmpty(exprs) ?
+      isEmpty(catchExprs) ?
+        compileTemplate(list("(function() {\ntry {\n  ~{}\n} finally {\n  ~{}\n}})()", compileFnBody(tryExprs), compileFnBody(finallyExprs))) :
+      isEmpty(finallyExprs) ?
+        compileTemplate(list("(function() {\ntry {\n  ~{}\n} catch (~{}) {\n  ~{}\n}})()", compileFnBody(tryExprs), compile(first(catchExprs)), compileFnBody(rest(catchExprs)))) :
+        compileTemplate(list("(function() {\ntry {\n  ~{}\n} catch (~{}) {\n  ~{}\n} finally {\n  ~{}\n}})()", compileFnBody(tryExprs), compile(first(catchExprs)), compileFnBody(rest(catchExprs)), compileFnBody(finallyExprs))) :
+    isEqual(first(first(exprs)), symbol(void(0), "catch")) ?
+      (tryExprs = tryExprs, catchExprs = rest(first(exprs)), finallyExprs = finallyExprs, exprs = rest(exprs), loop) :
+    isEqual(first(first(exprs)), symbol(void(0), "finally")) ?
+      (tryExprs = tryExprs, catchExprs = catchExprs, finallyExprs = rest(first(exprs)), exprs = rest(exprs), loop) :
+      (tryExprs = cons(first(exprs), tryExprs), catchExprs = catchExprs, finallyExprs = finallyExprs, exprs = rest(exprs), loop);
+    };
+    return recur;
+  })(list(), list(), list(), reverse(form));
+};
+exports.compileTry = compileTry;
+
+var compileProperty = function compileProperty(form) {
+  return (name(second(form)))[0] === "-" ?
+    compileTemplate(list(isList(first(form)) ?
+      "(~{}).~{}" :
+      "~{}.~{}", compile(macroexpand(first(form))), compile(macroexpand(symbol(subs(name(second(form)), 1)))))) :
+    compileTemplate(list("~{}.~{}(~{})", compile(macroexpand(first(form))), compile(macroexpand(second(form))), compileGroup(rest(rest(form)))));
+};
+exports.compileProperty = compileProperty;
+
+var compileApply = function compileApply(form) {
+  return compile(list(symbol(void(0), "."), first(form), symbol(void(0), "apply"), first(form), second(form)));
+};
+exports.compileApply = compileApply;
+
+var compileNew = function compileNew(form) {
+  return compileTemplate(list("new ~{}", compile(form)));
+};
+exports.compileNew = compileNew;
+
+var compileAget = function compileAget(form) {
+  var target = macroexpand(first(form));
+  var attribute = macroexpand(second(form));
+  var notFound = third(form);
+  var template = isList(target) ?
+    "(~{})[~{}]" :
+    "~{}[~{}]";
+  return notFound ?
+    compile(list(symbol(void(0), "or"), list(symbol(void(0), "get"), first(form), second(form)), macroexpand(notFound))) :
+    compileTemplate(list(template, compile(target), compile(attribute)));
+};
+exports.compileAget = compileAget;
+
+var compileGet = function compileGet(form) {
+  return compileAget(cons(list(symbol(void(0), "or"), first(form), 0), rest(form)));
+};
+exports.compileGet = compileGet;
+
+var compileInstance = function compileInstance(form) {
+  return compileTemplate(list("~{} instanceof ~{}", compile(macroexpand(second(form))), compile(macroexpand(first(form)))));
+};
+exports.compileInstance = compileInstance;
+
+var compileNot = function compileNot(form) {
+  return compileTemplate(list("!(~{})", compile(macroexpand(first(form)))));
+};
+exports.compileNot = compileNot;
+
+var compileLoop = function compileLoop(form) {
+  var bindings = (function loop(names, values, tokens) {
+    var recur = loop;
+    while (recur === loop) {
+      recur = isEmpty(tokens) ?
+      {
+        "names": names,
+        "values": values
+      } :
+      (names = conj(names, first(tokens)), values = conj(values, second(tokens)), tokens = rest(rest(tokens)), loop);
+    };
+    return recur;
+  })([], [], first(form));
+  var names = (bindings || 0)["names"];
+  var values = (bindings || 0)["values"];
+  var body = rest(form);
+  return compile(cons(cons(symbol(void(0), "fn"), cons(symbol(void(0), "loop"), cons(names, compileRecur(names, body)))), list.apply(list, values)));
+};
+exports.compileLoop = compileLoop;
+
+var rebindBindings = function rebindBindings(names, values) {
+  return (function loop(result, names, values) {
+    var recur = loop;
+    while (recur === loop) {
+      recur = isEmpty(names) ?
+      reverse(result) :
+      (result = cons(list(symbol(void(0), "set!"), first(names), first(values)), result), names = rest(names), values = rest(values), loop);
+    };
+    return recur;
+  })(list(), names, values);
+};
+exports.rebindBindings = rebindBindings;
+
+var expandRecur = function expandRecur(names, body) {
+  return map(function(form) {
+    return isList(form) ?
+      isEqual(first(form), symbol(void(0), "recur")) ?
+        list(symbol(void(0), "raw*"), compileGroup(concat(rebindBindings(names, rest(form)), list(symbol(void(0), "loop"))), true)) :
+        expandRecur(names, form) :
+      form;
+  }, body);
+};
+exports.expandRecur = expandRecur;
+
+var compileRecur = function compileRecur(names, body) {
+  return list(list(symbol(void(0), "raw*"), compileTemplate(list("var recur = loop;\nwhile (recur === loop) {\n  recur = ~{}\n}", compileStatements(expandRecur(names, body))))), symbol(void(0), "recur"));
+};
+exports.compileRecur = compileRecur;
+
+var compileRaw = function compileRaw(form) {
+  return first(form);
+};
+exports.compileRaw = compileRaw;
+
+installSpecial(symbol(void(0), "set!"), compileSet);
+
+installSpecial(symbol(void(0), "get"), compileGet);
+
+installSpecial(symbol(void(0), "aget"), compileAget);
+
+installSpecial(symbol(void(0), "def"), compileDef);
+
+installSpecial(symbol(void(0), "if"), compileIfElse);
+
+installSpecial(symbol(void(0), "do"), compileDo);
+
+installSpecial(symbol(void(0), "do*"), compileStatements);
+
+installSpecial(symbol(void(0), "fn"), compileFn);
+
+installSpecial(symbol(void(0), "throw"), compileThrow);
+
+installSpecial(symbol(void(0), "vector"), compileVector);
+
+installSpecial(symbol(void(0), "try"), compileTry);
+
+installSpecial(symbol(void(0), "."), compileProperty);
+
+installSpecial(symbol(void(0), "apply"), compileApply);
+
+installSpecial(symbol(void(0), "new"), compileNew);
+
+installSpecial(symbol(void(0), "instance?"), compileInstance);
+
+installSpecial(symbol(void(0), "not"), compileNot);
+
+installSpecial(symbol(void(0), "loop"), compileLoop);
+
+installSpecial(symbol(void(0), "raw*"), compileRaw);
+
+installSpecial(symbol(void(0), "comment"), writeComment);
+
+var compileRePattern = function compileRePattern(form) {
+  return "" + form;
+};
+exports.compileRePattern = compileRePattern;
+
+var installNative = function installNative(alias, operator, validator, fallback) {
+  return installSpecial(alias, function(form) {
+    return isEmpty(form) ?
+      fallback :
+      reduce(function(left, right) {
+        return compileTemplate(list("~{} ~{} ~{}", left, name(operator), right));
+      }, map(function(operand) {
+        return compileTemplate(list(isList(operand) ?
+          "(~{})" :
+          "~{}", compile(macroexpand(operand))));
+      }, form));
+  }, validator);
+};
+exports.installNative = installNative;
+
+var installOperator = function installOperator(alias, operator) {
+  return installSpecial(alias, function(form) {
+    return (function loop(result, left, right, operands) {
+      var recur = loop;
+      while (recur === loop) {
+        recur = isEmpty(operands) ?
+        "" + result + (compileTemplate(list("~{} ~{} ~{}", compile(macroexpand(left)), name(operator), compile(macroexpand(right))))) :
+        (result = "" + result + (compileTemplate(list("~{} ~{} ~{} && ", compile(macroexpand(left)), name(operator), compile(macroexpand(right))))), left = right, right = first(operands), operands = rest(operands), loop);
+      };
+      return recur;
+    })("", first(form), second(form), rest(rest(form)));
+  }, verifyTwo);
+};
+exports.installOperator = installOperator;
+
+var compilerError = function compilerError(form, message) {
+  var error = Error("" + message);
+  error.line = 1;
+  return (function() { throw error; })();
+};
+exports.compilerError = compilerError;
+
+var verifyTwo = function verifyTwo(form) {
+  return (isEmpty(rest(form))) || (isEmpty(rest(rest(form)))) ?
+    (function() { throw compilerError(form, "" + (first(form)) + " form requires at least two operands"); })() :
+    void(0);
+};
+exports.verifyTwo = verifyTwo;
+
+installNative(symbol(void(0), "+"), symbol(void(0), "+"), void(0), 0);
+
+installNative(symbol(void(0), "-"), symbol(void(0), "-"), void(0), "NaN");
+
+installNative(symbol(void(0), "*"), symbol(void(0), "*"), void(0), 1);
+
+installNative(symbol(void(0), "/"), symbol(void(0), "/"), verifyTwo);
+
+installNative(symbol(void(0), "mod"), symbol("%"), verifyTwo);
+
+installNative(symbol(void(0), "and"), symbol(void(0), "&&"));
+
+installNative(symbol(void(0), "or"), symbol(void(0), "||"));
+
+installOperator(symbol(void(0), "not="), symbol(void(0), "!="));
+
+installOperator(symbol(void(0), "=="), symbol(void(0), "==="));
+
+installOperator(symbol(void(0), "identical?"), symbol(void(0), "==="));
+
+installOperator(symbol(void(0), ">"), symbol(void(0), ">"));
+
+installOperator(symbol(void(0), ">="), symbol(void(0), ">="));
+
+installOperator(symbol(void(0), "<"), symbol(void(0), "<"));
+
+installOperator(symbol(void(0), "<="), symbol(void(0), "<="));
+
+installNative(symbol(void(0), "bit-and"), symbol(void(0), "&"), verifyTwo);
+
+installNative(symbol(void(0), "bit-or"), symbol(void(0), "|"), verifyTwo);
+
+installNative(symbol(void(0), "bit-xor"), symbol("^"));
+
+installNative(symbol(void(0), "bit-not"), symbol("~"), verifyTwo);
+
+installNative(symbol(void(0), "bit-shift-left"), symbol(void(0), "<<"), verifyTwo);
+
+installNative(symbol(void(0), "bit-shift-right"), symbol(void(0), ">>"), verifyTwo);
+
+installNative(symbol(void(0), "bit-shift-right-zero-fil"), symbol(void(0), ">>>"), verifyTwo);
+
+installMacro(symbol(void(0), "str"), function str() {
+  var forms = Array.prototype.slice.call(arguments, 0);
+  return concat(list(symbol(void(0), "+"), ""), forms);
+});
+
+installMacro(symbol(void(0), "let"), function letMacro(bindings) {
+  var body = Array.prototype.slice.call(arguments, 1);
+  return cons(symbol(void(0), "do"), concat(defineBindings(bindings), body));
+});
+
+installMacro(symbol(void(0), "cond"), function cond() {
+  var clauses = Array.prototype.slice.call(arguments, 0);
+  return !(isEmpty(clauses)) ?
+    list(symbol(void(0), "if"), first(clauses), isEmpty(rest(clauses)) ?
+      (function() { throw Error("cond requires an even number of forms"); })() :
+      second(clauses), cons(symbol(void(0), "cond"), rest(rest(clauses)))) :
+    void(0);
+});
+
+installMacro(symbol(void(0), "defn"), function defn(name) {
+  var body = Array.prototype.slice.call(arguments, 1);
+  return list(symbol(void(0), "def"), name, concat(list(symbol(void(0), "fn"), name), body));
+});
+
+installMacro(symbol(void(0), "defn-"), function defn(name) {
+  var body = Array.prototype.slice.call(arguments, 1);
+  return concat(list(symbol(void(0), "defn"), withMeta(name, conj({
+    "private": true
+  }, meta(name)))), body);
+});
+
+installMacro(symbol(void(0), "assert"), function assert(x, message) {
+  var title = message || "";
+  var assertion = prStr(x);
+  var uri = (x || 0)["uri"];
+  var form = isList(x) ?
+    second(x) :
+    x;
+  return list(symbol(void(0), "do"), list(symbol(void(0), "if"), list(symbol(void(0), "and"), list(symbol(void(0), "not"), list(symbol(void(0), "identical?"), list(symbol(void(0), "typeof"), symbol(void(0), "**verbose**")), "undefined")), symbol(void(0), "**verbose**")), list(symbol(void(0), ".log"), symbol(void(0), "console"), "Assert:", assertion)), list(symbol(void(0), "if"), list(symbol(void(0), "not"), x), list(symbol(void(0), "throw"), list(symbol(void(0), "Error."), list(symbol(void(0), "str"), "Assert failed: ", title, "\n\nAssertion:\n\n", assertion, "\n\nActual:\n\n", form, "\n--------------\n"), uri))));
+});
+
+var parseReferences = function parseReferences(forms) {
+  return reduce(function(references, form) {
+    isSeq(form) ?
+      (references || 0)[name(first(form))] = vec(rest(form)) :
+      void(0);
+    return references;
+  }, {}, forms);
+};
+exports.parseReferences = parseReferences;
+
+var parseRequire = function parseRequire(form) {
+  var requirement = isSymbol(form) ?
+    [form] :
+    vec(form);
+  var id = first(requirement);
+  var params = dictionary.apply(dictionary, rest(requirement));
+  var imports = reduce(function(imports, name) {
+    (imports || 0)[name] = ((imports || 0)[name]) || name;
+    return imports;
+  }, conj({}, (params || 0)["꞉rename"]), (params || 0)["꞉refer"]);
+  return conj({
+    "id": id,
+    "imports": imports
+  }, params);
+};
+exports.parseRequire = parseRequire;
+
+var analyzeNs = function analyzeNs(form) {
+  var id = first(form);
+  var params = rest(form);
+  var doc = isString(first(params)) ?
+    first(params) :
+    void(0);
+  var references = parseReferences(doc ?
+    rest(params) :
+    params);
+  return withMeta(form, {
+    "id": id,
+    "doc": doc,
+    "require": (references || 0)["require"] ?
+      map(parseRequire, (references || 0)["require"]) :
+      void(0)
+  });
+};
+exports.analyzeNs = analyzeNs;
+
+var idToNs = function idToNs(id) {
+  return symbol(void(0), join("*", split("" + id, ".")));
+};
+exports.idToNs = idToNs;
+
+var nameToField = function nameToField(name) {
+  return symbol(void(0), "" + "-" + name);
+};
+exports.nameToField = nameToField;
+
+var compileImport = function compileImport(module) {
+  return function(form) {
+    return list(symbol(void(0), "def"), second(form), list(symbol(void(0), "."), module, nameToField(first(form))));
+  };
+};
+exports.compileImport = compileImport;
+
+var compileRequire = function compileRequire(requirer) {
+  return function(form) {
+    var id = (form || 0)["id"];
+    var requirement = idToNs(((form || 0)["꞉as"]) || id);
+    var path = resolve(requirer, id);
+    var imports = (form || 0)["imports"];
+    return concat([symbol(void(0), "do*"), list(symbol(void(0), "def"), requirement, list(symbol(void(0), "require"), path))], imports ?
+      map(compileImport(requirement), imports) :
+      void(0));
+  };
+};
+exports.compileRequire = compileRequire;
+
+var resolve = function resolve(from, to) {
+  var requirer = split("" + from, ".");
+  var requirement = split("" + to, ".");
+  var isRelative = (!("" + from === "" + to)) && (first(requirer) === first(requirement));
+  return isRelative ?
+    (function loop(from, to) {
+      var recur = loop;
+      while (recur === loop) {
+        recur = first(from) === first(to) ?
+        (from = rest(from), to = rest(to), loop) :
+        join("/", concat(["."], repeat(dec(count(from)), ".."), to));
+      };
+      return recur;
+    })(requirer, requirement) :
+    join("/", requirement);
+};
+exports.resolve = resolve;
+
+var compileNs = function compileNs() {
+  var form = Array.prototype.slice.call(arguments, 0);
+  return (function() {
+    var metadata = meta(analyzeNs(form));
+    var id = "" + ((metadata || 0)["id"]);
+    var doc = (metadata || 0)["doc"];
+    var requirements = (metadata || 0)["require"];
+    var ns = doc ?
+      {
+        "id": id,
+        "doc": doc
+      } :
+      {
+        "id": id
+      };
+    return concat([symbol(void(0), "do*"), list(symbol(void(0), "def"), symbol(void(0), "*ns*"), ns)], requirements ?
+      map(compileRequire(id), requirements) :
+      void(0));
+  })();
+};
+exports.compileNs = compileNs;
+
+installMacro(symbol(void(0), "ns"), compileNs);
+
+installMacro(symbol(void(0), "print"), function() {
+  var more = Array.prototype.slice.call(arguments, 0);
+  "Prints the object(s) to the output for human consumption.";
+  return concat(list(symbol(void(0), ".log"), symbol(void(0), "console")), more);
+})
+},{"./reader":23,"./ast":20,"./sequence":21,"./runtime":18,"./string":26,"./backend/javascript/writer":27}],23:[function(require,module,exports){
 var _ns_ = {
   "id": "wisp.reader",
   "doc": "Reader module provides functions for reading text input\n  as wisp data structures"
@@ -17383,1050 +18501,7 @@ parseStatement: true, parseSourceElement: true */
 }).call(this);
 
 })()
-},{}],23:[function(require,module,exports){
-var _ns_ = {
-  "id": "wisp.compiler",
-  "doc": "wisp language compiler"
-};
-var wisp_reader = require("./reader");
-var readFromString = wisp_reader.readFromString;;
-var wisp_ast = require("./ast");
-var meta = wisp_ast.meta;
-var withMeta = wisp_ast.withMeta;
-var isSymbol = wisp_ast.isSymbol;
-var symbol = wisp_ast.symbol;
-var isKeyword = wisp_ast.isKeyword;
-var keyword = wisp_ast.keyword;
-var namespace = wisp_ast.namespace;
-var isUnquote = wisp_ast.isUnquote;
-var isUnquoteSplicing = wisp_ast.isUnquoteSplicing;
-var isQuote = wisp_ast.isQuote;
-var isSyntaxQuote = wisp_ast.isSyntaxQuote;
-var name = wisp_ast.name;
-var gensym = wisp_ast.gensym;
-var prStr = wisp_ast.prStr;;
-var wisp_sequence = require("./sequence");
-var isEmpty = wisp_sequence.isEmpty;
-var count = wisp_sequence.count;
-var isList = wisp_sequence.isList;
-var list = wisp_sequence.list;
-var first = wisp_sequence.first;
-var second = wisp_sequence.second;
-var third = wisp_sequence.third;
-var rest = wisp_sequence.rest;
-var cons = wisp_sequence.cons;
-var conj = wisp_sequence.conj;
-var reverse = wisp_sequence.reverse;
-var reduce = wisp_sequence.reduce;
-var vec = wisp_sequence.vec;
-var last = wisp_sequence.last;
-var repeat = wisp_sequence.repeat;
-var map = wisp_sequence.map;
-var filter = wisp_sequence.filter;
-var take = wisp_sequence.take;
-var concat = wisp_sequence.concat;
-var isSeq = wisp_sequence.isSeq;;
-var wisp_runtime = require("./runtime");
-var isOdd = wisp_runtime.isOdd;
-var isDictionary = wisp_runtime.isDictionary;
-var dictionary = wisp_runtime.dictionary;
-var merge = wisp_runtime.merge;
-var keys = wisp_runtime.keys;
-var vals = wisp_runtime.vals;
-var isContainsVector = wisp_runtime.isContainsVector;
-var mapDictionary = wisp_runtime.mapDictionary;
-var isString = wisp_runtime.isString;
-var isNumber = wisp_runtime.isNumber;
-var isVector = wisp_runtime.isVector;
-var isBoolean = wisp_runtime.isBoolean;
-var subs = wisp_runtime.subs;
-var reFind = wisp_runtime.reFind;
-var isTrue = wisp_runtime.isTrue;
-var isFalse = wisp_runtime.isFalse;
-var isNil = wisp_runtime.isNil;
-var isRePattern = wisp_runtime.isRePattern;
-var inc = wisp_runtime.inc;
-var dec = wisp_runtime.dec;
-var str = wisp_runtime.str;
-var char = wisp_runtime.char;
-var int = wisp_runtime.int;
-var isEqual = wisp_runtime.isEqual;
-var isStrictEqual = wisp_runtime.isStrictEqual;;
-var wisp_string = require("./string");
-var split = wisp_string.split;
-var join = wisp_string.join;
-var upperCase = wisp_string.upperCase;
-var replace = wisp_string.replace;;
-var wisp_backend_javascript_writer = require("./backend/javascript/writer");
-var writeReference = wisp_backend_javascript_writer.writeReference;
-var writeKeywordReference = wisp_backend_javascript_writer.writeKeywordReference;
-var writeKeyword = wisp_backend_javascript_writer.writeKeyword;
-var writeSymbol = wisp_backend_javascript_writer.writeSymbol;
-var writeNil = wisp_backend_javascript_writer.writeNil;
-var writeComment = wisp_backend_javascript_writer.writeComment;
-var writeNumber = wisp_backend_javascript_writer.writeNumber;
-var writeString = wisp_backend_javascript_writer.writeString;
-var writeBoolean = wisp_backend_javascript_writer.writeBoolean;;;
-
-var isSelfEvaluating = function isSelfEvaluating(form) {
-  return (isNumber(form)) || ((isString(form)) && (!(isSymbol(form))) && (!(isKeyword(form)))) || (isBoolean(form)) || (isNil(form)) || (isRePattern(form));
-};
-exports.isSelfEvaluating = isSelfEvaluating;
-
-var __macros__ = {};
-exports.__macros__ = __macros__;
-
-var executeMacro = function executeMacro(name, form) {
-  return (__macros__ || 0)[name].apply((__macros__ || 0)[name], vec(form));
-};
-exports.executeMacro = executeMacro;
-
-var installMacro = function installMacro(name, macroFn) {
-  return (__macros__ || 0)[name] = macroFn;
-};
-exports.installMacro = installMacro;
-
-var isMacro = function isMacro(name) {
-  return (isSymbol(name)) && ((__macros__ || 0)[name]) && true;
-};
-exports.isMacro = isMacro;
-
-var makeMacro = function makeMacro(pattern, body) {
-  var macroFn = concat(list(symbol(void(0), "fn"), pattern), body);
-  return eval("" + "(" + (compile(macroexpand(macroFn))) + ")");
-};
-exports.makeMacro = makeMacro;
-
-installMacro(symbol(void(0), "defmacro"), function(name, signature) {
-  var body = Array.prototype.slice.call(arguments, 2);
-  return installMacro(name, makeMacro(signature, body));
-});
-
-var __specials__ = {};
-exports.__specials__ = __specials__;
-
-var installSpecial = function installSpecial(name, f, validator) {
-  return (__specials__ || 0)[name] = function(form) {
-    validator ?
-      validator(form) :
-      void(0);
-    return f(withMeta(rest(form), meta(form)));
-  };
-};
-exports.installSpecial = installSpecial;
-
-var isSpecial = function isSpecial(name) {
-  return (isSymbol(name)) && ((__specials__ || 0)[name]) && true;
-};
-exports.isSpecial = isSpecial;
-
-var executeSpecial = function executeSpecial(name, form) {
-  return ((__specials__ || 0)[name])(form);
-};
-exports.executeSpecial = executeSpecial;
-
-var opt = function opt(argument, fallback) {
-  return (isNil(argument)) || (isEmpty(argument)) ?
-    fallback :
-    first(argument);
-};
-exports.opt = opt;
-
-var applyForm = function applyForm(fnName, form, isQuoted) {
-  return cons(fnName, isQuoted ?
-    map(function(e) {
-      return list(symbol(void(0), "quote"), e);
-    }, form) :
-    form, form);
-};
-exports.applyForm = applyForm;
-
-var applyUnquotedForm = function applyUnquotedForm(fnName, form) {
-  return cons(fnName, map(function(e) {
-    return isUnquote(e) ?
-      second(e) :
-    (isList(e)) && (isKeyword(first(e))) ?
-      list(symbol(void(0), "syntax-quote"), second(e)) :
-      list(symbol(void(0), "syntax-quote"), e);
-  }, form));
-};
-exports.applyUnquotedForm = applyUnquotedForm;
-
-var splitSplices = function splitSplices(form, fnName) {
-  var makeSplice = function makeSplice(form) {
-    return (isSelfEvaluating(form)) || (isSymbol(form)) ?
-      applyUnquotedForm(fnName, list(form)) :
-      applyUnquotedForm(fnName, form);
-  };
-  return (function loop(nodes, slices, acc) {
-    var recur = loop;
-    while (recur === loop) {
-      recur = isEmpty(nodes) ?
-      reverse(isEmpty(acc) ?
-        slices :
-        cons(makeSplice(reverse(acc)), slices)) :
-      (function() {
-        var node = first(nodes);
-        return isUnquoteSplicing(node) ?
-          (nodes = rest(nodes), slices = cons(second(node), isEmpty(acc) ?
-            slices :
-            cons(makeSplice(reverse(acc)), slices)), acc = list(), loop) :
-          (nodes = rest(nodes), slices = slices, acc = cons(node, acc), loop);
-      })();
-    };
-    return recur;
-  })(form, list(), list());
-};
-exports.splitSplices = splitSplices;
-
-var syntaxQuoteSplit = function syntaxQuoteSplit(appendName, fnName, form) {
-  var slices = splitSplices(form, fnName);
-  var n = count(slices);
-  return n === 0 ?
-    list(fnName) :
-  n === 1 ?
-    first(slices) :
-  "default" ?
-    applyForm(appendName, slices) :
-    void(0);
-};
-exports.syntaxQuoteSplit = syntaxQuoteSplit;
-
-var compileObject = function compileObject(form, isQuoted) {
-  return isKeyword(form) ?
-    writeKeyword(form) :
-  isSymbol(form) ?
-    writeSymbol(form) :
-  isNumber(form) ?
-    writeNumber(form) :
-  isString(form) ?
-    writeString(form) :
-  isBoolean(form) ?
-    writeBoolean(form) :
-  isNil(form) ?
-    writeNil(form) :
-  isRePattern(form) ?
-    compileRePattern(form) :
-  isVector(form) ?
-    compile(applyForm(symbol(void(0), "vector"), list.apply(list, form), isQuoted)) :
-  isList(form) ?
-    compile(applyForm(symbol(void(0), "list"), form, isQuoted)) :
-  isDictionary(form) ?
-    compileDictionary(isQuoted ?
-      mapDictionary(form, function(x) {
-        return list(symbol(void(0), "quote"), x);
-      }) :
-      form) :
-    void(0);
-};
-exports.compileObject = compileObject;
-
-var compileSyntaxQuotedVector = function compileSyntaxQuotedVector(form) {
-  var concatForm = syntaxQuoteSplit(symbol(void(0), "concat"), symbol(void(0), "vector"), list.apply(list, form));
-  return compile(count(concatForm) > 1 ?
-    list(symbol(void(0), "vec"), concatForm) :
-    concatForm);
-};
-exports.compileSyntaxQuotedVector = compileSyntaxQuotedVector;
-
-var compileSyntaxQuoted = function compileSyntaxQuoted(form) {
-  return isList(form) ?
-    compile(syntaxQuoteSplit(symbol(void(0), "concat"), symbol(void(0), "list"), form)) :
-  isVector(form) ?
-    compileSyntaxQuotedVector(form) :
-  "else" ?
-    compileObject(form) :
-    void(0);
-};
-exports.compileSyntaxQuoted = compileSyntaxQuoted;
-
-var compile = function compile(form) {
-  return isSelfEvaluating(form) ?
-    compileObject(form) :
-  isSymbol(form) ?
-    writeReference(form) :
-  isKeyword(form) ?
-    writeKeywordReference(form) :
-  isVector(form) ?
-    compileObject(form) :
-  isDictionary(form) ?
-    compileObject(form) :
-  isList(form) ?
-    (function() {
-      var head = first(form);
-      return isEmpty(form) ?
-        compileObject(form, true) :
-      isQuote(form) ?
-        compileObject(second(form), true) :
-      isSyntaxQuote(form) ?
-        compileSyntaxQuoted(second(form)) :
-      isSpecial(head) ?
-        executeSpecial(head, form) :
-      isKeyword(head) ?
-        compile(list(symbol(void(0), "get"), second(form), head)) :
-      "else" ?
-        (function() {
-          return !((isSymbol(head)) || (isList(head))) ?
-            (function() { throw compilerError(form, "" + "operator is not a procedure: " + head); })() :
-            compileInvoke(form);
-        })() :
-        void(0);
-    })() :
-    void(0);
-};
-exports.compile = compile;
-
-var compile_ = function compile_(forms) {
-  return reduce(function(result, form) {
-    return "" + result + (isEmpty(result) ?
-      "" :
-      ";\n\n") + (compile(isList(form) ?
-      withMeta(macroexpand(form), conj({
-        "top": true
-      }, meta(form))) :
-      form));
-  }, "", forms);
-};
-exports.compile_ = compile_;
-
-var compileProgram = function compileProgram(forms) {
-  return reduce(function(result, form) {
-    return "" + result + (isEmpty(result) ?
-      "" :
-      ";\n\n") + (compile(isList(form) ?
-      withMeta(macroexpand(form), conj({
-        "top": true
-      }, meta(form))) :
-      form));
-  }, "", forms);
-};
-exports.compileProgram = compileProgram;
-
-var macroexpand1 = function macroexpand1(form) {
-  return isList(form) ?
-    (function() {
-      var op = first(form);
-      var id = isSymbol(op) ?
-        name(op) :
-        void(0);
-      return isSpecial(op) ?
-        form :
-      isMacro(op) ?
-        executeMacro(op, rest(form)) :
-      (isSymbol(op)) && (!(id === ".")) ?
-        first(id) === "." ?
-          count(form) < 2 ?
-            (function() { throw Error("Malformed member expression, expecting (.member target ...)"); })() :
-            cons(symbol(void(0), "."), cons(second(form), cons(symbol(subs(id, 1)), rest(rest(form))))) :
-        last(id) === "." ?
-          cons(symbol(void(0), "new"), cons(symbol(subs(id, 0, dec(count(id)))), rest(form))) :
-          form :
-      "else" ?
-        form :
-        void(0);
-    })() :
-    form;
-};
-exports.macroexpand1 = macroexpand1;
-
-var macroexpand = function macroexpand(form) {
-  return (function loop(original, expanded) {
-    var recur = loop;
-    while (recur === loop) {
-      recur = original === expanded ?
-      original :
-      (original = expanded, expanded = macroexpand1(expanded), loop);
-    };
-    return recur;
-  })(form, macroexpand1(form));
-};
-exports.macroexpand = macroexpand;
-
-var _lineBreakPattern_ = /\n(?=[^\n])/m;
-exports._lineBreakPattern_ = _lineBreakPattern_;
-
-var indent = function indent(code, indentation) {
-  return join(indentation, split(code, _lineBreakPattern_));
-};
-exports.indent = indent;
-
-var compileTemplate = function compileTemplate(form) {
-  var indentPattern = /\n *$/;
-  var getIndentation = function(code) {
-    return (reFind(indentPattern, code)) || "\n";
-  };
-  return (function loop(code, parts, values) {
-    var recur = loop;
-    while (recur === loop) {
-      recur = count(parts) > 1 ?
-      (code = "" + code + (first(parts)) + (indent("" + (first(values)), getIndentation(first(parts)))), parts = rest(parts), values = rest(values), loop) :
-      "" + code + (first(parts));
-    };
-    return recur;
-  })("", split(first(form), "~{}"), rest(form));
-};
-exports.compileTemplate = compileTemplate;
-
-var compileDef = function compileDef(form) {
-  var id = first(form);
-  var isExport = ((((meta(form)) || {}) || 0)["top"]) && (!((((meta(id)) || {}) || 0)["private"]));
-  var attribute = symbol(namespace(id), "" + "-" + (name(id)));
-  return isExport ?
-    compileTemplate(list("var ~{};\n~{}", compile(cons(symbol(void(0), "set!"), form)), compile(list(symbol(void(0), "set!"), list(symbol(void(0), "."), symbol(void(0), "exports"), attribute), id)))) :
-    compileTemplate(list("var ~{}", compile(cons(symbol(void(0), "set!"), form))));
-};
-exports.compileDef = compileDef;
-
-var compileIfElse = function compileIfElse(form) {
-  var condition = macroexpand(first(form));
-  var thenExpression = macroexpand(second(form));
-  var elseExpression = macroexpand(third(form));
-  return compileTemplate(list((isList(elseExpression)) && (isEqual(first(elseExpression), symbol(void(0), "if"))) ?
-    "~{} ?\n  ~{} :\n~{}" :
-    "~{} ?\n  ~{} :\n  ~{}", compile(condition), compile(thenExpression), compile(elseExpression)));
-};
-exports.compileIfElse = compileIfElse;
-
-var compileDictionary = function compileDictionary(form) {
-  var body = (function loop(body, names) {
-    var recur = loop;
-    while (recur === loop) {
-      recur = isEmpty(names) ?
-      body :
-      (body = "" + (isNil(body) ?
-        "" :
-        "" + body + ",\n") + (compileTemplate(list("~{}: ~{}", compile(first(names)), compile(macroexpand((form || 0)[first(names)]))))), names = rest(names), loop);
-    };
-    return recur;
-  })(void(0), keys(form));
-  return isNil(body) ?
-    "{}" :
-    compileTemplate(list("{\n  ~{}\n}", body));
-};
-exports.compileDictionary = compileDictionary;
-
-var desugarFnName = function desugarFnName(form) {
-  return (isSymbol(first(form))) || (isNil(first(form))) ?
-    form :
-    cons(void(0), form);
-};
-exports.desugarFnName = desugarFnName;
-
-var desugarFnDoc = function desugarFnDoc(form) {
-  return (isString(second(form))) || (isNil(second(form))) ?
-    form :
-    cons(first(form), cons(void(0), rest(form)));
-};
-exports.desugarFnDoc = desugarFnDoc;
-
-var desugarFnAttrs = function desugarFnAttrs(form) {
-  return (isDictionary(third(form))) || (isNil(third(form))) ?
-    form :
-    cons(first(form), cons(second(form), cons(void(0), rest(rest(form)))));
-};
-exports.desugarFnAttrs = desugarFnAttrs;
-
-var compileDesugaredFn = function compileDesugaredFn(name, doc, attrs, params, body) {
-  return compileTemplate(isNil(name) ?
-    list("function(~{}) {\n  ~{}\n}", join(", ", map(compile, (params || 0)["names"])), compileFnBody(map(macroexpand, body), params)) :
-    list("function ~{}(~{}) {\n  ~{}\n}", compile(name), join(", ", map(compile, (params || 0)["names"])), compileFnBody(map(macroexpand, body), params)));
-};
-exports.compileDesugaredFn = compileDesugaredFn;
-
-var compileStatements = function compileStatements(form, prefix) {
-  return (function loop(result, expression, expressions) {
-    var recur = loop;
-    while (recur === loop) {
-      recur = isEmpty(expressions) ?
-      "" + result + (isNil(prefix) ?
-        "" :
-        prefix) + (compile(macroexpand(expression))) + ";" :
-      (result = "" + result + (compile(macroexpand(expression))) + ";\n", expression = first(expressions), expressions = rest(expressions), loop);
-    };
-    return recur;
-  })("", first(form), rest(form));
-};
-exports.compileStatements = compileStatements;
-
-var compileFnBody = function compileFnBody(form, params) {
-  return (isDictionary(params)) && ((params || 0)["rest"]) ?
-    compileStatements(cons(list(symbol(void(0), "def"), (params || 0)["rest"], list(symbol(void(0), "Array.prototype.slice.call"), symbol(void(0), "arguments"), (params || 0)["arity"])), form), "return ") :
-  (count(form) === 1) && (isList(first(form))) && (isEqual(first(first(form)), symbol(void(0), "do"))) ?
-    compileFnBody(rest(first(form)), params) :
-    compileStatements(form, "return ");
-};
-exports.compileFnBody = compileFnBody;
-
-var desugarParams = function desugarParams(params) {
-  return (function loop(names, params) {
-    var recur = loop;
-    while (recur === loop) {
-      recur = isEmpty(params) ?
-      {
-        "names": names,
-        "arity": count(names),
-        "rest": void(0)
-      } :
-    isEqual(first(params), symbol(void(0), "&")) ?
-      isEqual(count(params), 1) ?
-        {
-          "names": names,
-          "arity": count(names),
-          "rest": void(0)
-        } :
-      isEqual(count(params), 2) ?
-        {
-          "names": names,
-          "arity": count(names),
-          "rest": second(params)
-        } :
-      "else" ?
-        (function() { throw TypeError("Unexpected number of parameters after &"); })() :
-        void(0) :
-    "else" ?
-      (names = conj(names, first(params)), params = rest(params), loop) :
-      void(0);
-    };
-    return recur;
-  })([], params);
-};
-exports.desugarParams = desugarParams;
-
-var analyzeOverloadedFn = function analyzeOverloadedFn(name, doc, attrs, overloads) {
-  return map(function(overload) {
-    var params = desugarParams(first(overload));
-    return {
-      "rest": (params || 0)["rest"],
-      "names": (params || 0)["names"],
-      "arity": (params || 0)["arity"],
-      "body": rest(overload)
-    };
-  }, overloads);
-};
-exports.analyzeOverloadedFn = analyzeOverloadedFn;
-
-var compileOverloadedFn = function compileOverloadedFn(name, doc, attrs, overloads) {
-  var methods = analyzeOverloadedFn(name, doc, attrs, overloads);
-  var fixedMethods = filter(function(method) {
-    return !((method || 0)["rest"]);
-  }, methods);
-  var variadic = first(filter(function(method) {
-    return (method || 0)["rest"];
-  }, methods));
-  var names = reduce(function(names, params) {
-    return count(names) > (params || 0)["arity"] ?
-      names :
-      (params || 0)["names"];
-  }, [], methods);
-  return list(symbol(void(0), "fn"), name, doc, attrs, names, list(symbol(void(0), "raw*"), compileSwitch(symbol(void(0), "arguments.length"), map(function(method) {
-    return cons((method || 0)["arity"], list(symbol(void(0), "raw*"), compileFnBody(concat(compileRebind(names, (method || 0)["names"]), (method || 0)["body"]))));
-  }, fixedMethods), isNil(variadic) ?
-    list(symbol(void(0), "throw"), list(symbol(void(0), "Error"), "Invalid arity")) :
-    list(symbol(void(0), "raw*"), compileFnBody(concat(compileRebind(cons(list(symbol(void(0), "Array.prototype.slice.call"), symbol(void(0), "arguments"), (variadic || 0)["arity"]), names), cons((variadic || 0)["rest"], (variadic || 0)["names"])), (variadic || 0)["body"]))))), void(0));
-};
-exports.compileOverloadedFn = compileOverloadedFn;
-
-var compileRebind = function compileRebind(bindings, names) {
-  return (function loop(form, bindings, names) {
-    var recur = loop;
-    while (recur === loop) {
-      recur = isEmpty(names) ?
-      reverse(form) :
-      (form = isEqual(first(names), first(bindings)) ?
-        form :
-        cons(list(symbol(void(0), "def"), first(names), first(bindings)), form), bindings = rest(bindings), names = rest(names), loop);
-    };
-    return recur;
-  })(list(), bindings, names);
-};
-exports.compileRebind = compileRebind;
-
-var compileSwitchCases = function compileSwitchCases(cases) {
-  return reduce(function(form, caseExpression) {
-    return "" + form + (compileTemplate(list("case ~{}:\n  ~{}\n", compile(macroexpand(first(caseExpression))), compile(macroexpand(rest(caseExpression))))));
-  }, "", cases);
-};
-exports.compileSwitchCases = compileSwitchCases;
-
-var compileSwitch = function compileSwitch(value, cases, defaultCase) {
-  return compileTemplate(list("switch (~{}) {\n  ~{}\n  default:\n    ~{}\n}", compile(macroexpand(value)), compileSwitchCases(cases), compile(macroexpand(defaultCase))));
-};
-exports.compileSwitch = compileSwitch;
-
-var compileFn = function compileFn(form) {
-  var signature = desugarFnAttrs(desugarFnDoc(desugarFnName(form)));
-  var name = first(signature);
-  var doc = second(signature);
-  var attrs = third(signature);
-  return isVector(third(rest(signature))) ?
-    compileDesugaredFn(name, doc, attrs, desugarParams(third(rest(signature))), rest(rest(rest(rest(signature))))) :
-    compile(compileOverloadedFn(name, doc, attrs, rest(rest(rest(signature)))));
-};
-exports.compileFn = compileFn;
-
-var compileInvoke = function compileInvoke(form) {
-  return compileTemplate(list(isList(first(form)) ?
-    "(~{})(~{})" :
-    "~{}(~{})", compile(first(form)), compileGroup(rest(form))));
-};
-exports.compileInvoke = compileInvoke;
-
-var compileGroup = function compileGroup(form, wrap) {
-  return wrap ?
-    "" + "(" + (compileGroup(form)) + ")" :
-    join(", ", vec(map(compile, map(macroexpand, form))));
-};
-exports.compileGroup = compileGroup;
-
-var compileDo = function compileDo(form) {
-  return compile(list(cons(symbol(void(0), "fn"), cons([], form))));
-};
-exports.compileDo = compileDo;
-
-var defineBindings = function defineBindings(form) {
-  return (function loop(defs, bindings) {
-    var recur = loop;
-    while (recur === loop) {
-      recur = count(bindings) === 0 ?
-      reverse(defs) :
-      (defs = cons(list(symbol(void(0), "def"), (bindings || 0)[0], (bindings || 0)[1]), defs), bindings = rest(rest(bindings)), loop);
-    };
-    return recur;
-  })(list(), form);
-};
-exports.defineBindings = defineBindings;
-
-var compileThrow = function compileThrow(form) {
-  return compileTemplate(list("(function() { throw ~{}; })()", compile(macroexpand(first(form)))));
-};
-exports.compileThrow = compileThrow;
-
-var compileSet = function compileSet(form) {
-  return compileTemplate(list("~{} = ~{}", compile(macroexpand(first(form))), compile(macroexpand(second(form)))));
-};
-exports.compileSet = compileSet;
-
-var compileVector = function compileVector(form) {
-  return compileTemplate(list("[~{}]", compileGroup(form)));
-};
-exports.compileVector = compileVector;
-
-var compileTry = function compileTry(form) {
-  return (function loop(tryExprs, catchExprs, finallyExprs, exprs) {
-    var recur = loop;
-    while (recur === loop) {
-      recur = isEmpty(exprs) ?
-      isEmpty(catchExprs) ?
-        compileTemplate(list("(function() {\ntry {\n  ~{}\n} finally {\n  ~{}\n}})()", compileFnBody(tryExprs), compileFnBody(finallyExprs))) :
-      isEmpty(finallyExprs) ?
-        compileTemplate(list("(function() {\ntry {\n  ~{}\n} catch (~{}) {\n  ~{}\n}})()", compileFnBody(tryExprs), compile(first(catchExprs)), compileFnBody(rest(catchExprs)))) :
-        compileTemplate(list("(function() {\ntry {\n  ~{}\n} catch (~{}) {\n  ~{}\n} finally {\n  ~{}\n}})()", compileFnBody(tryExprs), compile(first(catchExprs)), compileFnBody(rest(catchExprs)), compileFnBody(finallyExprs))) :
-    isEqual(first(first(exprs)), symbol(void(0), "catch")) ?
-      (tryExprs = tryExprs, catchExprs = rest(first(exprs)), finallyExprs = finallyExprs, exprs = rest(exprs), loop) :
-    isEqual(first(first(exprs)), symbol(void(0), "finally")) ?
-      (tryExprs = tryExprs, catchExprs = catchExprs, finallyExprs = rest(first(exprs)), exprs = rest(exprs), loop) :
-      (tryExprs = cons(first(exprs), tryExprs), catchExprs = catchExprs, finallyExprs = finallyExprs, exprs = rest(exprs), loop);
-    };
-    return recur;
-  })(list(), list(), list(), reverse(form));
-};
-exports.compileTry = compileTry;
-
-var compileProperty = function compileProperty(form) {
-  return (name(second(form)))[0] === "-" ?
-    compileTemplate(list(isList(first(form)) ?
-      "(~{}).~{}" :
-      "~{}.~{}", compile(macroexpand(first(form))), compile(macroexpand(symbol(subs(name(second(form)), 1)))))) :
-    compileTemplate(list("~{}.~{}(~{})", compile(macroexpand(first(form))), compile(macroexpand(second(form))), compileGroup(rest(rest(form)))));
-};
-exports.compileProperty = compileProperty;
-
-var compileApply = function compileApply(form) {
-  return compile(list(symbol(void(0), "."), first(form), symbol(void(0), "apply"), first(form), second(form)));
-};
-exports.compileApply = compileApply;
-
-var compileNew = function compileNew(form) {
-  return compileTemplate(list("new ~{}", compile(form)));
-};
-exports.compileNew = compileNew;
-
-var compileAget = function compileAget(form) {
-  var target = macroexpand(first(form));
-  var attribute = macroexpand(second(form));
-  var notFound = third(form);
-  var template = isList(target) ?
-    "(~{})[~{}]" :
-    "~{}[~{}]";
-  return notFound ?
-    compile(list(symbol(void(0), "or"), list(symbol(void(0), "get"), first(form), second(form)), macroexpand(notFound))) :
-    compileTemplate(list(template, compile(target), compile(attribute)));
-};
-exports.compileAget = compileAget;
-
-var compileGet = function compileGet(form) {
-  return compileAget(cons(list(symbol(void(0), "or"), first(form), 0), rest(form)));
-};
-exports.compileGet = compileGet;
-
-var compileInstance = function compileInstance(form) {
-  return compileTemplate(list("~{} instanceof ~{}", compile(macroexpand(second(form))), compile(macroexpand(first(form)))));
-};
-exports.compileInstance = compileInstance;
-
-var compileNot = function compileNot(form) {
-  return compileTemplate(list("!(~{})", compile(macroexpand(first(form)))));
-};
-exports.compileNot = compileNot;
-
-var compileLoop = function compileLoop(form) {
-  var bindings = (function loop(names, values, tokens) {
-    var recur = loop;
-    while (recur === loop) {
-      recur = isEmpty(tokens) ?
-      {
-        "names": names,
-        "values": values
-      } :
-      (names = conj(names, first(tokens)), values = conj(values, second(tokens)), tokens = rest(rest(tokens)), loop);
-    };
-    return recur;
-  })([], [], first(form));
-  var names = (bindings || 0)["names"];
-  var values = (bindings || 0)["values"];
-  var body = rest(form);
-  return compile(cons(cons(symbol(void(0), "fn"), cons(symbol(void(0), "loop"), cons(names, compileRecur(names, body)))), list.apply(list, values)));
-};
-exports.compileLoop = compileLoop;
-
-var rebindBindings = function rebindBindings(names, values) {
-  return (function loop(result, names, values) {
-    var recur = loop;
-    while (recur === loop) {
-      recur = isEmpty(names) ?
-      reverse(result) :
-      (result = cons(list(symbol(void(0), "set!"), first(names), first(values)), result), names = rest(names), values = rest(values), loop);
-    };
-    return recur;
-  })(list(), names, values);
-};
-exports.rebindBindings = rebindBindings;
-
-var expandRecur = function expandRecur(names, body) {
-  return map(function(form) {
-    return isList(form) ?
-      isEqual(first(form), symbol(void(0), "recur")) ?
-        list(symbol(void(0), "raw*"), compileGroup(concat(rebindBindings(names, rest(form)), list(symbol(void(0), "loop"))), true)) :
-        expandRecur(names, form) :
-      form;
-  }, body);
-};
-exports.expandRecur = expandRecur;
-
-var compileRecur = function compileRecur(names, body) {
-  return list(list(symbol(void(0), "raw*"), compileTemplate(list("var recur = loop;\nwhile (recur === loop) {\n  recur = ~{}\n}", compileStatements(expandRecur(names, body))))), symbol(void(0), "recur"));
-};
-exports.compileRecur = compileRecur;
-
-var compileRaw = function compileRaw(form) {
-  return first(form);
-};
-exports.compileRaw = compileRaw;
-
-installSpecial(symbol(void(0), "set!"), compileSet);
-
-installSpecial(symbol(void(0), "get"), compileGet);
-
-installSpecial(symbol(void(0), "aget"), compileAget);
-
-installSpecial(symbol(void(0), "def"), compileDef);
-
-installSpecial(symbol(void(0), "if"), compileIfElse);
-
-installSpecial(symbol(void(0), "do"), compileDo);
-
-installSpecial(symbol(void(0), "do*"), compileStatements);
-
-installSpecial(symbol(void(0), "fn"), compileFn);
-
-installSpecial(symbol(void(0), "throw"), compileThrow);
-
-installSpecial(symbol(void(0), "vector"), compileVector);
-
-installSpecial(symbol(void(0), "try"), compileTry);
-
-installSpecial(symbol(void(0), "."), compileProperty);
-
-installSpecial(symbol(void(0), "apply"), compileApply);
-
-installSpecial(symbol(void(0), "new"), compileNew);
-
-installSpecial(symbol(void(0), "instance?"), compileInstance);
-
-installSpecial(symbol(void(0), "not"), compileNot);
-
-installSpecial(symbol(void(0), "loop"), compileLoop);
-
-installSpecial(symbol(void(0), "raw*"), compileRaw);
-
-installSpecial(symbol(void(0), "comment"), writeComment);
-
-var compileRePattern = function compileRePattern(form) {
-  return "" + form;
-};
-exports.compileRePattern = compileRePattern;
-
-var installNative = function installNative(alias, operator, validator, fallback) {
-  return installSpecial(alias, function(form) {
-    return isEmpty(form) ?
-      fallback :
-      reduce(function(left, right) {
-        return compileTemplate(list("~{} ~{} ~{}", left, name(operator), right));
-      }, map(function(operand) {
-        return compileTemplate(list(isList(operand) ?
-          "(~{})" :
-          "~{}", compile(macroexpand(operand))));
-      }, form));
-  }, validator);
-};
-exports.installNative = installNative;
-
-var installOperator = function installOperator(alias, operator) {
-  return installSpecial(alias, function(form) {
-    return (function loop(result, left, right, operands) {
-      var recur = loop;
-      while (recur === loop) {
-        recur = isEmpty(operands) ?
-        "" + result + (compileTemplate(list("~{} ~{} ~{}", compile(macroexpand(left)), name(operator), compile(macroexpand(right))))) :
-        (result = "" + result + (compileTemplate(list("~{} ~{} ~{} && ", compile(macroexpand(left)), name(operator), compile(macroexpand(right))))), left = right, right = first(operands), operands = rest(operands), loop);
-      };
-      return recur;
-    })("", first(form), second(form), rest(rest(form)));
-  }, verifyTwo);
-};
-exports.installOperator = installOperator;
-
-var compilerError = function compilerError(form, message) {
-  var error = Error("" + message);
-  error.line = 1;
-  return (function() { throw error; })();
-};
-exports.compilerError = compilerError;
-
-var verifyTwo = function verifyTwo(form) {
-  return (isEmpty(rest(form))) || (isEmpty(rest(rest(form)))) ?
-    (function() { throw compilerError(form, "" + (first(form)) + " form requires at least two operands"); })() :
-    void(0);
-};
-exports.verifyTwo = verifyTwo;
-
-installNative(symbol(void(0), "+"), symbol(void(0), "+"), void(0), 0);
-
-installNative(symbol(void(0), "-"), symbol(void(0), "-"), void(0), "NaN");
-
-installNative(symbol(void(0), "*"), symbol(void(0), "*"), void(0), 1);
-
-installNative(symbol(void(0), "/"), symbol(void(0), "/"), verifyTwo);
-
-installNative(symbol(void(0), "mod"), symbol("%"), verifyTwo);
-
-installNative(symbol(void(0), "and"), symbol(void(0), "&&"));
-
-installNative(symbol(void(0), "or"), symbol(void(0), "||"));
-
-installOperator(symbol(void(0), "not="), symbol(void(0), "!="));
-
-installOperator(symbol(void(0), "=="), symbol(void(0), "==="));
-
-installOperator(symbol(void(0), "identical?"), symbol(void(0), "==="));
-
-installOperator(symbol(void(0), ">"), symbol(void(0), ">"));
-
-installOperator(symbol(void(0), ">="), symbol(void(0), ">="));
-
-installOperator(symbol(void(0), "<"), symbol(void(0), "<"));
-
-installOperator(symbol(void(0), "<="), symbol(void(0), "<="));
-
-installNative(symbol(void(0), "bit-and"), symbol(void(0), "&"), verifyTwo);
-
-installNative(symbol(void(0), "bit-or"), symbol(void(0), "|"), verifyTwo);
-
-installNative(symbol(void(0), "bit-xor"), symbol("^"));
-
-installNative(symbol(void(0), "bit-not"), symbol("~"), verifyTwo);
-
-installNative(symbol(void(0), "bit-shift-left"), symbol(void(0), "<<"), verifyTwo);
-
-installNative(symbol(void(0), "bit-shift-right"), symbol(void(0), ">>"), verifyTwo);
-
-installNative(symbol(void(0), "bit-shift-right-zero-fil"), symbol(void(0), ">>>"), verifyTwo);
-
-installMacro(symbol(void(0), "str"), function str() {
-  var forms = Array.prototype.slice.call(arguments, 0);
-  return concat(list(symbol(void(0), "+"), ""), forms);
-});
-
-installMacro(symbol(void(0), "let"), function letMacro(bindings) {
-  var body = Array.prototype.slice.call(arguments, 1);
-  return cons(symbol(void(0), "do"), concat(defineBindings(bindings), body));
-});
-
-installMacro(symbol(void(0), "cond"), function cond() {
-  var clauses = Array.prototype.slice.call(arguments, 0);
-  return !(isEmpty(clauses)) ?
-    list(symbol(void(0), "if"), first(clauses), isEmpty(rest(clauses)) ?
-      (function() { throw Error("cond requires an even number of forms"); })() :
-      second(clauses), cons(symbol(void(0), "cond"), rest(rest(clauses)))) :
-    void(0);
-});
-
-installMacro(symbol(void(0), "defn"), function defn(name) {
-  var body = Array.prototype.slice.call(arguments, 1);
-  return list(symbol(void(0), "def"), name, concat(list(symbol(void(0), "fn"), name), body));
-});
-
-installMacro(symbol(void(0), "defn-"), function defn(name) {
-  var body = Array.prototype.slice.call(arguments, 1);
-  return concat(list(symbol(void(0), "defn"), withMeta(name, conj({
-    "private": true
-  }, meta(name)))), body);
-});
-
-installMacro(symbol(void(0), "assert"), function assert(x, message) {
-  var title = message || "";
-  var assertion = prStr(x);
-  var uri = (x || 0)["uri"];
-  var form = isList(x) ?
-    second(x) :
-    x;
-  return list(symbol(void(0), "do"), list(symbol(void(0), "if"), list(symbol(void(0), "and"), list(symbol(void(0), "not"), list(symbol(void(0), "identical?"), list(symbol(void(0), "typeof"), symbol(void(0), "**verbose**")), "undefined")), symbol(void(0), "**verbose**")), list(symbol(void(0), ".log"), symbol(void(0), "console"), "Assert:", assertion)), list(symbol(void(0), "if"), list(symbol(void(0), "not"), x), list(symbol(void(0), "throw"), list(symbol(void(0), "Error."), list(symbol(void(0), "str"), "Assert failed: ", title, "\n\nAssertion:\n\n", assertion, "\n\nActual:\n\n", form, "\n--------------\n"), uri))));
-});
-
-var parseReferences = function parseReferences(forms) {
-  return reduce(function(references, form) {
-    isSeq(form) ?
-      (references || 0)[name(first(form))] = vec(rest(form)) :
-      void(0);
-    return references;
-  }, {}, forms);
-};
-exports.parseReferences = parseReferences;
-
-var parseRequire = function parseRequire(form) {
-  var requirement = isSymbol(form) ?
-    [form] :
-    vec(form);
-  var id = first(requirement);
-  var params = dictionary.apply(dictionary, rest(requirement));
-  var imports = reduce(function(imports, name) {
-    (imports || 0)[name] = ((imports || 0)[name]) || name;
-    return imports;
-  }, conj({}, (params || 0)["꞉rename"]), (params || 0)["꞉refer"]);
-  return conj({
-    "id": id,
-    "imports": imports
-  }, params);
-};
-exports.parseRequire = parseRequire;
-
-var analyzeNs = function analyzeNs(form) {
-  var id = first(form);
-  var params = rest(form);
-  var doc = isString(first(params)) ?
-    first(params) :
-    void(0);
-  var references = parseReferences(doc ?
-    rest(params) :
-    params);
-  return withMeta(form, {
-    "id": id,
-    "doc": doc,
-    "require": (references || 0)["require"] ?
-      map(parseRequire, (references || 0)["require"]) :
-      void(0)
-  });
-};
-exports.analyzeNs = analyzeNs;
-
-var idToNs = function idToNs(id) {
-  return symbol(void(0), join("*", split("" + id, ".")));
-};
-exports.idToNs = idToNs;
-
-var nameToField = function nameToField(name) {
-  return symbol(void(0), "" + "-" + name);
-};
-exports.nameToField = nameToField;
-
-var compileImport = function compileImport(module) {
-  return function(form) {
-    return list(symbol(void(0), "def"), second(form), list(symbol(void(0), "."), module, nameToField(first(form))));
-  };
-};
-exports.compileImport = compileImport;
-
-var compileRequire = function compileRequire(requirer) {
-  return function(form) {
-    var id = (form || 0)["id"];
-    var requirement = idToNs(((form || 0)["꞉as"]) || id);
-    var path = resolve(requirer, id);
-    var imports = (form || 0)["imports"];
-    return concat([symbol(void(0), "do*"), list(symbol(void(0), "def"), requirement, list(symbol(void(0), "require"), path))], imports ?
-      map(compileImport(requirement), imports) :
-      void(0));
-  };
-};
-exports.compileRequire = compileRequire;
-
-var resolve = function resolve(from, to) {
-  var requirer = split("" + from, ".");
-  var requirement = split("" + to, ".");
-  var isRelative = (!("" + from === "" + to)) && (first(requirer) === first(requirement));
-  return isRelative ?
-    (function loop(from, to) {
-      var recur = loop;
-      while (recur === loop) {
-        recur = first(from) === first(to) ?
-        (from = rest(from), to = rest(to), loop) :
-        join("/", concat(["."], repeat(dec(count(from)), ".."), to));
-      };
-      return recur;
-    })(requirer, requirement) :
-    join("/", requirement);
-};
-exports.resolve = resolve;
-
-var compileNs = function compileNs() {
-  var form = Array.prototype.slice.call(arguments, 0);
-  return (function() {
-    var metadata = meta(analyzeNs(form));
-    var id = "" + ((metadata || 0)["id"]);
-    var doc = (metadata || 0)["doc"];
-    var requirements = (metadata || 0)["require"];
-    var ns = doc ?
-      {
-        "id": id,
-        "doc": doc
-      } :
-      {
-        "id": id
-      };
-    return concat([symbol(void(0), "do*"), list(symbol(void(0), "def"), symbol(void(0), "*ns*"), ns)], requirements ?
-      map(compileRequire(id), requirements) :
-      void(0));
-  })();
-};
-exports.compileNs = compileNs;
-
-installMacro(symbol(void(0), "ns"), compileNs);
-
-installMacro(symbol(void(0), "print"), function() {
-  var more = Array.prototype.slice.call(arguments, 0);
-  "Prints the object(s) to the output for human consumption.";
-  return concat(list(symbol(void(0), ".log"), symbol(void(0), "console")), more);
-})
-},{"./reader":22,"./ast":20,"./sequence":21,"./runtime":18,"./string":26,"./backend/javascript/writer":27}],19:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 var _ns_ = {
   "id": "choc.readable.util"
 };
@@ -18568,7 +18643,7 @@ var appendifyForm = function appendifyForm(items) {
   }, list(first(items)), rest(items)));
 };
 exports.appendifyForm = appendifyForm
-},{"util":3,"wisp/sequence":21,"wisp/ast":20,"wisp/runtime":18,"wisp/compiler":23,"wisp/reader":22,"esprima":24,"underscore":25}],26:[function(require,module,exports){
+},{"util":3,"wisp/ast":20,"wisp/sequence":21,"wisp/compiler":22,"wisp/reader":23,"wisp/runtime":18,"underscore":25,"esprima":24}],26:[function(require,module,exports){
 var _ns_ = {
   "id": "wisp.string"
 };
