@@ -20,7 +20,6 @@
   ([x form] `(if ~x (. ~x ~form) nil)) ; TODO check for undefined - what about false?
   ([x form & more] `(.. (. ~x ~form) ~@more)))
 
-
 (defn generate-readable-value 
   ([node1 node2] (generate-readable-value node1 node2 {}))
   ([node1 node2 opts]
@@ -29,6 +28,14 @@
        (cond 
         (= "FunctionExpression" (:type node2)) "this function"
         :else "TODO" ))))
+
+(defn generate-readable-expression-plus [node]
+  (let [xp (compile-message (generate-readable-expression node))]
+    ; (print xp)
+    ;(eval (transpile xp))
+    ; `((fn [node] (eval ~(transpile xp))))
+    1
+    ))
 
 (defn generate-readable-expression 
   ([node] (generate-readable-expression node {}))
@@ -60,7 +67,7 @@
                             " plus " 
                             (generate-readable-expression (:right node)))))
 
-        (= type "CallExpression")
+        (= type "CallExpressionXX")
         (let [target (or (.. node -callee -name) 
                          (str (.. node -callee -object -name) "." (.. node -callee -property -name)))] 
           (cond
@@ -167,12 +174,25 @@
                            :message (generate-readable-expression (:expression node))))]]
           `((fn [] ~messages)))
 
+
         (= "ReturnStatement" t)
         (let [messages [(compile-entry 
                           (list 
                            :lineNumber (.. node -loc -start -line)
                            :message (list "return " (symbol (:hoistedName o)))))]]
           `((fn [] ~messages)))
+
+
+        ; handle receiving an expression directly - TODO possible code smell
+        (= "CallExpression" t)
+        (let [messages [(compile-entry 
+                          (list 
+                           :lineNumber (.. node -loc -start -line)
+                           :message (generate-readable-expression node)))]]
+          `((fn [] ~messages)))
+
+
+
 
         ))))
 
@@ -213,17 +233,20 @@
 (defn readable-js-str 
   "This API is a little weird. Given an esprima parsed code tree, returns a string of js code. Maybe this should just return an esprima tree."
   [node opts]
-  (print opts)
+  ; (print opts)
   (let [readable (readable-node node opts)
         ; compiled (compile-readable-entries readable)
         ; _ (print "compiled")
         ; _ (print compiled)
         transpiled (transpile readable)
-        _ (print "transpiled")
-        _ (print transpiled)
+        ; _ (print "transpiled")
+        ; _ (print transpiled)
         result (if readable
                  transpiled
                  "''")
-        _ (print "result")
-        _ (print result)]
-   result))
+        ;_ (print "result")
+        ;_ (print result)
+        ]
+   result
+   ; "''"
+   ))

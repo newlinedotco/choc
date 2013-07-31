@@ -85,6 +85,12 @@ var generateReadableValue = function generateReadableValue(node1, node2, opts) {
 };
 exports.generateReadableValue = generateReadableValue;
 
+var generateReadableExpressionPlus = function generateReadableExpressionPlus(node) {
+  var xp = compileMessage(generateReadableExpression(node));
+  return 1;
+};
+exports.generateReadableExpressionPlus = generateReadableExpressionPlus;
+
 var generateReadableExpression = function generateReadableExpression(node) {
   switch (arguments.length) {
     case 1:
@@ -111,17 +117,53 @@ var generateReadableExpression = function generateReadableExpression(node) {
           (function() {
             return isEqual("<=", op) ?
               list(generateReadableExpression((node || 0)["left"]), isOrNot, " less than or equal to ", generateReadableExpression((node || 0)["right"])) :
+            isEqual("+", op) ?
+              list(generateReadableExpression((node || 0)["left"]), " plus ", generateReadableExpression((node || 0)["right"])) :
               void(0);
           })() :
-        isEqual(type, "CallExpression") ?
+        isEqual(type, "CallExpressionXX") ?
           (function() {
-            console.log("CALLEXPRESS");
-            return list(list(list(symbol(void(0), "fn"), [], list(symbol(void(0), "if"), true, list(symbol(void(0), "list"), "tell foo to bar")))));
+            var target = (node.callee ?
+              (node.callee).name :
+              void(0)) || ("" + ((node.callee).object ?
+              ((node.callee).object).name :
+              void(0)) + "." + ((node.callee).property ?
+              ((node.callee).property).name :
+              void(0)));
+            node.callee ?
+              (node.callee).object :
+              void(0) ?
+              list("tell ", generateReadableExpression(node.callee ?
+                (node.callee).object :
+                void(0), "want", "name"), " to ", generateReadableExpression(node.callee ?
+                (node.callee).property :
+                void(0), "want", "name")) :
+            node.callee ?
+              (node.callee).name :
+              void(0) ?
+              list("call the function ", generateReadableExpression(node ?
+                node.callee :
+                void(0), "want", "name")) :
+              void(0);
+            return list(list(list(symbol(void(0), "fn"), [], list(symbol(void(0), "cond"), list(symbol(void(0), ".hasOwnProperty"), symbol(target), "__choc_annotation"), list(symbol(void(0), ".__choc_annotation"), symbol(target), node.arguments), node.callee ?
+              (node.callee).name :
+              void(0) ?
+              true :
+              false, list(symbol(void(0), "str"), "call the function ", node.callee ?
+              (node.callee).name :
+              void(0)), (node.callee).object ?
+              ((node.callee).object).name :
+              void(0) ?
+              true :
+              false, list(symbol(void(0), "str"), "tell ", (node.callee).object ?
+              ((node.callee).object).name :
+              void(0), " to ", (node.callee).property ?
+              ((node.callee).property).name :
+              void(0)), true, ""))));
           })() :
         isEqual(type, "MemberExpression") ?
           (function() {
             console.log("MEMBER");
-            pp(node);
             return list("TODO");
           })() :
         isEqual(type, "Literal") ?
@@ -146,23 +188,57 @@ var readableNode = function readableNode(node) {
 
     default:
       var opts = Array.prototype.slice.call(arguments, 1);
+      pp(node);
       return (function() {
         var o = dictionary.apply(dictionary, vec.apply(vec, opts));
         var t = (node || 0)["type"];
         return isEqual("VariableDeclaration", t) ?
           (function() {
             var messages = vec(map(function(dec) {
-              var name = (dec.id).name;
-              return compileEntry(list("lineNumber", ((node.loc).start).line, "message", list("" + "Create the variable <span class='choc-variable'>" + name + "</span> and set it to <span class='choc-value'>", symbol(name), "</span>"), "timeline", symbol(name)));
+              var name = dec.id ?
+                (dec.id).name :
+                void(0);
+              return compileEntry(list("lineNumber", (node.loc).start ?
+                ((node.loc).start).line :
+                void(0), "message", list("" + "Create the variable <span class='choc-variable'>" + name + "</span> and set it to <span class='choc-value'>", symbol(name), "</span>"), "timeline", symbol(name)));
             }, node.declarations));
             return list(list(symbol(void(0), "fn"), [], messages));
           })() :
         isEqual("WhileStatement", t) ?
           (function() {
             var conditional = ((o || 0)["hoistedName"]) || true;
-            var trueMessages = [compileEntry(list("lineNumber", ((node.loc).start).line, "message", list("Because ", generateReadableExpression((node || 0)["test"])), "timeline", "t")), compileEntry(list("lineNumber", ((node.loc).end).line, "message", list("... and try again"), "timeline", ""))];
-            var falseMessages = [compileEntry(list("lineNumber", ((node.loc).start).line, "message", list("Because ", generateReadableExpression((node || 0)["test"], "negation", true)), "timeline", "f")), compileEntry(list("lineNumber", ((node.loc).end).line, "message", list("... and stop looping"), "timeline", ""))];
+            var trueMessages = [compileEntry(list("lineNumber", (node.loc).start ?
+              ((node.loc).start).line :
+              void(0), "message", list("Because ", generateReadableExpression((node || 0)["test"])), "timeline", "t")), compileEntry(list("lineNumber", (node.loc).end ?
+              ((node.loc).end).line :
+              void(0), "message", list("... and try again"), "timeline", ""))];
+            var falseMessages = [compileEntry(list("lineNumber", (node.loc).start ?
+              ((node.loc).start).line :
+              void(0), "message", list("Because ", generateReadableExpression((node || 0)["test"], "negation", true)), "timeline", "f")), compileEntry(list("lineNumber", (node.loc).end ?
+              ((node.loc).end).line :
+              void(0), "message", list("... and stop looping"), "timeline", ""))];
             return list(list(symbol(void(0), "fn"), vec([symbol(void(0), "condition")]), list(symbol(void(0), "if"), symbol(void(0), "condition"), trueMessages, falseMessages)), conditional);
+          })() :
+        isEqual("ExpressionStatement", t) ?
+          (function() {
+            var messages = [compileEntry(list("lineNumber", (node.loc).start ?
+              ((node.loc).start).line :
+              void(0), "message", generateReadableExpression((node || 0)["expression"])))];
+            return list(list(symbol(void(0), "fn"), [], messages));
+          })() :
+        isEqual("ReturnStatement", t) ?
+          (function() {
+            var messages = [compileEntry(list("lineNumber", (node.loc).start ?
+              ((node.loc).start).line :
+              void(0), "message", list("return ", symbol((o || 0)["hoistedName"]))))];
+            return list(list(symbol(void(0), "fn"), [], messages));
+          })() :
+        isEqual("CallExpression", t) ?
+          (function() {
+            var messages = [compileEntry(list("lineNumber", (node.loc).start ?
+              ((node.loc).start).line :
+              void(0), "message", generateReadableExpression(node)))];
+            return list(list(symbol(void(0), "fn"), [], messages));
           })() :
           void(0);
       })();
@@ -192,11 +268,8 @@ var compileEntry = function compileEntry(node) {
     var compiledMessage = compileMessage(v);
     return list(strKey, compiledMessage);
   }, partition(2, node));
-  var _ = console.log(compiledPairs.toString());
   var flat = flattenOnce(compiledPairs);
-  var _ = console.log(flat.toString());
   var asDict = dictionary.apply(dictionary, vec(flat));
-  var _ = pp(asDict);
   return asDict;
 };
 exports.compileEntry = compileEntry;
@@ -211,18 +284,11 @@ var compileReadableEntries = function compileReadableEntries(nodes) {
 exports.compileReadableEntries = compileReadableEntries;
 
 var readableJsStr = function readableJsStr(node, opts) {
-  console.log(opts);
-  return (function() {
-    var readable = readableNode(node, opts);
-    var transpiled = transpile(readable);
-    var _ = console.log("transpiled");
-    var _ = console.log(transpiled);
-    var result = readable ?
-      transpiled :
-      "''";
-    var _ = console.log("result");
-    var _ = console.log(result);
-    return result;
-  })();
+  var readable = readableNode(node, opts);
+  var transpiled = transpile(readable);
+  var result = readable ?
+    transpiled :
+    "''";
+  return result;
 };
 exports.readableJsStr = readableJsStr

@@ -99,12 +99,19 @@
 ;;           }")
 
 
+;; (assert-message 
+;;  "function apple() { return (1 + 2); }" 
+;;  "return 3"
+;;  :before "var __hoist = 3;"
+;;  :hoistedName "__hoist"
+;;  :selector (fn [node] (first (:body (:body node)))))
+
 (assert-message 
- "function apple() { return (1 + 2); }" 
- "return 3"
- :before "var __hoist = 3;"
- :hoistedName "__hoist"
- :selector (fn [node] (first (:body (:body node)))))
+ "pad.makeLine(1,2,3,4);" 
+ "tell pad to makeLine"
+ :before "var pad = {}; pad.makeLine = function(x1,y1,x2,y2) { return true; };"
+ :selector (fn [node] (:expression node)))
+
 
 ;; --------------
 
