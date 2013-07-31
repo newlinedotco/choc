@@ -16,14 +16,8 @@
             ))
 ; TODO implement condp in wisp and apply throughout
 
-;; (defmacro ..
-;;   ([x form] `(. ~x ~form))
-;;   ([x form & more] `(.. (. ~x ~form) ~@more)))
-
 (defmacro ..
-  ([x form] `(if ~x
-               (. ~x ~form)
-               nil))
+  ([x form] `(if ~x (. ~x ~form) nil)) ; TODO check for undefined - what about false?
   ([x form & more] `(.. (. ~x ~form) ~@more)))
 
 
@@ -114,7 +108,7 @@
 (defn readable-node
   ([node] (readable-node node {}))
   ([node & opts] 
-     ; (pp node)
+     (pp node)
      (let [o (apply dictionary (apply vec opts))
            t (:type node)] 
        (cond
@@ -173,20 +167,13 @@
                            :message (generate-readable-expression (:expression node))))]]
           `((fn [] ~messages)))
 
-        ;; (= "CallExpression" t)
-        ;; (let [expression (or (generate-readable-expression node) (list ""))]
-        ;;   (list 
-        ;;    (list 
-        ;;     :lineNumber (.. node -loc -start -line)
-        ;;     :message expression)))
+        (= "ReturnStatement" t)
+        (let [messages [(compile-entry 
+                          (list 
+                           :lineNumber (.. node -loc -start -line)
+                           :message (list "return " (symbol (:hoistedName o)))))]]
+          `((fn [] ~messages)))
 
-
-        ;; :else
-        ;; (do 
-        ;;         (pp "its else")
-        ;;         (pp node)
-        ;;         `()
-        ;;         )
         ))))
 
 
