@@ -16,9 +16,16 @@
             ))
 ; TODO implement condp in wisp and apply throughout
 
+;; (defmacro ..
+;;   ([x form] `(. ~x ~form))
+;;   ([x form & more] `(.. (. ~x ~form) ~@more)))
+
 (defmacro ..
-  ([x form] `(. ~x ~form))
+  ([x form] `(if ~x
+               (. ~x ~form)
+               nil))
   ([x form & more] `(.. (. ~x ~form) ~@more)))
+
 
 (defn generate-readable-value 
   ([node1 node2] (generate-readable-value node1 node2 {}))
@@ -32,7 +39,6 @@
 (defn generate-readable-expression 
   ([node] (generate-readable-expression node {}))
   ([node & opts]
-                                        ; (pp node)
      (let [o (if (dictionary? opts) opts (apply dictionary (vec opts)))
            type (:type node)
            op (:operator node)
@@ -61,7 +67,8 @@
                             (generate-readable-expression (:right node)))))
 
         (= type "CallExpression")
-        (let [] 
+        (let [target (or (.. node -callee -name) 
+                         (str (.. node -callee -object -name) "." (.. node -callee -property -name)))] 
           (cond
            (.. node -callee -object)    ; on a member object
            (list "tell "
@@ -73,19 +80,24 @@
            (list "call the function "
                  (generate-readable-expression (.. node -callee) :want "name")))
 
-          ; how can we evaluate target annotations
-          ; essentially, below we need to return a wisp function that writes to
-          ; javascript the original readable function. you have to inspect the target object at runtime
-          ; there is no other way
-          ; but we might not have to eval if you can get the arguments right
           `(((fn [] 
-               (if true "tell foo to bar")))))
+               (cond 
+                   (.hasOwnProperty ~(symbol target) "__choc_annotation") 
+                   (.__choc_annotation ~(symbol target) ~(.-arguments node))
+
+                   ~(if (.. node -callee -name) true false) 
+                   (str "call the function " ~(.. node -callee -name))
+
+                   ~(if (.. node -callee -object -name) true false) 
+                   (str "tell " ~(.. node -callee -object -name) " to " ~(.. node -callee -property -name)) 
+                   true ""
+                   )))))
         
 
         (= type "MemberExpression") 
         (do
           (print "MEMBER")
-          (pp node)
+          ; (pp node)
           (list "TODO"))
 
         (= type "Literal") (:value node)
@@ -102,7 +114,7 @@
 (defn readable-node
   ([node] (readable-node node {}))
   ([node & opts] 
-     (pp node)
+     ; (pp node)
      (let [o (apply dictionary (apply vec opts))
            t (:type node)] 
        (cond
@@ -195,11 +207,11 @@
                       compiled-message (compile-message v)]
                   (list str-key compiled-message)))
               (partition 2 node))
-        _ (print (.to-string compiled-pairs))
+        ; _ (print (.to-string compiled-pairs))
         flat (flatten-once compiled-pairs)
-        _ (print (.to-string flat))
+        ; _ (print (.to-string flat))
         as-dict (apply dictionary (vec flat))
-        _ (pp as-dict)
+        ; _ (pp as-dict)
         ]
     as-dict))
 

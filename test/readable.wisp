@@ -12,7 +12,7 @@
             [underscore :refer [has]]
             [util :refer [puts inspect]]
             [choc.src.util :refer [to-set set-incl? partition transpile pp parse-js when appendify-form]]
-            [choc.src.readable :refer [readable-node compile-readable-entries readable-js-str]]
+            [choc.src.readable :refer [readable-node compile-readable-entries readable-js-str generate-readable-expression]]
             ))
 
 (defn assert-message [js wanted & opts]
@@ -20,7 +20,7 @@
         parsed (first (parse-js js))
         readable (readable-node parsed opts)
         transpiled (transpile readable)
-        _ (puts transpiled) 
+        ; _ (puts transpiled) 
         safe-js (str "try { " js " } catch(err) { 
           if(err.message != \"pause\") {
             throw err;
@@ -40,77 +40,70 @@
     (assert (identical? code wanted) (str "code does not equal '" wanted "'"))))
 
 
-;; (print "variable declarations")
-;; (assert-message 
-;;  "var i = 2" 
-;;  "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>2</span>")
+(print "variable declarations")
+(assert-message 
+ "var i = 2" 
+ "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>2</span>")
 
-;; (print "AssignmentExpression")
-;; (assert-message 
-;;  "foo = 1 + bar" 
-;;  "set foo to 3"
-;;  :before "var bar = 2, foo = 0;")
+(print "AssignmentExpression")
+(assert-message 
+ "foo = 1 + bar" 
+ "set foo to 3"
+ :before "var bar = 2, foo = 0;")
 
 ;; (print "while statements")
 
-;; (assert-message 
-;;  "while (shift <= 200) {
-;;    throw new Error(\"pause\");
-;;  }" 
-;;  "Because 4 is less than or equal to 200"
-;;  :before "var shift = 4;")
+(print "WhileExpressions")
+(assert-message 
+ "while (shift <= 200) {
+   throw new Error(\"pause\");
+ }" 
+ "Because 4 is less than or equal to 200"
+ :before "var shift = 4;")
 
-;; (assert-message 
-;;  "while (shift <= 200) {
-;;    throw new Error(\"pause\");
-;;  }" 
-;;  "Because 300 is not less than or equal to 200"
-;;  :before "var shift = 300; var __cond = shift <= 200;"
-;;  :hoistedName '__cond)
+(assert-message 
+ "while (shift <= 200) {
+   throw new Error(\"pause\");
+ }" 
+ "Because 300 is not less than or equal to 200"
+ :before "var shift = 300; var __cond = shift <= 200;"
+ :hoistedName '__cond)
+
+(print "BinaryExpressions")
+(assert-message 
+ "foo += 1 + bar" 
+ "add 1 plus 2 to foo and set foo to 5" ; <-- desired text?
+ :before "var bar = 2, foo = 2, __hoist = 1 + bar;"
+ :hoistedName "__hoist")
+
+(assert-message 
+ "bar + 1" 
+ "2 plus 1" ; <- desired?
+ :before "var bar = 2;")
+
+(print "CallExpression")
+(assert-message 
+ "console.log(\"hello\")" 
+ "tell console to log")
+
+(assert-message 
+ "apple(\"hello\")" 
+ "call the function apple"
+ :before "function apple() { return true; }")
+
+(assert-message 
+ "annotatedfn(\"hello\")" 
+ "I was annotated with hello"
+ :before "var annotatedfn = function() { return true; }; 
+          annotatedfn.__choc_annotation = function(args) {
+            return \"I was annotated with \" + generateReadableExpression(args[0]);
+          }")
+
 
 ;; --------------
 
 ;; (print "handling unknowns")
 ; (assert-message-code "a += 1" "[]")
-
-;; (assert-message 
-;;  "foo += 1 + bar" 
-;;  "add 1 plus 2 to foo and set foo to 5" ; <-- desired text?
-;;  :before "var bar = 2, foo = 2, __hoist = 1 + bar;"
-;;  :hoistedName "__hoist")
-
-;; (assert-message 
-;;  "bar + 1" 
-;;  "2 plus 1" ; <- desired?
-;;  :before "var bar = 2;")
-
-;; (assert-message 
-;;  "console.log(\"hello\")" 
-;;  "tell console to log")
-
-;; (assert-message 
-;;  "apple(\"hello\")" 
-;;  "call the function apple"
-;;  :before "function apple() { return true; }")
-
-(assert-message 
- "annotatedfn(\"hello\")" 
- "i was annotated with hello"
- :before "var annotatedfn = function() { return true; }; 
-          annotatedfn.__choc_annotation = function(args) {
-            return \"I was annotated with call readable here\";
-          }")
-
-;; it 'function calls with annotations', () ->
-;;   before = """
-;;   annotatedfn = () ->
-;;   annotatedfn.__choc_annotation = (args) ->
-;;     return "'i was annotated with ' + " + "'" + readable.generateReadableExpression(args[0]) + "'"
-;;   """
-;;   before = coffee.compile(before, bare: true)
-;;   code = "annotatedfn('hello')"
-;;   result = messageE(code, before: before)
-;;   result[0].message.should.eql 'i was annotated with hello'
 
 ;; it 'return statements', () ->
 ;;   code =  """
