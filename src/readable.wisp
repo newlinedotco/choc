@@ -8,11 +8,12 @@
             [wisp.compiler :refer [self-evaluating? compile macroexpand macroexpand-1
                                        compile-program]]
             [wisp.reader :refer [read-from-string]] 
+            [wisp.string :as str :refer [join]] 
             [esprima :as esprima]
             [underscore :refer [has]]
             [util :refer [puts inspect]]
             [choc.readable.util :refer [to-set set-incl? partition pp transpile
-                                        flatten-once parse-js when appendify-form]]
+                                        flatten-once parse-js when appendify-form appendify-to-str]]
             ))
 ; TODO implement condp in wisp and apply throughout
 
@@ -68,8 +69,11 @@
                             (generate-readable-expression (:right node)))))
 
         (= type "CallExpression")
-        (let [target (or (.. node -callee -name) 
-                         (str (.. node -callee -object -name) "." (.. node -callee -property -name)))] 
+        (let [;_ (print (inspect node null 100))
+              target (or (.. node -callee -name) 
+                         (appendify-to-str (generate-readable-expression (.. node -callee))))
+              ; _ (pp ["CallExpression target" target])
+              ] 
           (cond
            (.. node -callee -object)    ; on a member object
            (list "tell "
@@ -90,16 +94,20 @@
                    (str "call the function " ~(.. node -callee -name))
 
                    ~(if (.. node -callee -object -name) true false) 
-                   (str "tell " ~(.. node -callee -object -name) " to " ~(.. node -callee -property -name)) 
+                   (str "tell " ~(.. node -callee -object -name) 
+                        " to " ~(.. node -callee -property -name)) 
+
+                   ~(if target true false) 
+                   (str "call " ~target) ; ? 
                    true ""
                    )))))
         
 
         (= type "MemberExpression") 
         (do
-          (print "MEMBER")
-          ; (pp node)
-          (list "TODO"))
+          (pp "MemberExpression here")
+          (pp node)
+          (list (generate-readable-expression (.. node -object)) "." (.. node -property -name)))
 
         (= type "Literal") (:value node)
         (= type "Identifier") (if (= (:want o) "name")
@@ -165,7 +173,7 @@
                               (compile-entry 
                                (list
                                 :lineNumber (.. node -loc -end -line) 
-                                :message (list "... and stop looping")
+                                :message (list "... stop looping")
                                 :timeline ""))
                               ]
               ]

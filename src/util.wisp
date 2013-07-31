@@ -123,6 +123,19 @@ statements in the body"
                                    (list item)))))) 
            (list (first items)) (rest items))))
 
+
+(defn appendify-to-str
+  "given a nested list, concats those items together"
+  [items] 
+  (reduce (fn [acc item] 
+            (+ acc 
+               (if (list? item)
+                 (appendify-to-str item)
+                 item))) 
+          ""
+          items))
+
+
 ;; (defn appendify-list [source]
 ;;   (loop [result []
 ;;          list source]
