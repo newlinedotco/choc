@@ -132,8 +132,6 @@
       original_object = node.callee.object;
       original_property = node.callee.property;
       original_arguments = node["arguments"];
-      console.log(node);
-      console.log(opts);
       messagesString = readable.readableJsStr(node, opts);
       trace_opts = "var opts = { lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " };";
       trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init;
@@ -304,7 +302,7 @@
         tracer(opts);
         if (target != null) {
           propDesc = Object.getOwnPropertyDescriptor(target, fn);
-          if (propDesc) {
+          if (propDesc && propDesc["set"]) {
             return propDesc.set.apply(target, args);
           } else {
             return target[fn].apply(target, args);
@@ -332,7 +330,6 @@
     onCodeError = opts.onCodeError || noop;
     locals = opts.locals || {};
     newSource = generateAnnotatedSourceM(source);
-    debug(newSource);
     tracer = new Tracer();
     tracer.onMessages = onMessages;
     tracer.onTimeline = onTimeline;

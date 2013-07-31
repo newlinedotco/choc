@@ -125,8 +125,8 @@ generateCallTrace = (node, opts={}) ->
     original_property = node.callee.property
     original_arguments = node.arguments
 
-    console.log(node)
-    console.log(opts)
+    # console.log(node)
+    # console.log(opts)
  
     messagesString = readable.readableJsStr(node, opts)
     trace_opts = """
@@ -201,8 +201,7 @@ generateAnnotatedSource = (source) ->
         newVariableName = newCodeTree.declarations[0].id.name
 
         # generate the trace tree before we actually perform the hoisting
-        traceTree = generateTraceTree(node, hoistedName: newVariableName, hoistedOriginal: originalExpression)
-
+        traceTree = generateTraceTree(node, {hoistedName: newVariableName, hoistedOriginal: originalExpression})
         parent[parentPathAttribute].splice(parentPathIndex + parent.__choc_offset, 0, newCodeTree)
 
         # replace it with the name of our variable
@@ -285,13 +284,25 @@ class Tracer
   traceCall: (tracer) =>
     (thisArg, target, fn, args, opts) ->
       tracer(opts)
+      # console.log("---------")
       if target?
+        # console.log("tracing target")
+        # console.log(fn)
+
         propDesc = Object.getOwnPropertyDescriptor(target, fn)
-        if propDesc
+
+        # console.log(propDesc)
+        # console.log(propDesc.set)
+        if propDesc && propDesc["set"]
+          # console.log("calling a setter")
           propDesc.set.apply(target, args) # ?
         else
+          # console.log("calling regular apply with")
+          # console.log(target)
+          # console.log(args)
           target[fn].apply(target, args)
       else
+        # console.log("tracing non target")
         fn.apply(thisArg, args)
       
 
@@ -308,7 +319,7 @@ scrub = (source, count, opts) ->
   locals      = opts.locals      || {}
 
   newSource   = generateAnnotatedSourceM(source)
-  debug(newSource)
+  # debug(newSource)
   # console.log(newSource)
 
   tracer = new Tracer()

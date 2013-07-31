@@ -49,3 +49,6 @@ describe 'Choc', ->
     assert.ok true
  
 
+  # we need to trace object getters and setters appropriately as well
+
+
