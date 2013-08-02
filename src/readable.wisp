@@ -15,7 +15,8 @@
             [choc.readable.util :refer [to-set set-incl? partition pp transpile
                                         flatten-once parse-js when appendify-form appendify-to-str]]
             ))
-; TODO implement condp in wisp and apply throughout
+
+; TODO implement condp in wisp
 
 (defmacro ..
   ([x form] `(if ~x (. ~x ~form) nil)) ; TODO check for undefined - what about false?
@@ -28,13 +29,13 @@
        (symbol (:name node1))
        (cond 
         (= "FunctionExpression" (:type node2)) "this function"
-        :else "TODO" ))))
+        :else "" ))))
 
 (defn generate-readable-expression 
   ([node] (generate-readable-expression node {}))
   ([node opts]
      (let [o opts ; (if (dictionary? opts) opts (apply dictionary (vec opts)))
-           _ (pp ["Generate readable expression" o node])
+           ; _ (pp ["Generate readable expression" o node])
            type (:type node)
            op (:operator node)
            is-or-not (if (:negation o) " is not" " is")]
@@ -88,50 +89,6 @@
          true ""
          )
 
-        (= type "CallExpressionXX")
-        (let [callee-expression (generate-readable-expression (.. node -callee))
-              target (or (.. node -callee -name) 
-                         callee-expression)] 
-          (cond
-           (.. node -callee -object)    ; on a member object
-           (list "tell "
-                 (generate-readable-expression (.. node -callee -object) {:want "name"})
-                 " to "
-                 (generate-readable-expression (.. node -callee -property) {:want "name"}))
-
-           (.. node -callee -name)      ; plain function call
-           (list "call the function "
-                 (generate-readable-expression (.. node -callee) {:want "name"})))
-
-          `(((fn [] 
-               (let [trg ~target]
-                 (cond 
-                  (.hasOwnProperty trg "__choc_annotation") 
-                  (.__choc_annotation trg ~(.-arguments node))
-
-                  ~(if (.. node -callee -name) true false) 
-                  (str "call the function " ~(.. node -callee -name))
-
-                  ~(if (.. node -callee -object -name) true false) 
-                  (str "tell " ~(.. node -callee -object -name) 
-                       " to " ~(.. node -callee -property -name)) 
-
-                  ~(if target true false) 
-                  (str "call " trg)     ; ? 
-                  true ""
-                  ))))))
-
-        ; if you have a call expression
-        ; it can have any number of member expressions
-        ; so you need to pass down the symbol to the object you're talking about
-        ; when do you decide if you use the annotation
-        ; if you have a call expression when should you call the annotation?
-        ; one of the things we haven't figured out yet, is if you're returning a function
-        ; and you have a function inside there then we're screwed. e.g. we can't
-        ; return functions within funcitons yet
-
-        ;; if MemberExpression object.type is another member expression, then keep going
-
         (= type "MemberExpression") 
         (if (= (.. node -object -type) "MemberExpression")
           ; (generate-readable-expression (.-object node) {:want "name"})
@@ -141,8 +98,6 @@
                 "."
                 (generate-readable-expression (.-property node) {:want "name"}))
 
-          ;"xxx"
-          ; object ; property
           (list "" 
                 (generate-readable-expression (.-object node) {:want "name"})
                 "."
@@ -151,47 +106,11 @@
           )
 
         (= type "Literal") (:value node)
-        (= type "Identifier") 
 
+        (= type "Identifier") 
         (if (= (:want o) "name")
           (:name node)
-          (symbol (:name node))
-
-          ;; (let [target (:name node)] 
-          ;;   `(((fn [] 
-          ;;        (try 
-          ;;          (cond
-          ;;           (.hasOwnProperty ~(symbol target) "__choc_annotation") 
-          ;;           (.__choc_annotation ~(symbol target) ~(:callArguments o))
-          ;;           true
-          ;;           ~target)
-          ;;          (catch error 
-          ;;              (print (str "Error in annotation for " ~target " : " error))
-          ;;              "bobsyouruncle" ;~target
-          ;;                 ))))))
-
-                                        ; here instead of straight symbol, it should be a function 
-                                        ; that way we can override ugly toStrings like Object
-                                        ; and call our own annotations
-          ; (symbol (:name node))
-          ;; (let [target (:name node)]
-          ;;     `(((fn []
-          ;;       (cond 
-          ;;        (.hasOwnProperty ~(symbol target) "__choc_annotation") 
-          ;;        (.__choc_annotation ~(symbol target))
-          ;;        (= (typeof ~(symbol target)) "object") "an object"
-          ;;        true ~(symbol target))))))
-
-          ;; (let [target (:name node)]
-          ;;   `(((fn [] 
-          ;;        (cond 
-          ;;         (.hasOwnProperty ~(symbol target) "__choc_annotation") 
-          ;;         (.__choc_annotation ~(symbol target))
-          ;;         (= (typeof ~(symbol target)) "object") "an object"
-          ;;         true ~(symbol target)
-          ;;         )
-          ;;        ))))
-          )
+          (symbol (:name node)))
 
         (= type "VariableDeclarator") 
         (cond 
@@ -327,6 +246,13 @@
       []
       (map compile-entry nodes)))
   )
+
+(defn compiled-readable-expression 
+  ([node] (compiled-readable-expression node {}))
+  ([node opts]
+     ;; (transpile (compile-message (generate-readable-expression node opts)))
+     (generate-readable-expression node opts)
+     ))
 
 (defn readable-js-str 
   "This API is a little weird. Given an esprima parsed code tree, returns a string of js code. Maybe this should just return an esprima tree."
