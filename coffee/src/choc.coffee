@@ -320,7 +320,7 @@ scrub = (source, count, opts) ->
 
   newSource   = generateAnnotatedSourceM(source)
   # debug(newSource)
-  # console.log(newSource)
+  console.log(newSource)
 
   tracer = new Tracer()
   tracer.onMessages = onMessages
@@ -340,9 +340,12 @@ scrub = (source, count, opts) ->
 
     # define any user-given locals as a string for eval'ing
     localsStr = _.map(_.keys(locals), (name) -> "var #{name} = locals.#{name};").join("; ")
+    # localsStr = ""
   
     # http://perfectionkills.com/global-eval-what-are-the-options/
+    # gval = eval
     eval(localsStr + "\n" + newSource)
+    #eval.call(this, localsStr + "\n" + newSource)
 
     # if you make it here without an exception, execution finished
     executionTerminated = true
