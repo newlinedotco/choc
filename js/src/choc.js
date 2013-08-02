@@ -320,7 +320,7 @@
   noop = function() {};
 
   scrub = function(source, count, opts) {
-    var afterAll, afterEach, beforeEach, e, executionTerminated, locals, localsStr, newSource, onCodeError, onFrame, onMessages, onTimeline, tracer, __choc_first_message, __choc_trace, __choc_trace_call;
+    var afterAll, afterEach, beforeEach, e, executionTerminated, gval, locals, localsStr, newSource, onCodeError, onFrame, onMessages, onTimeline, tracer;
     onFrame = opts.onFrame || noop;
     beforeEach = opts.beforeEach || noop;
     afterEach = opts.afterEach || noop;
@@ -330,18 +330,17 @@
     onCodeError = opts.onCodeError || noop;
     locals = opts.locals || {};
     newSource = generateAnnotatedSourceM(source);
-    console.log(newSource);
     tracer = new Tracer();
     tracer.onMessages = onMessages;
     tracer.onTimeline = onTimeline;
     executionTerminated = false;
     try {
       beforeEach();
-      __choc_trace = tracer.trace({
+      global.__choc_trace = tracer.trace({
         count: count
       });
-      __choc_trace_call = tracer.traceCall(__choc_trace);
-      __choc_first_message = function(messages) {
+      global.__choc_trace_call = tracer.traceCall(__choc_trace);
+      global.__choc_first_message = function(messages) {
         var _ref1;
         if (_.isNull((_ref1 = messages[0]) != null ? _ref1.message : void 0)) {
           return "TODO";
@@ -349,11 +348,13 @@
           return messages[0].message;
         }
       };
+      global.locals = locals;
       locals.Choc = Choc;
       localsStr = _.map(_.keys(locals), function(name) {
         return "var " + name + " = locals." + name + ";";
       }).join("; ");
-      eval(localsStr + "\n" + newSource);
+      gval = eval;
+      gval(localsStr + "\n" + newSource);
       executionTerminated = true;
       return console.log("execution terminated");
     } catch (_error) {
