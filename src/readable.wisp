@@ -62,27 +62,29 @@
                             (generate-readable-expression (:right node)))))
 
         (= type "CallExpression")
-        (let [callee-expression (generate-readable-expression (.. node -callee) {:want "name" :callArguments (.-arguments node)})] 
-          (list "call the function " callee-expression))
+        ; callee / arguments
+        (cond 
+         (or (= (.. node -callee -type) "Identifier"))
+         (let [callee-expression (generate-readable-expression (.. node -callee) {:want "name" :callArguments (.-arguments node)})] 
+           (list "call the function " callee-expression))
 
+         (= (.. node -callee -type) "MemberExpression")
+         (let [callee-expression (generate-readable-expression (.. node -callee) {:want "name" :callArguments (.-arguments node)})] 
+           (list "call the function " callee-expression))
 
- 
+         ;; unify these here and call the annotation?
+         ;; and if there is no annotation, just call the callee-expresison -
+         ;; except, you're going to need to be able to expand the
+         ;; callee-expression within a function
+         ;; if you tackle that, things might be a lot easier anyway
+
+         true ""
+         )
 
         (= type "CallExpressionXX")
         (let [callee-expression (generate-readable-expression (.. node -callee))
-
-                                        ;_ (pp "CALLEE")
-                                        ;_ (print (.to-string callee-expression))
-                                        ;_ (print (.to-string (compile-message callee-expression)))
-                                       ; ugh ugh ugh
-
               target (or (.. node -callee -name) 
-                                        ;"zzz"
-                         callee-expression
-                         ;;(appendify-to-str callee-expression)
-                         )
-                                        ; _ (pp ["CallExpression target" target])
-              ] 
+                         callee-expression)] 
           (cond
            (.. node -callee -object)    ; on a member object
            (list "tell "
@@ -111,42 +113,67 @@
                   (str "call " trg)     ; ? 
                   true ""
                   ))))))
-        
+
+        ; if you have a call expression
+        ; it can have any number of member expressions
+        ; so you need to pass down the symbol to the object you're talking about
+        ; when do you decide if you use the annotation
+        ; if you have a call expression when should you call the annotation?
+        ; one of the things we haven't figured out yet, is if you're returning a function
+        ; and you have a function inside there then we're screwed. e.g. we can't
+        ; return functions within funcitons yet
+
+        ;; if MemberExpression object.type is another member expression, then keep going
 
         (= type "MemberExpression") 
-        (list "" 
-              (generate-readable-expression (.-object node) {:want "name"})
-              "."
-              (generate-readable-expression (.-property node) {:want "name"})
-              )
+        (if (= (.. node -object -type) "MemberExpression")
+          ; (generate-readable-expression (.-object node) {:want "name"})
+
+          (list "nested " 
+                (generate-readable-expression (.-object node) {:want "name"})
+                "."
+                (generate-readable-expression (.-property node) {:want "name"}))
+
+          ;"xxx"
+          ; object ; property
+          (list "" 
+                (generate-readable-expression (.-object node) {:want "name"})
+                "."
+                (generate-readable-expression (.-property node) {:want "name"}))
+
+          )
 
         (= type "Literal") (:value node)
         (= type "Identifier") 
+
         (if (= (:want o) "name")
-          (let [target (:name node)] 
-            `(((fn [] 
-                 (try 
-                   (cond
-                    (.hasOwnProperty ~(symbol target) "__choc_annotation") 
-                    (.__choc_annotation ~(symbol target) ~(:callArguments o))
-                    true
-                    ~target)
-                   (catch error 
-                       (print (str "Error in annotation for " ~target " : " error))
-                       "bobsyouruncle" ;~target
-                          ))))))
+          (:name node)
+          (symbol (:name node))
+
+          ;; (let [target (:name node)] 
+          ;;   `(((fn [] 
+          ;;        (try 
+          ;;          (cond
+          ;;           (.hasOwnProperty ~(symbol target) "__choc_annotation") 
+          ;;           (.__choc_annotation ~(symbol target) ~(:callArguments o))
+          ;;           true
+          ;;           ~target)
+          ;;          (catch error 
+          ;;              (print (str "Error in annotation for " ~target " : " error))
+          ;;              "bobsyouruncle" ;~target
+          ;;                 ))))))
 
                                         ; here instead of straight symbol, it should be a function 
                                         ; that way we can override ugly toStrings like Object
                                         ; and call our own annotations
           ; (symbol (:name node))
-          (let [target (:name node)]
-              `(((fn []
-                (cond 
-                 (.hasOwnProperty ~(symbol target) "__choc_annotation") 
-                 (.__choc_annotation ~(symbol target))
-                 (= (typeof ~(symbol target)) "object") "an object"
-                 true ~(symbol target))))))
+          ;; (let [target (:name node)]
+          ;;     `(((fn []
+          ;;       (cond 
+          ;;        (.hasOwnProperty ~(symbol target) "__choc_annotation") 
+          ;;        (.__choc_annotation ~(symbol target))
+          ;;        (= (typeof ~(symbol target)) "object") "an object"
+          ;;        true ~(symbol target))))))
 
           ;; (let [target (:name node)]
           ;;   `(((fn [] 

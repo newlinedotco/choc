@@ -44,7 +44,6 @@
 ;;  "var i = {foo: 2};" 
 ;;  "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>an object</span>")
 
-
 ;; (print "AssignmentExpression")
 ;; (assert-message 
 ;;  "foo = 1 + bar" 
@@ -79,15 +78,27 @@
 ;;  "2 plus 1" ; <- desired?
 ;;  {:before "var bar = 2;"})
 
-;; (print "CallExpression")
-;; (assert-message 
-;;  "console.log(\"hello\")" 
-;;  "tell console to log")
-
+; CallExpression{ callee:Identifier arguments:Array }
 ;; (assert-message 
 ;;  "apple(\"hello\")" 
 ;;  "call the function apple"
 ;;  {:before "function apple() { return true; }"})
+
+;; (print "CallExpression")
+; CallExpression callee:MemberExpression 
+;; (assert-message 
+;;  "console.log(\"hello\")" 
+;;  "call the function console.log")
+
+; callexpression callee:MemberExpression -> object:MemberExpression
+;; (assert-message
+;;  "foo.bar.baz(10)"
+;;  "call the function foo.bar.baz"
+;;  {:before "
+;;    var foo = {};
+;;    foo.bar = {};
+;;    foo.bar.baz = function(n) { return true; }"
+;;   })
 
 (assert-message 
  "annotatedfn(\"hello\")" 
@@ -104,14 +115,6 @@
 ;;   :hoistedName "__hoist"
 ;;   :selector (fn [node] (first (:body (:body node))))})
 
-;; (assert-message
-;;  "foo.bar.baz(10)"
-;;  "call the function foo.bar.baz"
-;;  {:before "
-;;    var foo = {};
-;;    foo.bar = {};
-;;    foo.bar.baz = function(n) { return true; }"
-;;   })
 
 ;; -----
 
