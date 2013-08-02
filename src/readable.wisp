@@ -4,7 +4,7 @@
                                        count first second third rest last
                                        butlast take drop repeat concat reverse
                                        sort map filter reduce assoc]]
-            [wisp.runtime :refer [str = dictionary dictionary? fn?]]
+            [wisp.runtime :refer [str = dictionary dictionary? fn? merge]]
             [wisp.compiler :refer [self-evaluating? compile macroexpand macroexpand-1
                                        compile-program]]
             [wisp.reader :refer [read-from-string]] 
@@ -30,29 +30,22 @@
         (= "FunctionExpression" (:type node2)) "this function"
         :else "TODO" ))))
 
-(defn generate-readable-expression-plus [node]
-  (let [xp (compile-message (generate-readable-expression node))]
-    ; (print xp)
-    ;(eval (transpile xp))
-    ; `((fn [node] (eval ~(transpile xp))))
-    1
-    ))
-
 (defn generate-readable-expression 
   ([node] (generate-readable-expression node {}))
-  ([node & opts]
-     (let [o (if (dictionary? opts) opts (apply dictionary (vec opts)))
+  ([node opts]
+     (let [o opts ; (if (dictionary? opts) opts (apply dictionary (vec opts)))
+           _ (pp ["Generate readable expression" o node])
            type (:type node)
            op (:operator node)
            is-or-not (if (:negation o) " is not" " is")]
        (cond 
         (= type "AssignmentExpression") 
         (cond 
-         (= "=" op) (list "set " (generate-readable-expression (:left node) :want "name") 
+         (= "=" op) (list "set " (generate-readable-expression (:left node) {:want "name"}) 
                           " to " (generate-readable-value (:left node) (:right node)))
          (= "+=" op) (list "add " (generate-readable-expression (:right node)) 
-                           " to " (generate-readable-expression (:left node) :want "name")
-                           " and set " (generate-readable-expression (:left node) :want "name")
+                           " to " (generate-readable-expression (:left node) {:want "name"})
+                           " and set " (generate-readable-expression (:left node) {:want "name"})
                            " to " (generate-readable-value (:left node) (:right node))
                            )
          )
@@ -69,50 +62,107 @@
                             (generate-readable-expression (:right node)))))
 
         (= type "CallExpression")
-        (let [;_ (print (inspect node null 100))
+        (let [callee-expression (generate-readable-expression (.. node -callee) {:want "name" :callArguments (.-arguments node)})] 
+          (list "call the function " callee-expression))
+
+
+ 
+
+        (= type "CallExpressionXX")
+        (let [callee-expression (generate-readable-expression (.. node -callee))
+
+                                        ;_ (pp "CALLEE")
+                                        ;_ (print (.to-string callee-expression))
+                                        ;_ (print (.to-string (compile-message callee-expression)))
+                                       ; ugh ugh ugh
+
               target (or (.. node -callee -name) 
-                         (appendify-to-str (generate-readable-expression (.. node -callee))))
-              ; _ (pp ["CallExpression target" target])
+                                        ;"zzz"
+                         callee-expression
+                         ;;(appendify-to-str callee-expression)
+                         )
+                                        ; _ (pp ["CallExpression target" target])
               ] 
           (cond
            (.. node -callee -object)    ; on a member object
            (list "tell "
-                 (generate-readable-expression (.. node -callee -object) :want "name")
+                 (generate-readable-expression (.. node -callee -object) {:want "name"})
                  " to "
-                 (generate-readable-expression (.. node -callee -property) :want "name"))
+                 (generate-readable-expression (.. node -callee -property) {:want "name"}))
 
            (.. node -callee -name)      ; plain function call
            (list "call the function "
-                 (generate-readable-expression (.. node -callee) :want "name")))
+                 (generate-readable-expression (.. node -callee) {:want "name"})))
 
           `(((fn [] 
-               (cond 
-                   (.hasOwnProperty ~(symbol target) "__choc_annotation") 
-                   (.__choc_annotation ~(symbol target) ~(.-arguments node))
+               (let [trg ~target]
+                 (cond 
+                  (.hasOwnProperty trg "__choc_annotation") 
+                  (.__choc_annotation trg ~(.-arguments node))
 
-                   ~(if (.. node -callee -name) true false) 
-                   (str "call the function " ~(.. node -callee -name))
+                  ~(if (.. node -callee -name) true false) 
+                  (str "call the function " ~(.. node -callee -name))
 
-                   ~(if (.. node -callee -object -name) true false) 
-                   (str "tell " ~(.. node -callee -object -name) 
-                        " to " ~(.. node -callee -property -name)) 
+                  ~(if (.. node -callee -object -name) true false) 
+                  (str "tell " ~(.. node -callee -object -name) 
+                       " to " ~(.. node -callee -property -name)) 
 
-                   ~(if target true false) 
-                   (str "call " ~target) ; ? 
-                   true ""
-                   )))))
+                  ~(if target true false) 
+                  (str "call " trg)     ; ? 
+                  true ""
+                  ))))))
         
 
         (= type "MemberExpression") 
-        (do
-          (pp "MemberExpression here")
-          (pp node)
-          (list (generate-readable-expression (.. node -object)) "." (.. node -property -name)))
+        (list "" 
+              (generate-readable-expression (.-object node) {:want "name"})
+              "."
+              (generate-readable-expression (.-property node) {:want "name"})
+              )
 
         (= type "Literal") (:value node)
-        (= type "Identifier") (if (= (:want o) "name")
-                                (:name node)
-                                (symbol (:name node)))
+        (= type "Identifier") 
+        (if (= (:want o) "name")
+          (let [target (:name node)] 
+            `(((fn [] 
+                 (try 
+                   (cond
+                    (.hasOwnProperty ~(symbol target) "__choc_annotation") 
+                    (.__choc_annotation ~(symbol target) ~(:callArguments o))
+                    true
+                    ~target)
+                   (catch error 
+                       (print (str "Error in annotation for " ~target " : " error))
+                       "bobsyouruncle" ;~target
+                          ))))))
+
+                                        ; here instead of straight symbol, it should be a function 
+                                        ; that way we can override ugly toStrings like Object
+                                        ; and call our own annotations
+          ; (symbol (:name node))
+          (let [target (:name node)]
+              `(((fn []
+                (cond 
+                 (.hasOwnProperty ~(symbol target) "__choc_annotation") 
+                 (.__choc_annotation ~(symbol target))
+                 (= (typeof ~(symbol target)) "object") "an object"
+                 true ~(symbol target))))))
+
+          ;; (let [target (:name node)]
+          ;;   `(((fn [] 
+          ;;        (cond 
+          ;;         (.hasOwnProperty ~(symbol target) "__choc_annotation") 
+          ;;         (.__choc_annotation ~(symbol target))
+          ;;         (= (typeof ~(symbol target)) "object") "an object"
+          ;;         true ~(symbol target)
+          ;;         )
+          ;;        ))))
+          )
+
+        (= type "VariableDeclarator") 
+        (cond 
+         (= (:want o) "name") (generate-readable-expression (.. node -id) {:want "name"})
+         true (generate-readable-expression (.. node -id)) )
 
         true `("")
 
@@ -141,12 +191,11 @@
                               (list 
                                :lineNumber (.. node -loc -start -line) 
                                :message (list (str "Create the variable <span class='choc-variable'>" name 
-                                                   "</span> and set it to <span class='choc-value'>") (symbol name) 
+                                                   "</span> and set it to <span class='choc-value'>") (generate-readable-expression dec)
                                                    "</span>")
                                :timeline (symbol name))))) 
                          (. node -declarations)))] 
-          `((fn []
-              ~messages)))
+          `((fn [] ~messages)))
 
         (= "WhileStatement" t)
         (let [conditional (if (:hoistedName o) 
@@ -167,7 +216,7 @@
               false-messages [(compile-entry 
                                (list
                                 :lineNumber (.. node -loc -start -line) 
-                                :message (list "Because " (generate-readable-expression (:test node) :negation true) )
+                                :message (list "Because " (generate-readable-expression (:test node) {:negation true}) )
                                 :timeline "f"
                                 ))
                               (compile-entry 

@@ -40,6 +40,11 @@
 ;;  "var i = 2" 
 ;;  "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>2</span>")
 
+;; (assert-message 
+;;  "var i = {foo: 2};" 
+;;  "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>an object</span>")
+
+
 ;; (print "AssignmentExpression")
 ;; (assert-message 
 ;;  "foo = 1 + bar" 
@@ -74,24 +79,23 @@
 ;;  "2 plus 1" ; <- desired?
 ;;  {:before "var bar = 2;"})
 
-(print "CallExpression")
-(assert-message 
- "console.log(\"hello\")" 
- "tell console to log")
+;; (print "CallExpression")
+;; (assert-message 
+;;  "console.log(\"hello\")" 
+;;  "tell console to log")
 
 ;; (assert-message 
 ;;  "apple(\"hello\")" 
 ;;  "call the function apple"
 ;;  {:before "function apple() { return true; }"})
 
-;; (assert-message 
-;;  "annotatedfn(\"hello\")" 
-;;  "I was annotated with hello"
-;;  {:before "var annotatedfn = function() { return true; }; 
-;;           annotatedfn.__choc_annotation = function(args) {
-;;             return \"I was annotated with \" + generateReadableExpression(args[0]);
-;;           }"})
-
+(assert-message 
+ "annotatedfn(\"hello\")" 
+ "I was annotated with hello"
+ {:before "var annotatedfn = function() { return true; }; 
+          annotatedfn.__choc_annotation = function(args) {
+            return \"I was annotated with \" + generateReadableExpression(args[0]);
+          }"})
 
 ;; (assert-message 
 ;;  "function apple() { return (1 + 2); }" 
@@ -100,15 +104,14 @@
 ;;   :hoistedName "__hoist"
 ;;   :selector (fn [node] (first (:body (:body node))))})
 
-
-(assert-message
- "foo.bar.baz(10)"
- "call foo.bar.baz"
- {:before "
-   var foo = {};
-   foo.bar = {};
-   foo.bar.baz = function(n) { return true; }"
-  })
+;; (assert-message
+;;  "foo.bar.baz(10)"
+;;  "call the function foo.bar.baz"
+;;  {:before "
+;;    var foo = {};
+;;    foo.bar = {};
+;;    foo.bar.baz = function(n) { return true; }"
+;;   })
 
 ;; -----
 
