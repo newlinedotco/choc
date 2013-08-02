@@ -330,6 +330,7 @@
     onCodeError = opts.onCodeError || noop;
     locals = opts.locals || {};
     newSource = generateAnnotatedSourceM(source);
+    console.log(newSource);
     tracer = new Tracer();
     tracer.onMessages = onMessages;
     tracer.onTimeline = onTimeline;
