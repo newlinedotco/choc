@@ -320,7 +320,7 @@ scrub = (source, count, opts) ->
 
   newSource   = generateAnnotatedSourceM(source)
   # debug(newSource)
-  console.log(newSource)
+  # console.log(newSource)
 
   tracer = new Tracer()
   tracer.onMessages = onMessages
@@ -331,20 +331,21 @@ scrub = (source, count, opts) ->
     beforeEach()
 
     # create a few functions to be used by the eval'd source
-    __choc_trace         = tracer.trace(count: count)
-    __choc_trace_call    = tracer.traceCall(__choc_trace)
-    __choc_first_message = (messages) -> if _.isNull(messages[0]?.message) then "TODO" else messages[0].message
-
+    global.__choc_trace         = tracer.trace(count: count)
+    global.__choc_trace_call    = tracer.traceCall(__choc_trace)
+    global.__choc_first_message = (messages) -> if _.isNull(messages[0]?.message) then "TODO" else messages[0].message
+    global.locals = locals;
     # add our own local vars
     locals.Choc = Choc
 
     # define any user-given locals as a string for eval'ing
     localsStr = _.map(_.keys(locals), (name) -> "var #{name} = locals.#{name};").join("; ")
     # localsStr = ""
-  
+    
     # http://perfectionkills.com/global-eval-what-are-the-options/
-    # gval = eval
-    eval(localsStr + "\n" + newSource)
+    gval = eval
+    # eval(localsStr + "\n" + newSource)
+    gval(localsStr + "\n" + newSource)
     #eval.call(this, localsStr + "\n" + newSource)
 
     # if you make it here without an exception, execution finished
