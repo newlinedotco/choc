@@ -64,13 +64,20 @@
         (= type "CallExpression")
         ; callee / arguments
         (cond 
-         (or (= (.. node -callee -type) "Identifier"))
-         (let [callee-expression (generate-readable-expression (.. node -callee) {:want "name" :callArguments (.-arguments node)})] 
-           (list "call the function " callee-expression))
+         (or (= (.. node -callee -type) "Identifier")
+             (= (.. node -callee -type) "MemberExpression"))
 
-         (= (.. node -callee -type) "MemberExpression")
-         (let [callee-expression (generate-readable-expression (.. node -callee) {:want "name" :callArguments (.-arguments node)})] 
-           (list "call the function " callee-expression))
+         (let [callee-expression (generate-readable-expression (.. node -callee) {:want "name" :callArguments (.-arguments node)})
+               callee-compiled (compile-message callee-expression)] 
+           ;(list "call the function " callee-expression)
+           `(((fn [] 
+                (cond
+                 ; ew - suggestions?
+                 (.hasOwnProperty (eval ~callee-compiled) "__choc_annotation") 
+                 (.__choc_annotation (eval ~callee-compiled) ~(.-arguments node))
+                 true
+                 (str "call the function " ~callee-compiled)))))
+           )
 
          ;; unify these here and call the annotation?
          ;; and if there is no annotation, just call the callee-expresison -
@@ -129,7 +136,7 @@
         (if (= (.. node -object -type) "MemberExpression")
           ; (generate-readable-expression (.-object node) {:want "name"})
 
-          (list "nested " 
+          (list "" 
                 (generate-readable-expression (.-object node) {:want "name"})
                 "."
                 (generate-readable-expression (.-property node) {:want "name"}))
