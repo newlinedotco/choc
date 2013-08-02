@@ -138,4 +138,13 @@ var appendifyForm = function appendifyForm(items) {
       list(item))));
   }, list(first(items)), rest(items)));
 };
-exports.appendifyForm = appendifyForm
+exports.appendifyForm = appendifyForm;
+
+var appendifyToStr = function appendifyToStr(items) {
+  return reduce(function(acc, item) {
+    return acc + (isList(item) ?
+      appendifyToStr(item) :
+      item);
+  }, "", items);
+};
+exports.appendifyToStr = appendifyToStr

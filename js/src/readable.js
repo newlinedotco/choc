@@ -37,7 +37,8 @@ var str = wisp_runtime.str;
 var isEqual = wisp_runtime.isEqual;
 var dictionary = wisp_runtime.dictionary;
 var isDictionary = wisp_runtime.isDictionary;
-var isFn = wisp_runtime.isFn;;
+var isFn = wisp_runtime.isFn;
+var merge = wisp_runtime.merge;;
 var wisp_compiler = require("wisp/compiler");
 var isSelfEvaluating = wisp_compiler.isSelfEvaluating;
 var compile = wisp_compiler.compile;
@@ -46,6 +47,8 @@ var macroexpand1 = wisp_compiler.macroexpand1;
 var compileProgram = wisp_compiler.compileProgram;;
 var wisp_reader = require("wisp/reader");
 var readFromString = wisp_reader.readFromString;;
+var str = require("wisp/string");
+var join = str.join;;
 var esprima = require("esprima");;
 var underscore = require("underscore");
 var has = underscore.has;;
@@ -61,7 +64,8 @@ var transpile = choc_readable_util.transpile;
 var flattenOnce = choc_readable_util.flattenOnce;
 var parseJs = choc_readable_util.parseJs;
 var when = choc_readable_util.when;
-var appendifyForm = choc_readable_util.appendifyForm;;;
+var appendifyForm = choc_readable_util.appendifyForm;
+var appendifyToStr = choc_readable_util.appendifyToStr;;;
 
 undefined;
 
@@ -85,23 +89,14 @@ var generateReadableValue = function generateReadableValue(node1, node2, opts) {
 };
 exports.generateReadableValue = generateReadableValue;
 
-var generateReadableExpressionPlus = function generateReadableExpressionPlus(node) {
-  var xp = compileMessage(generateReadableExpression(node));
-  return 1;
-};
-exports.generateReadableExpressionPlus = generateReadableExpressionPlus;
-
-var generateReadableExpression = function generateReadableExpression(node) {
+var generateReadableExpression = function generateReadableExpression(node, opts) {
   switch (arguments.length) {
     case 1:
       return generateReadableExpression(node, {});
-
-    default:
-      var opts = Array.prototype.slice.call(arguments, 1);
+    case 2:
       return (function() {
-        var o = isDictionary(opts) ?
-          opts :
-          dictionary.apply(dictionary, vec(opts));
+        var o = opts;
+        var _ = pp(["Generate readable expression", o, node]);
         var type = (node || 0)["type"];
         var op = (node || 0)["operator"];
         var isOrNot = (o || 0)["negation"] ?
@@ -109,9 +104,15 @@ var generateReadableExpression = function generateReadableExpression(node) {
           " is";
         return isEqual(type, "AssignmentExpression") ?
           isEqual("=", op) ?
-            list("set ", generateReadableExpression((node || 0)["left"], "want", "name"), " to ", generateReadableValue((node || 0)["left"], (node || 0)["right"])) :
+            list("set ", generateReadableExpression((node || 0)["left"], {
+              "want": "name"
+            }), " to ", generateReadableValue((node || 0)["left"], (node || 0)["right"])) :
           isEqual("+=", op) ?
-            list("add ", generateReadableExpression((node || 0)["right"]), " to ", generateReadableExpression((node || 0)["left"], "want", "name"), " and set ", generateReadableExpression((node || 0)["left"], "want", "name"), " to ", generateReadableValue((node || 0)["left"], (node || 0)["right"])) :
+            list("add ", generateReadableExpression((node || 0)["right"]), " to ", generateReadableExpression((node || 0)["left"], {
+              "want": "name"
+            }), " and set ", generateReadableExpression((node || 0)["left"], {
+              "want": "name"
+            }), " to ", generateReadableValue((node || 0)["left"], (node || 0)["right"])) :
             void(0) :
         isEqual(type, "BinaryExpression") ?
           (function() {
@@ -121,31 +122,55 @@ var generateReadableExpression = function generateReadableExpression(node) {
               list(generateReadableExpression((node || 0)["left"]), " plus ", generateReadableExpression((node || 0)["right"])) :
               void(0);
           })() :
+        isEqual(type, "CallExpression") ?
+          (isEqual(node.callee ?
+            (node.callee).type :
+            void(0), "Identifier")) || (isEqual(node.callee ?
+            (node.callee).type :
+            void(0), "MemberExpression")) ?
+            (function() {
+              var calleeExpression = generateReadableExpression(node ?
+                node.callee :
+                void(0), {
+                "want": "name",
+                "callArguments": node.arguments
+              });
+              var calleeCompiled = compileMessage(calleeExpression);
+              return list(list(list(symbol(void(0), "fn"), [], list(symbol(void(0), "cond"), list(symbol(void(0), ".hasOwnProperty"), list(symbol(void(0), "eval"), calleeCompiled), "__choc_annotation"), list(symbol(void(0), ".__choc_annotation"), list(symbol(void(0), "eval"), calleeCompiled), node.arguments), true, list(symbol(void(0), "str"), "call the function ", calleeCompiled)))));
+            })() :
+          true ?
+            "" :
+            void(0) :
         isEqual(type, "CallExpressionXX") ?
           (function() {
+            var calleeExpression = generateReadableExpression(node ?
+              node.callee :
+              void(0));
             var target = (node.callee ?
               (node.callee).name :
-              void(0)) || ("" + ((node.callee).object ?
-              ((node.callee).object).name :
-              void(0)) + "." + ((node.callee).property ?
-              ((node.callee).property).name :
-              void(0)));
+              void(0)) || calleeExpression;
             node.callee ?
               (node.callee).object :
               void(0) ?
               list("tell ", generateReadableExpression(node.callee ?
                 (node.callee).object :
-                void(0), "want", "name"), " to ", generateReadableExpression(node.callee ?
+                void(0), {
+                "want": "name"
+              }), " to ", generateReadableExpression(node.callee ?
                 (node.callee).property :
-                void(0), "want", "name")) :
+                void(0), {
+                "want": "name"
+              })) :
             node.callee ?
               (node.callee).name :
               void(0) ?
               list("call the function ", generateReadableExpression(node ?
                 node.callee :
-                void(0), "want", "name")) :
+                void(0), {
+                "want": "name"
+              })) :
               void(0);
-            return list(list(list(symbol(void(0), "fn"), [], list(symbol(void(0), "cond"), list(symbol(void(0), ".hasOwnProperty"), symbol(target), "__choc_annotation"), list(symbol(void(0), ".__choc_annotation"), symbol(target), node.arguments), node.callee ?
+            return list(list(list(symbol(void(0), "fn"), [], list(symbol(void(0), "let"), vec([symbol(void(0), "trg"), target]), list(symbol(void(0), "cond"), list(symbol(void(0), ".hasOwnProperty"), symbol(void(0), "trg"), "__choc_annotation"), list(symbol(void(0), ".__choc_annotation"), symbol(void(0), "trg"), node.arguments), node.callee ?
               (node.callee).name :
               void(0) ?
               true :
@@ -159,38 +184,69 @@ var generateReadableExpression = function generateReadableExpression(node) {
               ((node.callee).object).name :
               void(0), " to ", (node.callee).property ?
               ((node.callee).property).name :
-              void(0)), true, ""))));
+              void(0)), target ?
+              true :
+              false, list(symbol(void(0), "str"), "call ", symbol(void(0), "trg")), true, "")))));
           })() :
         isEqual(type, "MemberExpression") ?
-          (function() {
-            console.log("MEMBER");
-            return list("TODO");
-          })() :
+          isEqual(node.object ?
+            (node.object).type :
+            void(0), "MemberExpression") ?
+            list("", generateReadableExpression(node.object, {
+              "want": "name"
+            }), ".", generateReadableExpression(node.property, {
+              "want": "name"
+            })) :
+            list("", generateReadableExpression(node.object, {
+              "want": "name"
+            }), ".", generateReadableExpression(node.property, {
+              "want": "name"
+            })) :
         isEqual(type, "Literal") ?
           (node || 0)["value"] :
         isEqual(type, "Identifier") ?
           isEqual((o || 0)["want"], "name") ?
             (node || 0)["name"] :
             symbol((node || 0)["name"]) :
+        isEqual(type, "VariableDeclarator") ?
+          isEqual((o || 0)["want"], "name") ?
+            generateReadableExpression(node ?
+              node.id :
+              void(0), {
+              "want": "name"
+            }) :
+          true ?
+            generateReadableExpression(node ?
+              node.id :
+              void(0)) :
+            void(0) :
         true ?
           list("") :
           void(0);
       })();
+
+    default:
+      (function() { throw Error("Invalid arity"); })()
   };
   return void(0);
 };
 exports.generateReadableExpression = generateReadableExpression;
 
-var readableNode = function readableNode(node) {
+var makeOpts = function makeOpts(opts) {
+  return isDictionary(opts) ?
+    opts :
+    dictionary.apply(dictionary, vec(opts));
+};
+exports.makeOpts = makeOpts;
+
+var readableNode = function readableNode(node, opts) {
   switch (arguments.length) {
     case 1:
       return readableNode(node, {});
-
-    default:
-      var opts = Array.prototype.slice.call(arguments, 1);
+    case 2:
       pp(node);
       return (function() {
-        var o = dictionary.apply(dictionary, vec.apply(vec, opts));
+        var o = makeOpts(opts);
         var t = (node || 0)["type"];
         return isEqual("VariableDeclaration", t) ?
           (function() {
@@ -200,13 +256,15 @@ var readableNode = function readableNode(node) {
                 void(0);
               return compileEntry(list("lineNumber", (node.loc).start ?
                 ((node.loc).start).line :
-                void(0), "message", list("" + "Create the variable <span class='choc-variable'>" + name + "</span> and set it to <span class='choc-value'>", symbol(name), "</span>"), "timeline", symbol(name)));
+                void(0), "message", list("" + "Create the variable <span class='choc-variable'>" + name + "</span> and set it to <span class='choc-value'>", generateReadableExpression(dec), "</span>"), "timeline", symbol(name)));
             }, node.declarations));
             return list(list(symbol(void(0), "fn"), [], messages));
           })() :
         isEqual("WhileStatement", t) ?
           (function() {
-            var conditional = ((o || 0)["hoistedName"]) || true;
+            var conditional = (o || 0)["hoistedName"] ?
+              symbol((o || 0)["hoistedName"]) :
+              true;
             var trueMessages = [compileEntry(list("lineNumber", (node.loc).start ?
               ((node.loc).start).line :
               void(0), "message", list("Because ", generateReadableExpression((node || 0)["test"])), "timeline", "t")), compileEntry(list("lineNumber", (node.loc).end ?
@@ -214,9 +272,11 @@ var readableNode = function readableNode(node) {
               void(0), "message", list("... and try again"), "timeline", ""))];
             var falseMessages = [compileEntry(list("lineNumber", (node.loc).start ?
               ((node.loc).start).line :
-              void(0), "message", list("Because ", generateReadableExpression((node || 0)["test"], "negation", true)), "timeline", "f")), compileEntry(list("lineNumber", (node.loc).end ?
+              void(0), "message", list("Because ", generateReadableExpression((node || 0)["test"], {
+              "negation": true
+            })), "timeline", "f")), compileEntry(list("lineNumber", (node.loc).end ?
               ((node.loc).end).line :
-              void(0), "message", list("... and stop looping"), "timeline", ""))];
+              void(0), "message", list("... stop looping"), "timeline", ""))];
             return list(list(symbol(void(0), "fn"), vec([symbol(void(0), "condition")]), list(symbol(void(0), "if"), symbol(void(0), "condition"), trueMessages, falseMessages)), conditional);
           })() :
         isEqual("ExpressionStatement", t) ?
@@ -242,6 +302,9 @@ var readableNode = function readableNode(node) {
           })() :
           void(0);
       })();
+
+    default:
+      (function() { throw Error("Invalid arity"); })()
   };
   return void(0);
 };
