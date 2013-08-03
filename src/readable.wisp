@@ -25,10 +25,13 @@
 (defn generate-readable-value 
   ([node1 node2] (generate-readable-value node1 node2 {}))
   ([node1 node2 opts]
+     (print node1)
+     (print node2)
      (if (.hasOwnProperty node1 :name)
        (symbol (:name node1))
        (cond 
         (= "FunctionExpression" (:type node2)) "this function"
+        true (generate-readable-expression node2)
         :else "" ))))
 
 (defn generate-readable-expression 

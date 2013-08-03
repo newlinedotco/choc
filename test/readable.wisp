@@ -115,6 +115,12 @@
       \", \" + eval(generateReadableExpression(args[1], {\"want\": \"name\"})) ;
    }"})
 
+;; TODO annotate by prototype 
+;; set line width to xxx isn't working
+;; 
+
+
+
 ;; (assert-message 
 ;;  "function apple() { return (1 + 2); }" 
 ;;  "return 3"
