@@ -372,6 +372,12 @@ scrub = (source, count, opts) ->
       afterAll({frameCount: tracer.frameCount})
       onTimeline(tracer.timeline)
 
+annotate = (fn, annotation) ->
+  fn.__choc_annotation = (args) ->
+    evaldArgs = _.map args, (arg) -> readable.readableArgs(arg)
+    annotation(evaldArgs)
+
 exports.scrub = scrub
 exports.generateAnnotatedSource = generateAnnotatedSource
 exports.readable = readable
+exports.annotate = annotate
