@@ -274,3 +274,9 @@
    result
    ; "''"
    ))
+
+(defn readable-args [node]
+  (let [geval eval]
+   (geval (generate-readable-expression node {:want "name"}))))
+
+ 
