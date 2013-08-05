@@ -132,7 +132,11 @@
 
           )
 
-        (= type "Literal") (:value node)
+        (= type "Literal") 
+        (if (= (:for o) "eval")
+          ;(str "'" (:value node) "'") ; a smelly hack
+          (:value node)
+          (:value node))
 
         (= type "Identifier") 
         (if (= (:want o) "name")
@@ -304,6 +308,6 @@
 
 (defn readable-args [node]
   (let [geval eval]
-   (geval (generate-readable-expression node {:want "name"}))))
+   (geval (generate-readable-expression node {:want "name" :for "eval"}))))
 
  
