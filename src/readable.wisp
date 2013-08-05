@@ -65,6 +65,9 @@
                             " plus " 
                             (generate-readable-expression (:right node)))))
 
+        (= type "ObjectExpression")
+        (list "an object")
+
         (= type "CallExpression")
         ; callee / arguments
         (cond 
@@ -90,7 +93,9 @@
                ] 
            ;(list "call the function " callee-expression)
            `(((fn [] 
-                (let [proto (.-prototype (.-constructor (eval ~callee-object-compiled))) ]
+                (let [proto (if (eval ~callee-object-compiled)
+                                (.-prototype (.-constructor (eval ~callee-object-compiled)))
+                                {}) ]
                   (cond
 
                    ; Call instance level property of __choc_annotation
@@ -310,4 +315,3 @@
   (let [geval eval]
    (geval (generate-readable-expression node {:want "name" :for "eval"}))))
 
- 
