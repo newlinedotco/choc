@@ -37,8 +37,8 @@
 (defn generate-readable-expression 
   ([node] (generate-readable-expression node {}))
   ([node opts]
-     (let [o opts ; (if (dictionary? opts) opts (apply dictionary (vec opts)))
-           ; _ (pp ["Generate readable expression" o node])
+     (let [o opts   ; (if (dictionary? opts) opts (apply dictionary (vec opts)))
+                                        ; _ (pp ["Generate readable expression" o node])
            type (:type node)
            op (:operator node)
            is-or-not (if (:negation o) " is not" " is")]
@@ -50,64 +50,106 @@
          (= "+=" op) (list "add " (generate-readable-expression (:right node)) 
                            " to " (generate-readable-expression (:left node) {:want "name"})
                            " and set " (generate-readable-expression (:left node) {:want "name"})
-                           " to " (generate-readable-value (:left node) (:right node))
-                           )
+                           " to " (generate-readable-value (:left node) (:right node)))
+         (= "-=" op) (list "subtract " (generate-readable-expression (:right node)) 
+                           " from " (generate-readable-expression (:left node) {:want "name"})
+                           " and set " (generate-readable-expression (:left node) {:want "name"})
+                           " to " (generate-readable-value (:left node) (:right node)))
+         (= "*=" op) (list "multiply " (generate-readable-expression (:left node) {:want "name"})
+                           " by " (generate-readable-expression (:right node)) 
+                           " and set " (generate-readable-expression (:left node) {:want "name"})
+                           " to " (generate-readable-value (:left node) (:right node)))
+         (= "/=" op) (list "divide " (generate-readable-expression (:left node) {:want "name"})
+                           " by " (generate-readable-expression (:right node)) 
+                           " and set " (generate-readable-expression (:left node) {:want "name"})
+                           " to " (generate-readable-value (:left node) (:right node)))
+         (= "%=" op) (list "divide " (generate-readable-expression (:left node) {:want "name"})
+                           " by " (generate-readable-expression (:right node)) 
+                           " and set " (generate-readable-expression (:left node) {:want "name"})
+                           " to the remainder: " (generate-readable-value (:left node) (:right node)))
+         
          )
         (= type "BinaryExpression")
-        (do
-                                        ;(pp node)
+        (let [truthy (fn [node verbiage]
+                    (list (generate-readable-expression (:left node)) 
+                          is-or-not
+                          verbiage
+                          (generate-readable-expression (:right node))))
+              opy (fn [node verbiage]
+                    (list (generate-readable-expression (:left node)) 
+                          verbiage
+                          (generate-readable-expression (:right node))))]
           (cond
-           (= "<=" op) (list (generate-readable-expression (:left node)) 
-                             is-or-not
-                             " less than or equal to " 
-                             (generate-readable-expression (:right node)))
-           (= "+" op) (list (generate-readable-expression (:left node)) 
-                            " plus " 
-                            (generate-readable-expression (:right node)))))
+           (= "+" op) (opy node " plus ")
+           (= "-" op) (opy node " minus ")
+           (= "*" op) (opy node " times ")
+           (= "/" op) (opy node " divided by ")
+           (= "%" op) (opy node " modulo ")
+           (= "|" op) (opy node " bitwise-or ")
+           (= "^" op) (opy node " bitwise-and ")
+ 
+           (= "<="  op) (truthy node " less than or equal to ") 
+           (= "=="  op) (truthy node " equal to ") 
+           (= "===" op) (truthy node " equal to ") 
+           (= "!="  op) (truthy node " not equal to ")
+           (= "<"   op) (truthy node " less than ") 
+           (= "<="  op) (truthy node " less than or equal to ") 
+           (= ">"   op) (truthy node " greater than ") 
+           (= ">="  op) (truthy node " greater than or equal to ") 
+           true (str "")
+           ))
+
+        ;; operators = 
+        ;;   "<<": "#{node.left.name}"
+        ;;   ">>": "#{node.left.name}"
+        ;;   ">>>": "#{node.left.name}"
+        ;;   "in": "''"
+        ;;   "instanceof": "''"
+        ;;   "..": "''"
 
         (= type "ObjectExpression")
         (list "an object")
 
         (= type "CallExpression")
-        ; callee / arguments
+                                        ; callee / arguments
         (cond 
          (or (= (.. node -callee -type) "Identifier")
              (= (.. node -callee -type) "MemberExpression"))
 
-         (let [; given foo.bar.baz()
+         (let [                         ; given foo.bar.baz()
 
-               ; reference to the object and property we're calling
-               ; e.g. foo.bar.baz
+                                        ; reference to the object and property we're calling
+                                        ; e.g. foo.bar.baz
                callee-expression (generate-readable-expression 
                                   (.. node -callee) 
                                   {:want "name" :callArguments (.-arguments node)})
                callee-compiled (compile-message callee-expression)
 
-               ; just the object without the property we're calling
-               ; e.g. foo.bar
+                                        ; just the object without the property we're calling
+                                        ; e.g. foo.bar
                callee-object (generate-readable-expression (.. node -callee -object) {:want "name"})
                callee-object-compiled (compile-message callee-object)
 
-               ; e.g. baz
+                                        ; e.g. baz
                propertyN (.. node -callee -property -name) ; generate-readable?
                ] 
-           ;(list "call the function " callee-expression)
+                                        ;(list "call the function " callee-expression)
            `(((fn [] 
                 (let [proto (if (eval ~callee-object-compiled)
-                                (.-prototype (.-constructor (eval ~callee-object-compiled)))
-                                {}) ]
+                              (.-prototype (.-constructor (eval ~callee-object-compiled)))
+                              {}) ]
                   (cond
 
-                   ; Call instance level property of __choc_annotation
+                                        ; Call instance level property of __choc_annotation
                    (.hasOwnProperty (eval ~callee-compiled) "__choc_annotation") 
                    (.__choc_annotation (eval ~callee-compiled) ~(.-arguments node))
 
-                   ; Check the prototype for a dictionary of named __choc_annotations
+                                        ; Check the prototype for a dictionary of named __choc_annotations
                    (and (.hasOwnProperty proto "__choc_annotations")
                         (.hasOwnProperty (get proto "__choc_annotations") ~propertyN)) 
                    ((get (get proto "__choc_annotations") ~propertyN) ~(.-arguments node))
 
-                   ; default
+                                        ; default
                    true
                    (str "call the function " ~callee-compiled))))))
            )
@@ -123,7 +165,7 @@
 
         (= type "MemberExpression") 
         (if (= (.. node -object -type) "MemberExpression")
-          ; (generate-readable-expression (.-object node) {:want "name"})
+                                        ; (generate-readable-expression (.-object node) {:want "name"})
 
           (list "" 
                 (generate-readable-expression (.-object node) {:want "name"})
@@ -139,7 +181,7 @@
 
         (= type "Literal") 
         (if (= (:for o) "eval")
-          ;(str "'" (:value node) "'") ; a smelly hack
+                                        ;(str "'" (:value node) "'") ; a smelly hack
           (:value node)
           (:value node))
 
@@ -224,7 +266,7 @@
         (let [messages [(compile-entry 
                           (list 
                            :lineNumber (.. node -loc -start -line)
-                           :message (generate-readable-expression (:expression node))))]]
+                           :message (generate-readable-expression (:expression node) opts)))]]
           `((fn [] ~messages)))
 
 
