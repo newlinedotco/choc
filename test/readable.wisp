@@ -12,7 +12,7 @@
             [underscore :refer [has]]
             [util :refer [puts inspect]]
             [choc.src.util :refer [to-set set-incl? partition transpile pp parse-js when appendify-form]]
-            [choc.src.readable :refer [readable-node compile-readable-entries readable-js-str generate-readable-expression]]
+            [choc.src.readable :refer [readable-node compile-readable-entries readable-js-str generate-readable-expression readable-args]]
             ))
 
 (defn assert-message [js wanted opts]
@@ -100,24 +100,39 @@
 ;;    foo.bar.baz = function(n) { return true; }"
 ;;   })
 
-(assert-message 
- "annotatedfn(\"hello\", shift)" 
- "I was annotated with hello, 3"
- {:before "
-   var shift = 3;
-   var annotatedfn = function() { return true; }; 
+;; (assert-message 
+;;  "annotatedfn(\"hello\", shift)" 
+;;  "I was annotated with hello, 3"
+;;  {:before "
+;;    var shift = 3;
+;;    var annotatedfn = function() { return true; }; 
 
-   var myeval = function(str) { eval(str); }
+;;    var myeval = function(str) { eval(str); }
    
-   var that = this;
-   annotatedfn.__choc_annotation = function(args) {
-     return \"I was annotated with \" + generateReadableExpression(args[0]) + 
-      \", \" + eval(generateReadableExpression(args[1], {\"want\": \"name\"})) ;
-   }"})
+;;    var that = this;
+;;    annotatedfn.__choc_annotation = function(args) {
+;;      return \"I was annotated with \" + generateReadableExpression(args[0]) + 
+;;       \", \" + eval(generateReadableExpression(args[1], {\"want\": \"name\"})) ;
+;;    }"})
+
+(assert-message 
+ "z.addAnimal(animal);" 
+ "Add a zebra to the zoo"
+ {:before "
+   function Zoo() { }
+   Zoo.prototype.addAnimal = function(animal) { return animal; }
+   Zoo.prototype.__choc_annotations = {
+     \"addAnimal\": function(args) {
+       animal = readableArgs(args[0]);
+       return \"Add a \" + animal + \" to the zoo\";
+     }
+   };
+   z = new Zoo();
+   animal = \"zebra\";
+"})
+
 
 ;; TODO annotate by prototype 
-;; set line width to xxx isn't working
-;; 
 
 
 

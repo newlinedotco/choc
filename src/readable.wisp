@@ -71,16 +71,40 @@
          (or (= (.. node -callee -type) "Identifier")
              (= (.. node -callee -type) "MemberExpression"))
 
-         (let [callee-expression (generate-readable-expression (.. node -callee) {:want "name" :callArguments (.-arguments node)})
-               callee-compiled (compile-message callee-expression)] 
+         (let [; given foo.bar.baz()
+
+               ; reference to the object and property we're calling
+               ; e.g. foo.bar.baz
+               callee-expression (generate-readable-expression 
+                                  (.. node -callee) 
+                                  {:want "name" :callArguments (.-arguments node)})
+               callee-compiled (compile-message callee-expression)
+
+               ; just the object without the property we're calling
+               ; e.g. foo.bar
+               callee-object (generate-readable-expression (.. node -callee -object) {:want "name"})
+               callee-object-compiled (compile-message callee-object)
+
+               ; e.g. baz
+               propertyN (.. node -callee -property -name) ; generate-readable?
+               ] 
            ;(list "call the function " callee-expression)
            `(((fn [] 
-                (cond
-                 ; ew - suggestions?
-                 (.hasOwnProperty (eval ~callee-compiled) "__choc_annotation") 
-                 (.__choc_annotation (eval ~callee-compiled) ~(.-arguments node))
-                 true
-                 (str "call the function " ~callee-compiled)))))
+                (let [proto (.-prototype (.-constructor (eval ~callee-object-compiled))) ]
+                  (cond
+
+                   ; Call instance level property of __choc_annotation
+                   (.hasOwnProperty (eval ~callee-compiled) "__choc_annotation") 
+                   (.__choc_annotation (eval ~callee-compiled) ~(.-arguments node))
+
+                   ; Check the prototype for a dictionary of named __choc_annotations
+                   (and (.hasOwnProperty proto "__choc_annotations")
+                        (.hasOwnProperty (get proto "__choc_annotations") ~propertyN)) 
+                   ((get (get proto "__choc_annotations") ~propertyN) ~(.-arguments node))
+
+                   ; default
+                   true
+                   (str "call the function " ~callee-compiled))))))
            )
 
          ;; unify these here and call the annotation?
