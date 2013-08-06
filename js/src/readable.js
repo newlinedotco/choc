@@ -116,13 +116,71 @@ var generateReadableExpression = function generateReadableExpression(node, opts)
             }), " and set ", generateReadableExpression((node || 0)["left"], {
               "want": "name"
             }), " to ", generateReadableValue((node || 0)["left"], (node || 0)["right"])) :
+          isEqual("-=", op) ?
+            list("subtract ", generateReadableExpression((node || 0)["right"]), " from ", generateReadableExpression((node || 0)["left"], {
+              "want": "name"
+            }), " and set ", generateReadableExpression((node || 0)["left"], {
+              "want": "name"
+            }), " to ", generateReadableValue((node || 0)["left"], (node || 0)["right"])) :
+          isEqual("*=", op) ?
+            list("multiply ", generateReadableExpression((node || 0)["left"], {
+              "want": "name"
+            }), " by ", generateReadableExpression((node || 0)["right"]), " and set ", generateReadableExpression((node || 0)["left"], {
+              "want": "name"
+            }), " to ", generateReadableValue((node || 0)["left"], (node || 0)["right"])) :
+          isEqual("/=", op) ?
+            list("divide ", generateReadableExpression((node || 0)["left"], {
+              "want": "name"
+            }), " by ", generateReadableExpression((node || 0)["right"]), " and set ", generateReadableExpression((node || 0)["left"], {
+              "want": "name"
+            }), " to ", generateReadableValue((node || 0)["left"], (node || 0)["right"])) :
+          isEqual("%=", op) ?
+            list("divide ", generateReadableExpression((node || 0)["left"], {
+              "want": "name"
+            }), " by ", generateReadableExpression((node || 0)["right"]), " and set ", generateReadableExpression((node || 0)["left"], {
+              "want": "name"
+            }), " to the remainder: ", generateReadableValue((node || 0)["left"], (node || 0)["right"])) :
             void(0) :
         isEqual(type, "BinaryExpression") ?
           (function() {
-            return isEqual("<=", op) ?
-              list(generateReadableExpression((node || 0)["left"]), isOrNot, " less than or equal to ", generateReadableExpression((node || 0)["right"])) :
-            isEqual("+", op) ?
-              list(generateReadableExpression((node || 0)["left"]), " plus ", generateReadableExpression((node || 0)["right"])) :
+            var truthy = function(node, verbiage) {
+              return list(generateReadableExpression((node || 0)["left"]), isOrNot, verbiage, generateReadableExpression((node || 0)["right"]));
+            };
+            var opy = function(node, verbiage) {
+              return list(generateReadableExpression((node || 0)["left"]), verbiage, generateReadableExpression((node || 0)["right"]));
+            };
+            return isEqual("+", op) ?
+              opy(node, " plus ") :
+            isEqual("-", op) ?
+              opy(node, " minus ") :
+            isEqual("*", op) ?
+              opy(node, " times ") :
+            isEqual("/", op) ?
+              opy(node, " divided by ") :
+            isEqual("%", op) ?
+              opy(node, " modulo ") :
+            isEqual("|", op) ?
+              opy(node, " bitwise-or ") :
+            isEqual("^", op) ?
+              opy(node, " bitwise-and ") :
+            isEqual("<=", op) ?
+              truthy(node, " less than or equal to ") :
+            isEqual("==", op) ?
+              truthy(node, " equal to ") :
+            isEqual("===", op) ?
+              truthy(node, " equal to ") :
+            isEqual("!=", op) ?
+              truthy(node, " not equal to ") :
+            isEqual("<", op) ?
+              truthy(node, " less than ") :
+            isEqual("<=", op) ?
+              truthy(node, " less than or equal to ") :
+            isEqual(">", op) ?
+              truthy(node, " greater than ") :
+            isEqual(">=", op) ?
+              truthy(node, " greater than or equal to ") :
+            true ?
+              "" + "" :
               void(0);
           })() :
         isEqual(type, "ObjectExpression") ?
@@ -252,7 +310,7 @@ var readableNode = function readableNode(node, opts) {
           (function() {
             var messages = [compileEntry(list("lineNumber", (node.loc).start ?
               ((node.loc).start).line :
-              void(0), "message", generateReadableExpression((node || 0)["expression"])))];
+              void(0), "message", generateReadableExpression((node || 0)["expression"], opts)))];
             return list(list(symbol(void(0), "fn"), [], messages));
           })() :
         isEqual("ReturnStatement", t) ?
