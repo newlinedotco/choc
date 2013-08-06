@@ -12,7 +12,7 @@
             [underscore :refer [has]]
             [util :refer [puts inspect]]
             [choc.src.util :refer [to-set set-incl? partition transpile pp parse-js when appendify-form]]
-            [choc.src.readable :refer [readable-node compile-readable-entries readable-js-str generate-readable-expression readable-args]]
+            [choc.src.readable :refer [readable-node compile-readable-entries readable-js-str generate-readable-expression readable-args readable-arg]]
             ))
 
 (defn assert-message [js wanted opts]
@@ -88,35 +88,31 @@
 ;;  "divide foo by 3 and set foo to the remainder: 2"
 ;;  {:before "var foo = 8;"})
 
-
-
 ;; (assert-message 
 ;;  "bar + 1" 
 ;;  "2 plus 1" ; <- desired?
 ;;  {:before "var bar = 2;"})
 
-(assert-message 
- "bar == 1" 
- "2 is equal to 1"
- {:before "var bar = 2;"})
+;; (assert-message 
+;;  "bar == 1" 
+;;  "2 is equal to 1"
+;;  {:before "var bar = 2;"})
 
-(assert-message 
- "bar < 1" 
- "2 is not less than 1"
- {:before "var bar = 2;"
-  :negation true})
+;; (assert-message 
+;;  "bar < 1" 
+;;  "2 is not less than 1"
+;;  {:before "var bar = 2;"
+;;   :negation true})
 
-(assert-message 
- "bar != 1" 
- "2 is not equal to 1"
- {:before "var bar = 2;"})
+;; (assert-message 
+;;  "bar != 1" 
+;;  "2 is not equal to 1"
+;;  {:before "var bar = 2;"})
 
-(assert-message 
- "bar * 1" 
- "2 times 1"
- {:before "var bar = 2;"})
-
-
+;; (assert-message 
+;;  "bar * 1" 
+;;  "2 times 1"
+;;  {:before "var bar = 2;"})
 
 ;; (assert-message 
 ;;  "apple(\"hello\")" 
@@ -160,13 +156,19 @@
 ;;    Zoo.prototype.addAnimal = function(animal) { return animal; }
 ;;    Zoo.prototype.__choc_annotations = {
 ;;      \"addAnimal\": function(args) {
-;;        animal = readableArgs(args[0]);
+;;        animal = readableArg(args[0]);
 ;;        return \"Add a \" + animal + \" to the zoo\";
 ;;      }
 ;;    };
 ;;    z = new Zoo();
 ;;    animal = \"zebra\";
 ;; "})
+
+;; (assert-message 
+;;  "line.width = 3;" 
+;;  "set line.width = 3"
+;;  {:before "var line = {width: 1};"})
+
 
 ;; (assert-message 
 ;;  "function apple() { return (1 + 2); }" 
@@ -177,15 +179,17 @@
 
 
 
-;; -----
+;; ---- TODOs below ----
 
 ;; (assert-message 
-;;  "pad.makeLine(1,2,3,4);" 
-;;  "tell pad to makeLine"
-;;  :before "var pad = {}; pad.makeLine = function(x1,y1,x2,y2) { return true; };"
-;;  :selector (fn [node] (:expression node)))
+;;  "line.width = 3;" 
+;;  "i'm setting width"
+;;  {:before "
+;;    var line = {width: 1};
+;;    line.__choc_annotations = {
+;;      \"width\": function(args) {
+;;        return \"i'm setting width\";
+;;      }
+;;    };
+;; "})
 
-;; --------------
-
-;; (print "handling unknowns")
-; (assert-message-code "a += 1" "[]")

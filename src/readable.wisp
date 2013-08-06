@@ -135,21 +135,28 @@
                ] 
                                         ;(list "call the function " callee-expression)
            `(((fn [] 
-                (let [proto (if (eval ~callee-object-compiled)
+                (let [callee (eval ~callee-object-compiled)
+                      proto (if (eval ~callee-object-compiled)
                               (.-prototype (.-constructor (eval ~callee-object-compiled)))
-                              {}) ]
+                              {}) 
+                      safe-callee (if callee callee {})]
                   (cond
 
-                                        ; Call instance level property of __choc_annotation
+                   ; Call instance level property of __choc_annotation (e.g. the function itself)
                    (.hasOwnProperty (eval ~callee-compiled) "__choc_annotation") 
                    (.__choc_annotation (eval ~callee-compiled) ~(.-arguments node))
 
-                                        ; Check the prototype for a dictionary of named __choc_annotations
+                   ; Check the instance itself for a set of annotations
+                   (and (.hasOwnProperty callee "__choc_annotations")
+                        (.hasOwnProperty (get callee "__choc_annotations") ~propertyN)) 
+                   ((get (get callee "__choc_annotations") ~propertyN) ~(.-arguments node))
+
+                   ; Check the instance constructor prototype for a dictionary of named __choc_annotations
                    (and (.hasOwnProperty proto "__choc_annotations")
                         (.hasOwnProperty (get proto "__choc_annotations") ~propertyN)) 
                    ((get (get proto "__choc_annotations") ~propertyN) ~(.-arguments node))
 
-                                        ; default
+                   ; default
                    true
                    (str "call the function " ~callee-compiled))))))
            )
@@ -353,7 +360,14 @@
    ; "''"
    ))
 
-(defn readable-args [node]
+(defn readable-arg [node]
   (let [geval eval]
-   (geval (generate-readable-expression node {:want "name" :for "eval"}))))
+   (try 
+     (geval (generate-readable-expression node {:want "name" :for "eval"}))
+     (catch error (print error)))))
+
+(defn readable-args [args]
+  (map (fn [arg] (readable-arg arg)) args))
+
+
 
