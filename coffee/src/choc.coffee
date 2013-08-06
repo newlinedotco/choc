@@ -193,6 +193,7 @@ generateAnnotatedSource = (source) ->
       newPosition = null
 
       if isHoistStatement(nodeType)
+
         # pull test expresion out
         originalExpression = node[hoister[nodeType]]
 
@@ -203,10 +204,10 @@ generateAnnotatedSource = (source) ->
         # generate the trace tree before we actually perform the hoisting
         traceTree = generateTraceTree(node, {hoistedName: newVariableName, hoistedOriginal: originalExpression})
         parent[parentPathAttribute].splice(parentPathIndex + parent.__choc_offset, 0, newCodeTree)
+        parent.__choc_offset = parent.__choc_offset + 1
 
         # replace it with the name of our variable
         node[hoister[node.type]] = { type: 'Identifier', name: newVariableName }
-        parent.__choc_offset = parent.__choc_offset + 1
 
         if _.isNumber(parentPathIndex)
           newPosition = parentPathIndex + parent.__choc_offset
@@ -226,7 +227,21 @@ generateAnnotatedSource = (source) ->
 
       # TODO case statement
       else if nodeType == 'CallExpression'
-        # pp ["CallExpression", parentPathAttribute]
+        # this call expression is within an ExpressionStatement. 
+        # suppose this could happen in other cases?
+   
+        # for CallExpressions we want to hoist the arguments into a
+        #  variable. This is safe because arguments are evaluated before they are
+        #  called
+        # We can then assume in generateCallTrace that all arguments are 
+        # for arg in node.arguments
+        #   # generate our new pre-variable
+        #   newCodeTree = generateVariableDeclaration(arg)
+        #   newVariableName = newCodeTree.declarations[0].id.name
+        #   parentPathAttribute = element.path
+        #   # parent[parentPathAttribute].splice(parentPathIndex + parent.__choc_offset, 0, newCodeTree)
+        #   # parent.__choc_offset = parent.__choc_offset + 1
+
         traceTree = generateCallTrace(node)
 
       else if isPlainStatement(nodeType)
@@ -284,25 +299,13 @@ class Tracer
   traceCall: (tracer) =>
     (thisArg, target, fn, args, opts) ->
       tracer(opts)
-      # console.log("---------")
       if target?
-        # console.log("tracing target")
-        # console.log(fn)
-
         propDesc = Object.getOwnPropertyDescriptor(target, fn)
-
-        # console.log(propDesc)
-        # console.log(propDesc.set)
         if propDesc && propDesc["set"]
-          # console.log("calling a setter")
           propDesc.set.apply(target, args) # ?
         else
-          # console.log("calling regular apply with")
-          # console.log(target)
-          # console.log(args)
           target[fn].apply(target, args)
       else
-        # console.log("tracing non target")
         fn.apply(thisArg, args)
       
 

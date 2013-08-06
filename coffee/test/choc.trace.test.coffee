@@ -38,7 +38,7 @@ describe 'Choc', ->
     assert.ok true
  
 
-  it.only 'traces functions once', () ->
+  it 'traces functions once', () ->
     src = """
       var bob = 1
       bob = 2;
@@ -47,6 +47,20 @@ describe 'Choc', ->
     newSource   = choc.generateAnnotatedSource(src)
     puts newSource
     assert.ok true
+
+  it.only 'traces CallExpressions', () ->
+    src = """
+      function add(a, b) {
+        return a + b;
+      }
+      var bob = 1;
+      add(bob, bob + 1); 
+    """
+    newSource   = choc.generateAnnotatedSource(src)
+    puts newSource
+    assert.ok true
+
+
  
 
   # we need to trace object getters and setters appropriately as well
