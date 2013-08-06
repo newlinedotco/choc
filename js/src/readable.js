@@ -208,7 +208,7 @@ var generateReadableExpression = function generateReadableExpression(node, opts)
               var propertyN = (node.callee).property ?
                 ((node.callee).property).name :
                 void(0);
-              return list(list(list(symbol(void(0), "fn"), [], list(symbol(void(0), "let"), vec([symbol(void(0), "proto"), list(symbol(void(0), "if"), list(symbol(void(0), "eval"), calleeObjectCompiled), list(symbol(void(0), ".-prototype"), list(symbol(void(0), ".-constructor"), list(symbol(void(0), "eval"), calleeObjectCompiled))), {})]), list(symbol(void(0), "cond"), list(symbol(void(0), ".hasOwnProperty"), list(symbol(void(0), "eval"), calleeCompiled), "__choc_annotation"), list(symbol(void(0), ".__choc_annotation"), list(symbol(void(0), "eval"), calleeCompiled), node.arguments), list(symbol(void(0), "and"), list(symbol(void(0), ".hasOwnProperty"), symbol(void(0), "proto"), "__choc_annotations"), list(symbol(void(0), ".hasOwnProperty"), list(symbol(void(0), "get"), symbol(void(0), "proto"), "__choc_annotations"), propertyN)), list(list(symbol(void(0), "get"), list(symbol(void(0), "get"), symbol(void(0), "proto"), "__choc_annotations"), propertyN), node.arguments), true, list(symbol(void(0), "str"), "call the function ", calleeCompiled))))));
+              return list(list(list(symbol(void(0), "fn"), [], list(symbol(void(0), "let"), vec([symbol(void(0), "callee"), list(symbol(void(0), "eval"), calleeObjectCompiled), symbol(void(0), "proto"), list(symbol(void(0), "if"), list(symbol(void(0), "eval"), calleeObjectCompiled), list(symbol(void(0), ".-prototype"), list(symbol(void(0), ".-constructor"), list(symbol(void(0), "eval"), calleeObjectCompiled))), {}), symbol(void(0), "safe-callee"), list(symbol(void(0), "if"), symbol(void(0), "callee"), symbol(void(0), "callee"), {})]), list(symbol(void(0), "cond"), list(symbol(void(0), ".hasOwnProperty"), list(symbol(void(0), "eval"), calleeCompiled), "__choc_annotation"), list(symbol(void(0), ".__choc_annotation"), list(symbol(void(0), "eval"), calleeCompiled), node.arguments), list(symbol(void(0), "and"), list(symbol(void(0), ".hasOwnProperty"), symbol(void(0), "callee"), "__choc_annotations"), list(symbol(void(0), ".hasOwnProperty"), list(symbol(void(0), "get"), symbol(void(0), "callee"), "__choc_annotations"), propertyN)), list(list(symbol(void(0), "get"), list(symbol(void(0), "get"), symbol(void(0), "callee"), "__choc_annotations"), propertyN), node.arguments), list(symbol(void(0), "and"), list(symbol(void(0), ".hasOwnProperty"), symbol(void(0), "proto"), "__choc_annotations"), list(symbol(void(0), ".hasOwnProperty"), list(symbol(void(0), "get"), symbol(void(0), "proto"), "__choc_annotations"), propertyN)), list(list(symbol(void(0), "get"), list(symbol(void(0), "get"), symbol(void(0), "proto"), "__choc_annotations"), propertyN), node.arguments), true, list(symbol(void(0), "str"), "call the function ", calleeCompiled))))));
             })() :
           true ?
             "" :
@@ -397,11 +397,23 @@ var readableJsStr = function readableJsStr(node, opts) {
 };
 exports.readableJsStr = readableJsStr;
 
-var readableArgs = function readableArgs(node) {
+var readableArg = function readableArg(node) {
   var geval = eval;
-  return geval(generateReadableExpression(node, {
-    "want": "name",
-    "for": "eval"
-  }));
+  return (function() {
+  try {
+    return geval(generateReadableExpression(node, {
+      "want": "name",
+      "for": "eval"
+    }));
+  } catch (error) {
+    return console.log(error);
+  }})();
+};
+exports.readableArg = readableArg;
+
+var readableArgs = function readableArgs(args) {
+  return map(function(arg) {
+    return readableArg(arg);
+  }, args);
 };
 exports.readableArgs = readableArgs
