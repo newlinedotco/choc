@@ -377,7 +377,7 @@ scrub = (source, count, opts) ->
 
 annotate = (fn, annotation) ->
   fn.__choc_annotation = (args) ->
-    evaldArgs = _.map args, (arg) -> readable.readableArgs(arg)
+    evaldArgs = readable.readableArgs(args)
     annotation(evaldArgs)
 
 exports.scrub = scrub
