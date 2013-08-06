@@ -12,6 +12,9 @@ JS_TEST_FILES := $(shell find js/test -name '*.test.*' | sed -e :a -e '$$!N;s/\n
 test:
 	./node_modules/.bin/mocha --compilers coffee:coffee-script $(TEST_FILES)
 
+watchtest:
+	./node_modules/.bin/mocha --watch --compilers coffee:coffee-script $(TEST_FILES)
+
 test-js: js
 	./node_modules/.bin/mocha $(JS_TEST_FILES)
 
