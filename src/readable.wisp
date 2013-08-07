@@ -138,8 +138,7 @@
                 (let [callee (eval ~callee-object-compiled)
                       proto (if (eval ~callee-object-compiled)
                               (.-prototype (.-constructor (eval ~callee-object-compiled)))
-                              {}) 
-                      safe-callee (if callee callee {})]
+                              {})]
                   (cond
 
                    ; Call instance level property of __choc_annotation (e.g. the function itself)
@@ -290,7 +289,7 @@
         (let [messages [(compile-entry 
                           (list 
                            :lineNumber (.. node -loc -start -line)
-                           :message (generate-readable-expression node)))]]
+                           :message (generate-readable-expression node opts)))]]
           `((fn [] ~messages)))
 
 
@@ -342,7 +341,6 @@
 (defn readable-js-str 
   "This API is a little weird. Given an esprima parsed code tree, returns a string of js code. Maybe this should just return an esprima tree."
   [node opts]
-  ; (print opts)
   (let [readable (readable-node node opts)
         ; compiled (compile-readable-entries readable)
         ; _ (print "compiled")

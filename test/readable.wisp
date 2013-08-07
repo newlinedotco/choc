@@ -12,7 +12,7 @@
             [underscore :refer [has]]
             [util :refer [puts inspect]]
             [choc.src.util :refer [to-set set-incl? partition transpile pp parse-js when appendify-form]]
-            [choc.src.readable :refer [readable-node compile-readable-entries readable-js-str generate-readable-expression readable-args readable-arg]]
+            [choc.src.readable :refer [readable-node compile-readable-entries readable-js-str generate-readable-expression readable-args readable-arg compile-message]]
             ))
 
 (defn assert-message [js wanted opts]
@@ -139,9 +139,6 @@
 ;;  {:before "
 ;;    var shift = 3;
 ;;    var annotatedfn = function() { return true; }; 
-
-;;    var myeval = function(str) { eval(str); }
-   
 ;;    var that = this;
 ;;    annotatedfn.__choc_annotation = function(args) {
 ;;      return \"I was annotated with \" + generateReadableExpression(args[0]) + 
@@ -163,6 +160,22 @@
 ;;    z = new Zoo();
 ;;    animal = \"zebra\";
 ;; "})
+
+
+;; really you need to hoist function call arguments
+(assert-message 
+ "annotatedfn(shift + 2)" 
+ "I was called with 5"
+ {:before "
+   var shift = 3;
+   var annotatedfn = function(x) { return true; }; 
+   var myeval = function(str) { eval(str); }
+   
+   var that = this;
+   annotatedfn.__choc_annotation = function(args) {
+     return \"I was called with \" + transpile(compileMessage(readableArg(args[0])));
+   }"})
+
 
 ;; (assert-message 
 ;;  "line.width = 3;" 
