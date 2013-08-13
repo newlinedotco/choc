@@ -10,6 +10,7 @@
             [wisp.reader :refer [read-from-string]] 
             [wisp.string :as str :refer [join]] 
             [esprima :as esprima]
+            [escodegen :as escodegen]
             [underscore :refer [has]]
             [util :refer [puts inspect]]
             [choc.readable.util :refer [to-set set-incl? partition pp transpile
@@ -71,10 +72,10 @@
          )
         (= type "BinaryExpression")
         (let [truthy (fn [node verbiage]
-                    (list (generate-readable-expression (:left node)) 
-                          is-or-not
-                          verbiage
-                          (generate-readable-expression (:right node))))
+                       (list (generate-readable-expression (:left node)) 
+                             is-or-not
+                             verbiage
+                             (generate-readable-expression (:right node))))
               opy (fn [node verbiage]
                     (list (generate-readable-expression (:left node)) 
                           verbiage
@@ -120,44 +121,70 @@
 
                                         ; reference to the object and property we're calling
                                         ; e.g. foo.bar.baz
-               callee-expression (generate-readable-expression 
-                                  (.. node -callee) 
-                                  {:want "name" :callArguments (.-arguments node)})
+               callee-expression (if (.-object (.-callee node)) 
+                                   (generate-readable-expression (.. node -callee -object) {:want "name"})
+                                   (generate-readable-expression 
+                                    (.. node -callee) 
+                                    {:want "name" :callArguments (.-arguments node)}) )
                callee-compiled (compile-message callee-expression)
 
                                         ; just the object without the property we're calling
                                         ; e.g. foo.bar
-               callee-object (generate-readable-expression (.. node -callee -object) {:want "name"})
-               callee-object-compiled (compile-message callee-object)
+               ; callee-object (generate-readable-expression (.. node -callee -object) {:want "name"})
+               ; callee-object-compiled (compile-message callee-object)
 
+
+               ;;;
+               ;;; right here you need to generate the arguments with escodegen and then eval them below to pass regular arguments into the annotaitons
+               ;;; 
                                         ; e.g. baz
                propertyN (.. node -callee -property -name) ; generate-readable?
+
+               ; There are so many reasons why this is bad. We should be
+               ; hoisting the function arguments instead of evaling them
+               ; here.
+               ; Furthermore, this straight up wont work if the arguments are state changing.
+               ; TODO generate these arguments in a proper way
+               argumentSources (map (fn [arg] (.generate escodegen arg {format: { compact: false }})) (.-arguments node))
+
                ] 
                                         ;(list "call the function " callee-expression)
            `(((fn [] 
-                (let [callee (eval ~callee-object-compiled)
-                      proto (if (eval ~callee-object-compiled)
-                              (.-prototype (.-constructor (eval ~callee-object-compiled)))
-                              {})]
-                  (cond
+                (let [callee (eval ~callee-compiled)
+                      arguments (map (fn [arg] (eval arg)) ~argumentSources)] 
+                  (readable/annotation-for callee ~propertyN arguments))
+                )))
 
-                   ; Call instance level property of __choc_annotation (e.g. the function itself)
-                   (.hasOwnProperty (eval ~callee-compiled) "__choc_annotation") 
-                   (.__choc_annotation (eval ~callee-compiled) ~(.-arguments node))
+           ;; `(((fn [] 
+           ;;      (let [callee (eval ~callee-object-compiled)
+           ;;            proto (if (eval ~callee-object-compiled) ; callee?
+           ;;                    (.-prototype (.-constructor (eval ~callee-object-compiled)))
+           ;;                    {})]
+           ;;        (cond
+           ;;         ;; what we're going to do here
+           ;;         ;; is take this function and try to pull it out of macro land
+           ;;         ;; just send along all of the arguments as an object and reconstruct this call outside of this function
+           ;;         ;; then we're going to escodegen the arguments into an eval'd array
+           ;;         ;; and call our annotation function with that eval'd array, so it gets finalized arguments
 
-                   ; Check the instance itself for a set of annotations
-                   (and (.hasOwnProperty callee "__choc_annotations")
-                        (.hasOwnProperty (get callee "__choc_annotations") ~propertyN)) 
-                   ((get (get callee "__choc_annotations") ~propertyN) ~(.-arguments node))
+           ;;         ; Call instance level property of __choc_annotation (e.g. the function itself)
+           ;;         (.hasOwnProperty (eval ~callee-compiled) "__choc_annotation") 
+           ;;         (.__choc_annotation (eval ~callee-compiled) ~(.-arguments node))
 
-                   ; Check the instance constructor prototype for a dictionary of named __choc_annotations
-                   (and (.hasOwnProperty proto "__choc_annotations")
-                        (.hasOwnProperty (get proto "__choc_annotations") ~propertyN)) 
-                   ((get (get proto "__choc_annotations") ~propertyN) ~(.-arguments node))
+           ;;         ; Check the instance itself for a set of annotations
+           ;;         (and (.hasOwnProperty callee "__choc_annotations")
+           ;;              (.hasOwnProperty (get callee "__choc_annotations") ~propertyN)) 
+           ;;         ((get (get callee "__choc_annotations") ~propertyN) ~(.-arguments node))
 
-                   ; default
-                   true
-                   (str "call the function " ~callee-compiled))))))
+           ;;         ; Check the instance constructor prototype for a dictionary of named __choc_annotations
+           ;;         (and (.hasOwnProperty proto "__choc_annotations")
+           ;;              (.hasOwnProperty (get proto "__choc_annotations") ~propertyN)) 
+           ;;         ((get (get proto "__choc_annotations") ~propertyN) ~(.-arguments node))
+
+           ;;         ; default
+           ;;         true
+           ;;         (str "call the function " ~callee-compiled))))))
+
            )
 
          ;; unify these here and call the annotation?
@@ -367,5 +394,25 @@
 (defn readable-args [args]
   (map (fn [arg] (readable-arg arg)) args))
 
+(defn say-hello [args]
+  (print (str "hello " args)))
+
+(defn annotation-for [callee propertyName arguments]
+  (let [proto true ] 
+    (cond
+     ; Check the instance itself for a particular annotation
+     (.hasOwnProperty callee "__choc_annotation") 
+     (.__choc_annotation callee arguments)
+
+     ; Check the instance itself for a set of annotations
+     (and (.hasOwnProperty callee "__choc_annotations")
+          (.hasOwnProperty (get callee "__choc_annotations") propertyName)) 
+     ((get (get callee "__choc_annotations") propertyName) arguments)
+ 
+     ; Check the instance constructor prototype for a dictionary of named __choc_annotations
+     (and (.hasOwnProperty proto "__choc_annotations")
+          (.hasOwnProperty (get proto "__choc_annotations") propertyName)) 
+     ((get (get proto "__choc_annotations") propertyName) arguments)
+     true "")))
 
 

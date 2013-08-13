@@ -12,7 +12,7 @@
             [underscore :refer [has]]
             [util :refer [puts inspect]]
             [choc.src.util :refer [to-set set-incl? partition transpile pp parse-js when appendify-form]]
-            [choc.src.readable :refer [readable-node compile-readable-entries readable-js-str generate-readable-expression readable-args readable-arg compile-message]]
+            [choc.src.readable :refer [readable-node compile-readable-entries readable-js-str generate-readable-expression readable-args readable-arg compile-message annotation-for]]
             ))
 
 (defn assert-message [js wanted opts]
@@ -173,7 +173,8 @@
    
    var that = this;
    annotatedfn.__choc_annotation = function(args) {
-     return \"I was called with \" + transpile(compileMessage(readableArg(args[0])));
+     return \"I was called with \" + args[0];
+
    }"})
 
 
