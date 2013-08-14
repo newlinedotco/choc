@@ -56,7 +56,7 @@ describe 'Choc', ->
       var bob = 1;
       add(bob, bob + 1); 
     """
-    newSource   = choc.generateAnnotatedSource(src)
+    newSource = choc.generateAnnotatedSource(src)
     puts newSource
     assert.ok true
 

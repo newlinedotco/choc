@@ -96,6 +96,8 @@ generateCallTrace = (node, opts={}) ->
   if node.callee.type == "Identifier"
     original_function = node.callee.name
     original_arguments = node.arguments
+
+    opts.originalArguments ||= original_arguments
    
     messagesString = readable.readableJsStr(node, opts)
     trace_opts = """
@@ -125,6 +127,7 @@ generateCallTrace = (node, opts={}) ->
     original_property = node.callee.property
     original_arguments = node.arguments
 
+    opts.originalArguments ||= original_arguments
     # console.log(node)
     # console.log(opts)
  
@@ -241,6 +244,8 @@ generateAnnotatedSource = (source) ->
         #   parentPathAttribute = element.path
         #   # parent[parentPathAttribute].splice(parentPathIndex + parent.__choc_offset, 0, newCodeTree)
         #   # parent.__choc_offset = parent.__choc_offset + 1
+
+        # how is it that you're able to inject the traceTree but not your variables?
 
         traceTree = generateCallTrace(node)
 
