@@ -9,6 +9,7 @@
     "underscore.string": "*",
     "forever": "*",
     "esprima": "~1.0.3",
+    "escodegen": "",
     "supervisor": "*",
     "debug": "*",
     "wisp": "~0.8.0"
