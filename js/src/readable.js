@@ -416,4 +416,9 @@ var readableArgs = function readableArgs(args) {
     return readableArg(arg);
   }, args);
 };
-exports.readableArgs = readableArgs
+exports.readableArgs = readableArgs;
+
+var sayHello = function sayHello(args) {
+  return console.log("" + "hello " + args);
+};
+exports.sayHello = sayHello
