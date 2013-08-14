@@ -38,8 +38,7 @@
 (defn generate-readable-expression 
   ([node] (generate-readable-expression node {}))
   ([node opts]
-     (let [o opts   ; (if (dictionary? opts) opts (apply dictionary (vec opts)))
-                                        ; _ (pp ["Generate readable expression" o node])
+     (let [o opts
            type (:type node)
            op (:operator node)
            is-or-not (if (:negation o) " is not" " is")]
@@ -117,37 +116,35 @@
          (or (= (.. node -callee -type) "Identifier")
              (= (.. node -callee -type) "MemberExpression"))
 
-         (let [; given foo.bar.baz()
-
-               ; reference to the object and property we're calling
-               ; e.g. foo.bar.baz
-               callee-expression (if (.-object (.-callee node)) 
-                                   ; (generate-readable-expression (.. node -callee -object) {:want "name"})
-                                   (generate-readable-expression (.. node -callee) {:want "name"})
-                                   (generate-readable-expression (.. node -callee) {:want "name" :callArguments (.-arguments node)}) )
+         (let [ ;; given foo.bar.baz()...
+              
+               ;; callee-compiled is a reference to the object and property we're calling
+               ;; e.g. foo.bar.baz
+               callee-expression (generate-readable-expression (.-callee node) {:want "name"})
                callee-compiled (compile-message callee-expression)
 
-               ; just the object without the property we're calling
-               ; e.g. foo.bar
+               ;; callee-object-compiled is just the object without the property we're calling
+               ;; e.g. foo.bar
                callee-object (generate-readable-expression (.. node -callee -object) {:want "name"})
                callee-object-compiled (compile-message callee-object)
 
+               ;; propertyN is just the property being called
+               ;; e.g. baz
+               propertyN (.. node -callee -property -name)
 
-               ;;;
-               ;;; right here you need to generate the arguments with escodegen and then eval them below to pass regular arguments into the annotaitons
-               ;;; 
-               ; e.g. baz
-               propertyN (.. node -callee -property -name) ; generate-readable?
-
-               ; There are so many reasons why this is bad. We should be
-               ; hoisting the function arguments instead of evaling them
-               ; here.
-               ; Furthermore, this straight up wont work if the arguments are state changing.
-               ; TODO generate these arguments in a proper way
-               argumentSources (map (fn [arg] (.generate escodegen arg {format: { compact: false }})) (.-arguments node))
-
-               ] 
-                                        ;(list "call the function " callee-expression)
+               ;; Here we are eval'ing the arguments being passed into the
+               ;; function call so that we can have a clean api for implementing
+               ;; annotations.
+               ;;
+               ;; There are so many reasons why this is bad. We should be
+               ;; hoisting the function arguments instead of evaling them
+               ;; here. (Or write our own JS interpreter so then we don't need
+               ;; to source rewrites at all. See metajs)
+               ;;
+               ;; Furthermore, this straight up wont work if the arguments are state changing.
+               ;; TODO generate these arguments in a proper way
+               argumentSources (map (fn [arg] (.generate escodegen arg {format: { compact: false }})) 
+                                    (.-arguments node))] 
            `(((fn [] 
                 (let [callee (eval ~callee-compiled)
                       callee-object (eval ~callee-object-compiled)
@@ -157,27 +154,12 @@
          true "")
 
         (= type "MemberExpression") 
-        (let [_ true]
-            (if (= (.. node -object -type) "MemberExpression")
-                                        ; (generate-readable-expression (.-object node) {:want "name"})
-
-           (list "" 
-                 (generate-readable-expression (.-object node) {:want "name"})
-                 "."
-                 (generate-readable-expression (.-property node) {:want "name"}))
-
-           (list "" 
-                 (generate-readable-expression (.-object node) {:want "name"})
-                 "."
-                 (generate-readable-expression (.-property node) {:want "name"}))
-
-           ))
+        (list "" 
+              (generate-readable-expression (.-object node)   {:want "name"}) "."
+              (generate-readable-expression (.-property node) {:want "name"}))
 
         (= type "Literal") 
-        (if (= (:for o) "eval")
-                                        ;(str "'" (:value node) "'") ; a smelly hack
-          (:value node)
-          (:value node))
+        (:value node)
 
         (= type "Identifier") 
         (if (= (:want o) "name")
@@ -190,10 +172,7 @@
          true (generate-readable-expression (.. node -id)) )
 
         true `("")
-
         ))))
-
-; return a fn of a compiled entry everytime
 
 (defn make-opts [opts]
   (if (dictionary? opts) 
@@ -279,12 +258,7 @@
                            :lineNumber (.. node -loc -start -line)
                            :message (generate-readable-expression node opts)))]]
           `((fn [] ~messages)))
-
-
-
-
         ))))
-
 
 (defn compile-message [message]
   (cond
@@ -303,28 +277,9 @@
                       compiled-message (compile-message v)]
                   (list str-key compiled-message)))
               (partition 2 node))
-        ; _ (print (.to-string compiled-pairs))
         flat (flatten-once compiled-pairs)
-        ; _ (print (.to-string flat))
-        as-dict (apply dictionary (vec flat))
-        ; _ (pp as-dict)
-        ]
+        as-dict (apply dictionary (vec flat))]
     as-dict))
-
-(defn compile-readable-entries [nodes]
-  (if (fn? nodes)
-    nodes
-    (if (empty? nodes)
-      []
-      (map compile-entry nodes)))
-  )
-
-(defn compiled-readable-expression 
-  ([node] (compiled-readable-expression node {}))
-  ([node opts]
-     ;; (transpile (compile-message (generate-readable-expression node opts)))
-     (generate-readable-expression node opts)
-     ))
 
 (defn readable-js-str 
   "This API is a little weird. Given an esprima parsed code tree, returns a string of js code. Maybe this should just return an esprima tree."
@@ -335,15 +290,6 @@
                  transpiled
                  "''")]
    result))
-
-(defn readable-arg [node]
-  (let [geval eval]
-   (try 
-     (geval (generate-readable-expression node {:want "name" :for "eval"}))
-     (catch error (print error)))))
-
-(defn readable-args [args]
-  (map (fn [arg] (readable-arg arg)) args))
 
 (defn- find-annotation-for [obj propertyName args]
   (let [proto (.-prototype (.-constructor obj))] 
