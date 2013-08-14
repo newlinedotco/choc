@@ -330,21 +330,11 @@
   "This API is a little weird. Given an esprima parsed code tree, returns a string of js code. Maybe this should just return an esprima tree."
   [node opts]
   (let [readable (readable-node node opts)
-        ; compiled (compile-readable-entries readable)
-        ; _ (print "compiled")
-        ; _ (print compiled)
         transpiled (transpile readable)
-        ; _ (print "transpiled")
-        ; _ (print transpiled)
         result (if readable
                  transpiled
-                 "''")
-        ;_ (print "result")
-        ;_ (print result)
-        ]
-   result
-   ; "''"
-   ))
+                 "''")]
+   result))
 
 (defn readable-arg [node]
   (let [geval eval]
