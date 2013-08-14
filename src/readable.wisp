@@ -117,27 +117,26 @@
          (or (= (.. node -callee -type) "Identifier")
              (= (.. node -callee -type) "MemberExpression"))
 
-         (let [                         ; given foo.bar.baz()
+         (let [; given foo.bar.baz()
 
-                                        ; reference to the object and property we're calling
-                                        ; e.g. foo.bar.baz
+               ; reference to the object and property we're calling
+               ; e.g. foo.bar.baz
                callee-expression (if (.-object (.-callee node)) 
-                                   (generate-readable-expression (.. node -callee -object) {:want "name"})
-                                   (generate-readable-expression 
-                                    (.. node -callee) 
-                                    {:want "name" :callArguments (.-arguments node)}) )
+                                   ; (generate-readable-expression (.. node -callee -object) {:want "name"})
+                                   (generate-readable-expression (.. node -callee) {:want "name"})
+                                   (generate-readable-expression (.. node -callee) {:want "name" :callArguments (.-arguments node)}) )
                callee-compiled (compile-message callee-expression)
 
-                                        ; just the object without the property we're calling
-                                        ; e.g. foo.bar
-               ; callee-object (generate-readable-expression (.. node -callee -object) {:want "name"})
-               ; callee-object-compiled (compile-message callee-object)
+               ; just the object without the property we're calling
+               ; e.g. foo.bar
+               callee-object (generate-readable-expression (.. node -callee -object) {:want "name"})
+               callee-object-compiled (compile-message callee-object)
 
 
                ;;;
                ;;; right here you need to generate the arguments with escodegen and then eval them below to pass regular arguments into the annotaitons
                ;;; 
-                                        ; e.g. baz
+               ; e.g. baz
                propertyN (.. node -callee -property -name) ; generate-readable?
 
                ; There are so many reasons why this is bad. We should be
@@ -151,8 +150,9 @@
                                         ;(list "call the function " callee-expression)
            `(((fn [] 
                 (let [callee (eval ~callee-compiled)
+                      callee-object (eval ~callee-object-compiled)
                       arguments (map (fn [arg] (eval arg)) ~argumentSources)] 
-                  (readable/annotation-for callee ~propertyN arguments))
+                  (readable/annotation-for callee callee-object ~callee-compiled ~propertyN arguments))
                 )))
 
            ;; `(((fn [] 
@@ -197,20 +197,21 @@
          )
 
         (= type "MemberExpression") 
-        (if (= (.. node -object -type) "MemberExpression")
+        (let [_ true]
+            (if (= (.. node -object -type) "MemberExpression")
                                         ; (generate-readable-expression (.-object node) {:want "name"})
 
-          (list "" 
-                (generate-readable-expression (.-object node) {:want "name"})
-                "."
-                (generate-readable-expression (.-property node) {:want "name"}))
+           (list "" 
+                 (generate-readable-expression (.-object node) {:want "name"})
+                 "."
+                 (generate-readable-expression (.-property node) {:want "name"}))
 
-          (list "" 
-                (generate-readable-expression (.-object node) {:want "name"})
-                "."
-                (generate-readable-expression (.-property node) {:want "name"}))
+           (list "" 
+                 (generate-readable-expression (.-object node) {:want "name"})
+                 "."
+                 (generate-readable-expression (.-property node) {:want "name"}))
 
-          )
+           ))
 
         (= type "Literal") 
         (if (= (:for o) "eval")
@@ -394,25 +395,49 @@
 (defn readable-args [args]
   (map (fn [arg] (readable-arg arg)) args))
 
-(defn say-hello [args]
-  (print (str "hello " args)))
-
-(defn annotation-for [callee propertyName arguments]
-  (let [proto true ] 
+(defn- find-annotation-for [obj propertyName args]
+  (let [proto (.-prototype (.-constructor obj))] 
     (cond
-     ; Check the instance itself for a particular annotation
-     (.hasOwnProperty callee "__choc_annotation") 
-     (.__choc_annotation callee arguments)
+     ;; Check the instance itself for a particular annotation
+     (.hasOwnProperty obj "__choc_annotation") 
+     (.__choc_annotation obj args)
 
-     ; Check the instance itself for a set of annotations
-     (and (.hasOwnProperty callee "__choc_annotations")
-          (.hasOwnProperty (get callee "__choc_annotations") propertyName)) 
-     ((get (get callee "__choc_annotations") propertyName) arguments)
- 
-     ; Check the instance constructor prototype for a dictionary of named __choc_annotations
+     ;; Check the instance itself for a set of annotations
+     (and (.hasOwnProperty obj "__choc_annotations")
+          (.hasOwnProperty (get obj "__choc_annotations") propertyName)) 
+     ((get (get obj "__choc_annotations") propertyName) args)
+     
+     ;; Check the instance constructor prototype for a dictionary of named __choc_annotations
      (and (.hasOwnProperty proto "__choc_annotations")
           (.hasOwnProperty (get proto "__choc_annotations") propertyName)) 
-     ((get (get proto "__choc_annotations") propertyName) arguments)
-     true "")))
+     ((get (get proto "__choc_annotations") propertyName) args)
+     true false)))
+
+(defn annotation-for [callee callee-object callee-compiled propertyName args]
+  (let [callee-annotation (find-annotation-for callee propertyName args)] 
+    (if callee-annotation
+      callee-annotation
+      (let [callee-object-annotation (if callee-object (find-annotation-for callee-object propertyName args) false)]
+        (if callee-object-annotation
+          callee-object-annotation
+          (str "call the function " callee-compiled)))))
+
+  ;; (let [proto (.-prototype (.-constructor callee))] 
+  ;;   (cond
+  ;;    ; Check the instance itself for a particular annotation
+  ;;    (.hasOwnProperty callee "__choc_annotation") 
+  ;;    (.__choc_annotation callee arguments)
+
+  ;;    ; Check the instance itself for a set of annotations
+  ;;    (and (.hasOwnProperty callee "__choc_annotations")
+  ;;         (.hasOwnProperty (get callee "__choc_annotations") propertyName)) 
+  ;;    ((get (get callee "__choc_annotations") propertyName) arguments)
+ 
+  ;;    ; Check the instance constructor prototype for a dictionary of named __choc_annotations
+  ;;    (and (.hasOwnProperty proto "__choc_annotations")
+  ;;         (.hasOwnProperty (get proto "__choc_annotations") propertyName)) 
+  ;;    ((get (get proto "__choc_annotations") propertyName) arguments)
+  ;;    true (str "call the function " callee-compiled)))
+  )
 
 

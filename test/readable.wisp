@@ -134,49 +134,48 @@
 ;;   })
 
 ;; (assert-message 
-;;  "annotatedfn(\"hello\", shift)" 
-;;  "I was annotated with hello, 3"
+;;  "annotatedfn(\"hello\", name, shift)" 
+;;  "I was annotated with hello, bob, 3"
 ;;  {:before "
 ;;    var shift = 3;
+;;    var name = \"bob\";
 ;;    var annotatedfn = function() { return true; }; 
 ;;    var that = this;
 ;;    annotatedfn.__choc_annotation = function(args) {
-;;      return \"I was annotated with \" + generateReadableExpression(args[0]) + 
-;;       \", \" + eval(generateReadableExpression(args[1], {\"want\": \"name\"})) ;
+;;      return \"I was annotated with \" + args[0] + \", \" + args[1] + \", \" + args[2] ;
 ;;    }"})
 
-;; (assert-message 
-;;  "z.addAnimal(animal);" 
-;;  "Add a zebra to the zoo"
-;;  {:before "
-;;    function Zoo() { }
-;;    Zoo.prototype.addAnimal = function(animal) { return animal; }
-;;    Zoo.prototype.__choc_annotations = {
-;;      \"addAnimal\": function(args) {
-;;        animal = readableArg(args[0]);
-;;        return \"Add a \" + animal + \" to the zoo\";
-;;      }
-;;    };
-;;    z = new Zoo();
-;;    animal = \"zebra\";
-;; "})
+(assert-message 
+ "z.addAnimal(animal);" 
+ "Add a zebra to the zoo"
+ {:before "
+   function Zoo() { }
+   Zoo.prototype.addAnimal = function(animal) { return animal; }
+   Zoo.prototype.__choc_annotations = {
+     \"addAnimal\": function(args) {
+       puts(inspect(args));
+       return \"Add a \" + args[0] + \" to the zoo\";
+     }
+   };
+   var z = new Zoo();
+   var animal = \"zebra\";
+"})
 
 
 ;; really you need to hoist function call arguments
-(assert-message 
- "annotatedfn(shift + 2)" 
- "I was called with 5"
- {:before "
-   var shift = 3;
-   var annotatedfn = function(x) { return true; }; 
-   var myeval = function(str) { eval(str); }
+;; (assert-message 
+;;  "annotatedfn(shift + 2)" 
+;;  "I was called with 5"
+;;  {:before "
+;;    var shift = 3;
+;;    var annotatedfn = function(x) { return true; }; 
+;;    var myeval = function(str) { eval(str); }
    
-   var that = this;
-   annotatedfn.__choc_annotation = function(args) {
-     return \"I was called with \" + args[0];
+;;    var that = this;
+;;    annotatedfn.__choc_annotation = function(args) {
+;;      return \"I was called with \" + args[0];
 
-   }"})
-
+;;    }"})
 
 ;; (assert-message 
 ;;  "line.width = 3;" 
