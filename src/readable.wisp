@@ -17,7 +17,6 @@
                                         flatten-once parse-js when appendify-form appendify-to-str]]
             ))
 
-; TODO implement condp in wisp
 
 (defmacro ..
   ([x form] `(if ~x (. ~x ~form) nil)) ; TODO check for undefined - what about false?
@@ -42,7 +41,7 @@
            type (:type node)
            op (:operator node)
            is-or-not (if (:negation o) " is not" " is")]
-       (cond 
+       (cond ; TODO implement condp in wisp
         (= type "AssignmentExpression") 
         (cond 
          (= "=" op) (list "set " (generate-readable-expression (:left node) {:want "name"}) 
@@ -116,7 +115,7 @@
          (or (= (.. node -callee -type) "Identifier")
              (= (.. node -callee -type) "MemberExpression"))
 
-         (let [ ;; given foo.bar.baz()...
+         (let [;; given foo.bar.baz()...
               
                ;; callee-compiled is a reference to the object and property we're calling
                ;; e.g. foo.bar.baz
@@ -309,11 +308,16 @@
      ((get (get proto "__choc_annotations") propertyName) args)
      true false)))
 
-(defn annotation-for [callee callee-object callee-compiled propertyName args]
+(defn annotation-for 
+  "searches the annotation chain given the arguments. calls the annotation and
+returns the message to be displayed"
+  [callee callee-object callee-compiled propertyName args]
   (let [callee-annotation (find-annotation-for callee propertyName args)] 
     (if callee-annotation
       callee-annotation
-      (let [callee-object-annotation (if callee-object (find-annotation-for callee-object propertyName args) false)]
+      (let [callee-object-annotation (if callee-object 
+                                       (find-annotation-for callee-object propertyName args) 
+                                       false)]
         (if callee-object-annotation
           callee-object-annotation
           (str "call the function " callee-compiled))))))
