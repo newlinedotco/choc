@@ -153,48 +153,8 @@
                       callee-object (eval ~callee-object-compiled)
                       arguments (map (fn [arg] (eval arg)) ~argumentSources)] 
                   (readable/annotation-for callee callee-object ~callee-compiled ~propertyN arguments))
-                )))
-
-           ;; `(((fn [] 
-           ;;      (let [callee (eval ~callee-object-compiled)
-           ;;            proto (if (eval ~callee-object-compiled) ; callee?
-           ;;                    (.-prototype (.-constructor (eval ~callee-object-compiled)))
-           ;;                    {})]
-           ;;        (cond
-           ;;         ;; what we're going to do here
-           ;;         ;; is take this function and try to pull it out of macro land
-           ;;         ;; just send along all of the arguments as an object and reconstruct this call outside of this function
-           ;;         ;; then we're going to escodegen the arguments into an eval'd array
-           ;;         ;; and call our annotation function with that eval'd array, so it gets finalized arguments
-
-           ;;         ; Call instance level property of __choc_annotation (e.g. the function itself)
-           ;;         (.hasOwnProperty (eval ~callee-compiled) "__choc_annotation") 
-           ;;         (.__choc_annotation (eval ~callee-compiled) ~(.-arguments node))
-
-           ;;         ; Check the instance itself for a set of annotations
-           ;;         (and (.hasOwnProperty callee "__choc_annotations")
-           ;;              (.hasOwnProperty (get callee "__choc_annotations") ~propertyN)) 
-           ;;         ((get (get callee "__choc_annotations") ~propertyN) ~(.-arguments node))
-
-           ;;         ; Check the instance constructor prototype for a dictionary of named __choc_annotations
-           ;;         (and (.hasOwnProperty proto "__choc_annotations")
-           ;;              (.hasOwnProperty (get proto "__choc_annotations") ~propertyN)) 
-           ;;         ((get (get proto "__choc_annotations") ~propertyN) ~(.-arguments node))
-
-           ;;         ; default
-           ;;         true
-           ;;         (str "call the function " ~callee-compiled))))))
-
-           )
-
-         ;; unify these here and call the annotation?
-         ;; and if there is no annotation, just call the callee-expresison -
-         ;; except, you're going to need to be able to expand the
-         ;; callee-expression within a function
-         ;; if you tackle that, things might be a lot easier anyway
-
-         true ""
-         )
+                ))))
+         true "")
 
         (= type "MemberExpression") 
         (let [_ true]
@@ -420,24 +380,6 @@
       (let [callee-object-annotation (if callee-object (find-annotation-for callee-object propertyName args) false)]
         (if callee-object-annotation
           callee-object-annotation
-          (str "call the function " callee-compiled)))))
-
-  ;; (let [proto (.-prototype (.-constructor callee))] 
-  ;;   (cond
-  ;;    ; Check the instance itself for a particular annotation
-  ;;    (.hasOwnProperty callee "__choc_annotation") 
-  ;;    (.__choc_annotation callee arguments)
-
-  ;;    ; Check the instance itself for a set of annotations
-  ;;    (and (.hasOwnProperty callee "__choc_annotations")
-  ;;         (.hasOwnProperty (get callee "__choc_annotations") propertyName)) 
-  ;;    ((get (get callee "__choc_annotations") propertyName) arguments)
- 
-  ;;    ; Check the instance constructor prototype for a dictionary of named __choc_annotations
-  ;;    (and (.hasOwnProperty proto "__choc_annotations")
-  ;;         (.hasOwnProperty (get proto "__choc_annotations") propertyName)) 
-  ;;    ((get (get proto "__choc_annotations") propertyName) arguments)
-  ;;    true (str "call the function " callee-compiled)))
-  )
+          (str "call the function " callee-compiled))))))
 
 
