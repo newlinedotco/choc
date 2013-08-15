@@ -342,6 +342,9 @@ scrub = (source, count, opts) ->
     global.__choc_trace         = tracer.trace(count: count)
     global.__choc_trace_call    = tracer.traceCall(__choc_trace)
     global.__choc_first_message = (messages) -> if _.isNull(messages[0]?.message) then "TODO" else messages[0].message
+    global.map = (fn, items) -> _.map(items, fn)
+    global.annotationFor = readable.annotationFor
+
     global.locals = locals;
     # add our own local vars
     locals.Choc = Choc
@@ -382,8 +385,7 @@ scrub = (source, count, opts) ->
 
 annotate = (fn, annotation) ->
   fn.__choc_annotation = (args) ->
-    evaldArgs = readable.readableArgs(args)
-    annotation(evaldArgs)
+    annotation(args)
 
 exports.scrub = scrub
 exports.generateAnnotatedSource = generateAnnotatedSource
