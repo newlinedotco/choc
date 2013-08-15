@@ -25,8 +25,6 @@
 (defn generate-readable-value 
   ([node1 node2] (generate-readable-value node1 node2 {}))
   ([node1 node2 opts]
-     (print node1)
-     (print node2)
      (if (.hasOwnProperty node1 :name)
        (symbol (:name node1))
        (cond 
@@ -147,7 +145,7 @@
            `(((fn [] 
                 (let [callee (eval ~callee-compiled)
                       callee-object (eval ~callee-object-compiled)
-                      arguments (map (fn [arg] (eval arg)) ~argumentSources)] 
+                      arguments (wisp.sequence/map (fn [arg] (eval arg)) ~argumentSources)] 
                   (readable/annotation-for callee callee-object ~callee-compiled ~propertyN arguments))
                 ))))
          true "")
@@ -290,7 +288,7 @@
                  "''")]
    result))
 
-(defn- find-annotation-for [obj propertyName args]
+(defn find-annotation-for [obj propertyName args]
   (let [proto (.-prototype (.-constructor obj))] 
     (cond
      ;; Check the instance itself for a particular annotation
