@@ -50,6 +50,7 @@ var readFromString = wisp_reader.readFromString;;
 var str = require("wisp/string");
 var join = str.join;;
 var esprima = require("esprima");;
+var escodegen = require("escodegen");;
 var underscore = require("underscore");
 var has = underscore.has;;
 var util = require("util");
@@ -74,8 +75,6 @@ var generateReadableValue = function generateReadableValue(node1, node2, opts) {
     case 2:
       return generateReadableValue(node1, node2, {});
     case 3:
-      console.log(node1);
-      console.log(node2);
       return node1.hasOwnProperty("name") ?
         symbol((node1 || 0)["name"]) :
       isEqual("FunctionExpression", (node2 || 0)["type"]) ?
@@ -192,11 +191,8 @@ var generateReadableExpression = function generateReadableExpression(node, opts)
             (node.callee).type :
             void(0), "MemberExpression")) ?
             (function() {
-              var calleeExpression = generateReadableExpression(node ?
-                node.callee :
-                void(0), {
-                "want": "name",
-                "callArguments": node.arguments
+              var calleeExpression = generateReadableExpression(node.callee, {
+                "want": "name"
               });
               var calleeCompiled = compileMessage(calleeExpression);
               var calleeObject = generateReadableExpression(node.callee ?
@@ -208,29 +204,26 @@ var generateReadableExpression = function generateReadableExpression(node, opts)
               var propertyN = (node.callee).property ?
                 ((node.callee).property).name :
                 void(0);
-              return list(list(list(symbol(void(0), "fn"), [], list(symbol(void(0), "let"), vec([symbol(void(0), "callee"), list(symbol(void(0), "eval"), calleeObjectCompiled), symbol(void(0), "proto"), list(symbol(void(0), "if"), list(symbol(void(0), "eval"), calleeObjectCompiled), list(symbol(void(0), ".-prototype"), list(symbol(void(0), ".-constructor"), list(symbol(void(0), "eval"), calleeObjectCompiled))), {})]), list(symbol(void(0), "cond"), list(symbol(void(0), ".hasOwnProperty"), list(symbol(void(0), "eval"), calleeCompiled), "__choc_annotation"), list(symbol(void(0), ".__choc_annotation"), list(symbol(void(0), "eval"), calleeCompiled), node.arguments), list(symbol(void(0), "and"), list(symbol(void(0), ".hasOwnProperty"), symbol(void(0), "callee"), "__choc_annotations"), list(symbol(void(0), ".hasOwnProperty"), list(symbol(void(0), "get"), symbol(void(0), "callee"), "__choc_annotations"), propertyN)), list(list(symbol(void(0), "get"), list(symbol(void(0), "get"), symbol(void(0), "callee"), "__choc_annotations"), propertyN), node.arguments), list(symbol(void(0), "and"), list(symbol(void(0), ".hasOwnProperty"), symbol(void(0), "proto"), "__choc_annotations"), list(symbol(void(0), ".hasOwnProperty"), list(symbol(void(0), "get"), symbol(void(0), "proto"), "__choc_annotations"), propertyN)), list(list(symbol(void(0), "get"), list(symbol(void(0), "get"), symbol(void(0), "proto"), "__choc_annotations"), propertyN), node.arguments), true, list(symbol(void(0), "str"), "call the function ", calleeCompiled))))));
+              var argumentSources = map(function(arg) {
+                return escodegen.generate(arg, {
+                  "format:": {
+                    "compact:": false
+                  }
+                });
+              }, node.arguments);
+              return list(list(list(symbol(void(0), "fn"), [], list(symbol(void(0), "let"), vec([symbol(void(0), "callee"), list(symbol(void(0), "eval"), calleeCompiled), symbol(void(0), "callee-object"), list(symbol(void(0), "eval"), calleeObjectCompiled), symbol(void(0), "arguments"), list(symbol("wisp.sequence", "map"), list(symbol(void(0), "fn"), vec([symbol(void(0), "arg")]), list(symbol(void(0), "eval"), symbol(void(0), "arg"))), argumentSources)]), list(symbol("readable", "annotation-for"), symbol(void(0), "callee"), symbol(void(0), "callee-object"), calleeCompiled, propertyN, symbol(void(0), "arguments"))))));
             })() :
           true ?
             "" :
             void(0) :
         isEqual(type, "MemberExpression") ?
-          isEqual(node.object ?
-            (node.object).type :
-            void(0), "MemberExpression") ?
-            list("", generateReadableExpression(node.object, {
-              "want": "name"
-            }), ".", generateReadableExpression(node.property, {
-              "want": "name"
-            })) :
-            list("", generateReadableExpression(node.object, {
-              "want": "name"
-            }), ".", generateReadableExpression(node.property, {
-              "want": "name"
-            })) :
+          list("", generateReadableExpression(node.object, {
+            "want": "name"
+          }), ".", generateReadableExpression(node.property, {
+            "want": "name"
+          })) :
         isEqual(type, "Literal") ?
-          isEqual((o || 0)["for"], "eval") ?
-            (node || 0)["value"] :
-            (node || 0)["value"] :
+          (node || 0)["value"] :
         isEqual(type, "Identifier") ?
           isEqual((o || 0)["want"], "name") ?
             (node || 0)["name"] :
@@ -364,29 +357,6 @@ var compileEntry = function compileEntry(node) {
 };
 exports.compileEntry = compileEntry;
 
-var compileReadableEntries = function compileReadableEntries(nodes) {
-  return isFn(nodes) ?
-    nodes :
-  isEmpty(nodes) ?
-    [] :
-    map(compileEntry, nodes);
-};
-exports.compileReadableEntries = compileReadableEntries;
-
-var compiledReadableExpression = function compiledReadableExpression(node, opts) {
-  switch (arguments.length) {
-    case 1:
-      return compiledReadableExpression(node, {});
-    case 2:
-      return generateReadableExpression(node, opts);
-
-    default:
-      (function() { throw Error("Invalid arity"); })()
-  };
-  return void(0);
-};
-exports.compiledReadableExpression = compiledReadableExpression;
-
 var readableJsStr = function readableJsStr(node, opts) {
   var readable = readableNode(node, opts);
   var transpiled = transpile(readable);
@@ -397,28 +367,31 @@ var readableJsStr = function readableJsStr(node, opts) {
 };
 exports.readableJsStr = readableJsStr;
 
-var readableArg = function readableArg(node) {
-  var geval = eval;
-  return (function() {
-  try {
-    return geval(generateReadableExpression(node, {
-      "want": "name",
-      "for": "eval"
-    }));
-  } catch (error) {
-    return console.log(error);
-  }})();
+var findAnnotationFor = function findAnnotationFor(obj, propertyName, args) {
+  var proto = (obj.constructor).prototype;
+  return obj.hasOwnProperty("__choc_annotation") ?
+    obj.__choc_annotation(args) :
+  (obj.hasOwnProperty("__choc_annotations")) && ((obj || 0)["__choc_annotations"].hasOwnProperty(propertyName)) ?
+    ((((obj || 0)["__choc_annotations"]) || 0)[propertyName])(args) :
+  (proto.hasOwnProperty("__choc_annotations")) && ((proto || 0)["__choc_annotations"].hasOwnProperty(propertyName)) ?
+    ((((proto || 0)["__choc_annotations"]) || 0)[propertyName])(args) :
+  true ?
+    false :
+    void(0);
 };
-exports.readableArg = readableArg;
+exports.findAnnotationFor = findAnnotationFor;
 
-var readableArgs = function readableArgs(args) {
-  return map(function(arg) {
-    return readableArg(arg);
-  }, args);
+var annotationFor = function annotationFor(callee, calleeObject, calleeCompiled, propertyName, args) {
+  var calleeAnnotation = findAnnotationFor(callee, propertyName, args);
+  return calleeAnnotation ?
+    calleeAnnotation :
+    (function() {
+      var calleeObjectAnnotation = calleeObject ?
+        findAnnotationFor(calleeObject, propertyName, args) :
+        false;
+      return calleeObjectAnnotation ?
+        calleeObjectAnnotation :
+        "" + "call the function " + calleeCompiled;
+    })();
 };
-exports.readableArgs = readableArgs;
-
-var sayHello = function sayHello(args) {
-  return console.log("" + "hello " + args);
-};
-exports.sayHello = sayHello
+exports.annotationFor = annotationFor
