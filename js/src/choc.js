@@ -110,6 +110,7 @@
     if (node.callee.type === "Identifier") {
       original_function = node.callee.name;
       original_arguments = node["arguments"];
+      opts.originalArguments || (opts.originalArguments = original_arguments);
       messagesString = readable.readableJsStr(node, opts);
       trace_opts = "var opts = { lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " };";
       trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init;
@@ -132,6 +133,7 @@
       original_object = node.callee.object;
       original_property = node.callee.property;
       original_arguments = node["arguments"];
+      opts.originalArguments || (opts.originalArguments = original_arguments);
       messagesString = readable.readableJsStr(node, opts);
       trace_opts = "var opts = { lineNumber: " + line + ", range: [ " + range[0] + ", " + range[1] + " ], type: '" + nodeType + "', messages: " + messagesString + " };";
       trace_opts_tree = esprima.parse(trace_opts).body[0].declarations[0].init;
@@ -207,11 +209,11 @@
             hoistedOriginal: originalExpression
           });
           parent[parentPathAttribute].splice(parentPathIndex + parent.__choc_offset, 0, newCodeTree);
+          parent.__choc_offset = parent.__choc_offset + 1;
           node[hoister[node.type]] = {
             type: 'Identifier',
             name: newVariableName
           };
-          parent.__choc_offset = parent.__choc_offset + 1;
           if (_.isNumber(parentPathIndex)) {
             newPosition = parentPathIndex + parent.__choc_offset;
             parent[parentPathAttribute].splice(newPosition, 0, traceTree);
@@ -348,6 +350,10 @@
           return messages[0].message;
         }
       };
+      global.map = function(fn, items) {
+        return _.map(items, fn);
+      };
+      global.annotationFor = readable.annotationFor;
       global.locals = locals;
       locals.Choc = Choc;
       localsStr = _.map(_.keys(locals), function(name) {
@@ -377,11 +383,7 @@
 
   annotate = function(fn, annotation) {
     return fn.__choc_annotation = function(args) {
-      var evaldArgs;
-      evaldArgs = _.map(args, function(arg) {
-        return readable.readableArgs(arg);
-      });
-      return annotation(evaldArgs);
+      return annotation(args);
     };
   };
 

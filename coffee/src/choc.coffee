@@ -8,7 +8,6 @@ escodegen = require("escodegen")
 esmorph = require("esmorph")
 estraverse = require('../../lib/estraverse')
 _ = require("underscore")
-# readable = require("./readable")
 readable = require("choc-readable")
 
 debug = require("debug")("choc")

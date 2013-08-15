@@ -37,9 +37,16 @@
       puts(newSource);
       return assert.ok(true);
     });
-    return it.only('traces functions once', function() {
+    it('traces functions once', function() {
       var newSource, src;
       src = "var bob = 1\nbob = 2;\nconsole.log(\"hi\")";
+      newSource = choc.generateAnnotatedSource(src);
+      puts(newSource);
+      return assert.ok(true);
+    });
+    return it.only('traces CallExpressions', function() {
+      var newSource, src;
+      src = "function add(a, b) {\n  return a + b;\n}\nvar bob = 1;\nadd(bob, bob + 1); ";
       newSource = choc.generateAnnotatedSource(src);
       puts(newSource);
       return assert.ok(true);
