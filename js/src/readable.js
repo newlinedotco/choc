@@ -280,6 +280,21 @@ var readableNode = function readableNode(node, opts) {
             }, node.declarations));
             return list(list(symbol(void(0), "fn"), [], messages));
           })() :
+        isEqual("IfStatement", t) ?
+          (function() {
+            var conditional = (o || 0)["hoistedName"] ?
+              symbol((o || 0)["hoistedName"]) :
+              true;
+            var trueMessages = [compileEntry(list("lineNumber", (node.loc).start ?
+              ((node.loc).start).line :
+              void(0), "message", list("Because ", generateReadableExpression((node || 0)["test"])), "timeline", "t"))];
+            var falseMessages = [compileEntry(list("lineNumber", (node.loc).start ?
+              ((node.loc).start).line :
+              void(0), "message", list("Skip because ", generateReadableExpression((node || 0)["test"], {
+              "negation": true
+            })), "timeline", "f"))];
+            return list(list(symbol(void(0), "fn"), vec([symbol(void(0), "condition")]), list(symbol(void(0), "if"), symbol(void(0), "condition"), trueMessages, falseMessages)), conditional);
+          })() :
         isEqual("WhileStatement", t) ?
           (function() {
             var conditional = (o || 0)["hoistedName"] ?
@@ -310,7 +325,7 @@ var readableNode = function readableNode(node, opts) {
           (function() {
             var messages = [compileEntry(list("lineNumber", (node.loc).start ?
               ((node.loc).start).line :
-              void(0), "message", list("return ", symbol((o || 0)["hoistedName"]))))];
+              void(0), "message", list("return ", symbol((o || 0)["hoistedName"])), "timeline", symbol((o || 0)["hoistedName"])))];
             return list(list(symbol(void(0), "fn"), [], messages));
           })() :
         isEqual("CallExpression", t) ?
