@@ -198,6 +198,30 @@
                          (. node -declarations)))] 
           `((fn [] ~messages)))
 
+        ;; TODO IfStatement
+        (= "IfStatement" t)
+        (let [conditional (if (:hoistedName o) 
+                            (symbol (:hoistedName o))
+                            true)
+              true-messages [(compile-entry 
+                              (list
+                               :lineNumber (.. node -loc -start -line) 
+                               :message (list "Because " (generate-readable-expression (:test node)) )
+                               :timeline "t"
+                               ))]
+              false-messages [(compile-entry 
+                               (list
+                                :lineNumber (.. node -loc -start -line) 
+                                :message (list "Skip because " (generate-readable-expression (:test node) {:negation true}) )
+                                :timeline "f"
+                                ))]
+              ]
+          `((fn [condition]
+              (if condition
+                ~true-messages
+                ~false-messages)) ~conditional))
+ 
+
         (= "WhileStatement" t)
         (let [conditional (if (:hoistedName o) 
                             (symbol (:hoistedName o))
@@ -244,11 +268,12 @@
         (let [messages [(compile-entry 
                           (list 
                            :lineNumber (.. node -loc -start -line)
-                           :message (list "return " (symbol (:hoistedName o)))))]]
+                           :message (list "return " (symbol (:hoistedName o)))
+                           :timeline (symbol (:hoistedName o))))]]
           `((fn [] ~messages)))
 
 
-        ; handle receiving an expression directly - TODO possible code smell
+        ; handle receiving an expression directly - TODO code smell
         (= "CallExpression" t)
         (let [messages [(compile-entry 
                           (list 
