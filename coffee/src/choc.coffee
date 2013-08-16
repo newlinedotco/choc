@@ -264,7 +264,7 @@ generateAnnotatedSource = (source) ->
 
 
   newSource = escodegen.generate(tree, format: { compact: false } )
-  console.log(newSource)
+  # console.log(newSource)
   newSource
 
 # TODO - use an LRU memoize if you're planning on doing a lot of editing
@@ -354,9 +354,7 @@ scrub = (source, count, opts) ->
     
     # http://perfectionkills.com/global-eval-what-are-the-options/
     gval = eval
-    # eval(localsStr + "\n" + newSource)
     gval(localsStr + "\n" + newSource)
-    #eval.call(this, localsStr + "\n" + newSource)
 
     # if you make it here without an exception, execution finished
     executionTerminated = true
@@ -378,7 +376,7 @@ scrub = (source, count, opts) ->
     # if no exceptions were raised then we've successfully run our whole
     # program. Call back to the client and let them know how many steps we've
     # taken and give them the tracer's timeline
-    if executionTerminated
+    if executionTerminated || opts.animate? # todo
       afterAll({frameCount: tracer.frameCount})
       onTimeline(tracer.timeline)
 
