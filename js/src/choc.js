@@ -250,7 +250,6 @@
         compact: false
       }
     });
-    console.log(newSource);
     return newSource;
   };
 
@@ -372,7 +371,7 @@
       }
     } finally {
       afterEach();
-      if (executionTerminated) {
+      if (executionTerminated || (opts.animate != null)) {
         afterAll({
           frameCount: tracer.frameCount
         });
