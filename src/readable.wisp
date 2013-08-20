@@ -25,12 +25,10 @@
 (defn generate-readable-value 
   ([node1 node2] (generate-readable-value node1 node2 {}))
   ([node1 node2 opts]
-     (if (.hasOwnProperty node1 :name)
-       (symbol (:name node1))
-       (cond 
-        (= "FunctionExpression" (:type node2)) "this function"
-        true (generate-readable-expression node2)
-        :else "" ))))
+     (cond
+       (= "FunctionExpression" (:type node2)) "this function"
+       (.hasOwnProperty node1 :name) (symbol (:name node1))
+       true (generate-readable-expression node2))))
 
 (defn generate-readable-expression 
   ([node] (generate-readable-expression node {}))
@@ -166,6 +164,7 @@
         (= type "VariableDeclarator") 
         (cond 
          (= (:want o) "name") (generate-readable-expression (.. node -id) {:want "name"})
+         (= (.. node -init -type) "FunctionExpression") `("this function")
          true (generate-readable-expression (.. node -id)) )
 
         true `("")
@@ -187,13 +186,17 @@
         (let [messages (vec 
                         (map 
                          (fn [dec]
-                           (let [name (.. dec -id -name)]
+                           (let [name (.. dec -id -name)
+                                 create-message (list (str "Create the variable <span class='choc-variable'>" name "</span>" ) )
+                                 init-message (if (.-init dec)
+                                                (list " and set it to <span class='choc-value'>" 
+                                                      (generate-readable-expression dec) "</span>")
+                                                (list))
+                                 message (concat create-message init-message)]
                              (compile-entry 
                               (list 
                                :lineNumber (.. node -loc -start -line) 
-                               :message (list (str "Create the variable <span class='choc-variable'>" name 
-                                                   "</span> and set it to <span class='choc-value'>") (generate-readable-expression dec)
-                                                   "</span>")
+                               :message message
                                :timeline (symbol name))))) 
                          (. node -declarations)))] 
           `((fn [] ~messages)))

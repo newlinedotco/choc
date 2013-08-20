@@ -37,11 +37,28 @@
  "var i = 2" 
  "Create the variable <span class='choc-variable'>i</span> and set it to <span class='choc-value'>2</span>")
 
+(print "variable declarations")
+(assert-message 
+ "var i" 
+ "Create the variable <span class='choc-variable'>i</span>")
+
+(print "variable declarations")
+(assert-message 
+ "var fn = function() { return true; }" 
+ "Create the variable <span class='choc-variable'>fn</span> and set it to <span class='choc-value'>this function</span>")
+
 (print "AssignmentExpression")
 (assert-message 
  "foo = 1 + bar" 
  "set foo to 3"
  {:before "var bar = 2, foo = 0;"})
+
+(print "AssignmentExpression")
+(assert-message 
+ "fn = function() { return true; }" 
+ "set fn to this function"
+ {:before "var fn;"})
+
 
 (print "WhileExpressions")
 (assert-message 
