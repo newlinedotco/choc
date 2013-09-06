@@ -114,14 +114,31 @@ statements in the body"
 ; (print (.to-string (appendify-form `("a" "b" ("c" "d" "e" ("f" "g")) "h"))))
 (defn appendify-form 
   [items] 
-  (first 
-   (reduce (fn [acc item] 
-             (list (cons `+ 
-                         (concat acc 
-                                 (if (list? item)
-                                   (list (appendify-form item))
-                                   (list item)))))) 
-           (list (first items)) (rest items))))
+  ; (print "\ninput:")
+  ; (print (.to-string items))
+  ; (print "first:")
+  ; (print (.to-string (first items)))
+  ; (print "rest:")
+  ; (print (.to-string (rest items)))
+  (let [head (first items)
+        prefix (if (list? head)
+                 (list (appendify-form head))
+                 (list head))
+        results (first 
+         (reduce (fn [acc item] 
+  ;                  (print "item:")
+  ;                  (print (.to-string item))
+  ;                  (print "list?:")
+  ;                  (print (list? item))
+                   (list (cons `+ 
+                               (concat acc 
+                                       (if (list? item)
+                                         (list (appendify-form item))
+                                         (list item)))))) 
+                 prefix (rest items)))]
+  ;   (print "results:")
+  ;   (print (.to-string results))
+    results))
 
 
 (defn appendify-to-str

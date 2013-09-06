@@ -91,7 +91,7 @@
            (= "<="  op) (truthy node " less than or equal to ") 
            (= ">"   op) (truthy node " greater than ") 
            (= ">="  op) (truthy node " greater than or equal to ") 
-           true (str "")
+           true (list "")
            ))
 
         ;; operators = 

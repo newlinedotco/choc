@@ -192,6 +192,18 @@
   :hoistedName "__hoist"
   :selector (fn [node] (first (:body (:body node))))})
 
+
+(assert-message 
+"if( (x*x) + (y*y) <= (radius*radius) ) {
+   console.log(x, y);
+ }"
+ "Because 1 times 1 plus 4 times 4 is less than or equal to 5 times 5"
+ {:before "var radius=5, x=1, y=4;"})
+
+;; (appendify-form
+;;  `("Because " ((("x" " times " "x") " plus " ("y" " times " "y")) ".")))
+
+
 ;; ---- TODOs below ----
 
 ;; (assert-message 
