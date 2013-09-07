@@ -125,45 +125,20 @@ statements in the body"
 
 (defn appendify-form
   [items] 
-  ;; (print "\ninput:")
-  ;; (print (.to-string items))
-  ;; (print "first:")
-  ;; (print (.to-string (first items)))
-  ;; (print "rest:")
-  ;; (print (.to-string (rest items)))
   (if (= (first items) `fn) 
     (list items)
     (let [head (first items)
-          ;; _ (pp (list? head))
-          ;; _ (pp (= (first head) `fn) )
-          ;; prefix (if (list? head)
-          ;;          (if (= (first head) `fn) 
-          ;;            head
-          ;;            (list (appendify-form head)))
-          ;;          (list head))
           prefix (if (list? head)
                    (appendify-form head)
                    head)
-          ;; prefix head
-          _ (print (.to-string prefix))
-
-                                        ; prefix head
           results (first 
                    (reduce (fn [acc item] 
-                             ;; (print "item:")
-                             ;; (print (.to-string item))
-                             ;; (print "list?:")
-                             ;; (print (list? item))
-                             ;; (print "acc:")
-                             ;; (print (.to-string acc))
                              (list (cons `+ 
                                          (concat acc 
                                                  (if (list? item)
                                                    (list (appendify-form item))
                                                    (list item)))))) 
                            (list prefix) (rest items)))]
-                                        ;   (print "results:")
-                                        ;   (print (.to-string results))
       results)))
 
 
