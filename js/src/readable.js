@@ -75,14 +75,12 @@ var generateReadableValue = function generateReadableValue(node1, node2, opts) {
     case 2:
       return generateReadableValue(node1, node2, {});
     case 3:
-      return node1.hasOwnProperty("name") ?
-        symbol((node1 || 0)["name"]) :
-      isEqual("FunctionExpression", (node2 || 0)["type"]) ?
+      return isEqual("FunctionExpression", (node2 || 0)["type"]) ?
         "this function" :
+      node1.hasOwnProperty("name") ?
+        symbol((node1 || 0)["name"]) :
       true ?
         generateReadableExpression(node2) :
-      "else" ?
-        "" :
         void(0);
 
     default:
@@ -235,6 +233,10 @@ var generateReadableExpression = function generateReadableExpression(node, opts)
               void(0), {
               "want": "name"
             }) :
+          isEqual(node.init ?
+            (node.init).type :
+            void(0), "FunctionExpression") ?
+            list("this function") :
           true ?
             generateReadableExpression(node ?
               node.id :
@@ -274,9 +276,14 @@ var readableNode = function readableNode(node, opts) {
               var name = dec.id ?
                 (dec.id).name :
                 void(0);
+              var createMessage = list("" + "Create the variable <span class='choc-variable'>" + name + "</span>");
+              var initMessage = dec.init ?
+                list(" and set it to <span class='choc-value'>", generateReadableExpression(dec), "</span>") :
+                list();
+              var message = concat(createMessage, initMessage);
               return compileEntry(list("lineNumber", (node.loc).start ?
                 ((node.loc).start).line :
-                void(0), "message", list("" + "Create the variable <span class='choc-variable'>" + name + "</span> and set it to <span class='choc-value'>", generateReadableExpression(dec), "</span>"), "timeline", symbol(name)));
+                void(0), "message", message, "timeline", symbol(name)));
             }, node.declarations));
             return list(list(symbol(void(0), "fn"), [], messages));
           })() :

@@ -131,12 +131,30 @@ exports.parseJs = parseJs;
 
 undefined;
 
-var appendifyForm = function appendifyForm(items) {
+var appendifyFormOld = function appendifyFormOld(items) {
   return first(reduce(function(acc, item) {
     return list(cons(symbol(void(0), "+"), concat(acc, isList(item) ?
       list(appendifyForm(item)) :
       list(item))));
   }, list(first(items)), rest(items)));
+};
+exports.appendifyFormOld = appendifyFormOld;
+
+var appendifyForm = function appendifyForm(items) {
+  return isEqual(first(items), symbol(void(0), "fn")) ?
+    list(items) :
+    (function() {
+      var head = first(items);
+      var prefix = isList(head) ?
+        appendifyForm(head) :
+        head;
+      var results = first(reduce(function(acc, item) {
+        return list(cons(symbol(void(0), "+"), concat(acc, isList(item) ?
+          list(appendifyForm(item)) :
+          list(item))));
+      }, list(prefix), rest(items)));
+      return results;
+    })();
 };
 exports.appendifyForm = appendifyForm;
 
