@@ -54,6 +54,16 @@ if require? && (require.main == module)
   }
   """
 
+  source = """
+    var radius = 5; 
+    var x = 1;
+    var y = 2;
+
+    if( (x*x) + (y*y) <= (radius*radius) ) {
+      console.log(x, y);
+    }
+  """
+
   scrubNotify = (info) ->
     puts inspect info
 
