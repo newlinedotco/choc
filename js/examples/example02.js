@@ -19,6 +19,7 @@
     source = "var foo = 1;\nvar bar = foo + 2 < 3;\nif(foo + 2 < 3) {\n  console.log('it is');\n}\nconsole.log(foo);";
     source = "function add(a, b) {\n  var c = 3;\n  return a + b;\n}";
     source = "// parabolas\nvar shift = 0;\nwhile (shift <= 200) {\n  // console.log(shift);\n  var foo = shift;\n  if(foo % 2 == 0) {\n    foo = shift - 1;\n  }\n  shift += 14; // increment\n  foo = 1;\n}";
+    source = "var radius = 5; \nvar x = 1;\nvar y = 2;\n\nif( (x*x) + (y*y) <= (radius*radius) ) {\n  console.log(x, y);\n}";
     scrubNotify = function(info) {
       return puts(inspect(info));
     };

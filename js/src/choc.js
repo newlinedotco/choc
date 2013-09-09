@@ -250,6 +250,7 @@
         compact: false
       }
     });
+    debug(newSource);
     return newSource;
   };
 
@@ -321,7 +322,7 @@
   noop = function() {};
 
   scrub = function(source, count, opts) {
-    var afterAll, afterEach, beforeEach, e, executionTerminated, gval, locals, localsStr, newSource, onCodeError, onFrame, onMessages, onTimeline, tracer;
+    var afterAll, afterEach, appendSource, beforeEach, e, executionTerminated, gval, locals, localsStr, newSource, onCodeError, onFrame, onMessages, onTimeline, tracer;
     onFrame = opts.onFrame || noop;
     beforeEach = opts.beforeEach || noop;
     afterEach = opts.afterEach || noop;
@@ -330,6 +331,7 @@
     onMessages = opts.onMessages || noop;
     onCodeError = opts.onCodeError || noop;
     locals = opts.locals || {};
+    appendSource = opts.appendSource || "";
     newSource = generateAnnotatedSourceM(source);
     tracer = new Tracer();
     tracer.onMessages = onMessages;
@@ -359,7 +361,7 @@
         return "var " + name + " = locals." + name + ";";
       }).join("; ");
       gval = eval;
-      gval(localsStr + "\n" + newSource);
+      gval(localsStr + "\n" + newSource + "\n" + appendSource);
       executionTerminated = true;
       return console.log("execution terminated");
     } catch (_error) {
