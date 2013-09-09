@@ -264,7 +264,7 @@ generateAnnotatedSource = (source) ->
 
 
   newSource = escodegen.generate(tree, format: { compact: false } )
-  # console.log(newSource)
+  debug(newSource)
   newSource
 
 # TODO - use an LRU memoize if you're planning on doing a lot of editing
@@ -324,6 +324,7 @@ scrub = (source, count, opts) ->
   onMessages  = opts.onMessages  || noop
   onCodeError = opts.onCodeError || noop
   locals      = opts.locals      || {}
+  appendSource = opts.appendSource || ""
 
   newSource   = generateAnnotatedSourceM(source)
   # debug(newSource)
@@ -354,7 +355,7 @@ scrub = (source, count, opts) ->
     
     # http://perfectionkills.com/global-eval-what-are-the-options/
     gval = eval
-    gval(localsStr + "\n" + newSource)
+    gval(localsStr + "\n" + newSource + "\n" + appendSource)
 
     # if you make it here without an exception, execution finished
     executionTerminated = true
