@@ -3,6 +3,10 @@
 
   a library for learnable programming
 
+#
+
+a tool for teachers
+
 ## License 
 
 (The MIT License)
