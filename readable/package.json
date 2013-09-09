@@ -1,0 +1,23 @@
+{
+  "name": "choc-readable",
+  "version": "0.0.1",
+  "description": "readable",
+  "keywords": [],
+  "author": "Nate Murray <nate@natemurray.com>",
+  "dependencies": {
+    "underscore": "*",
+    "underscore.string": "*",
+    "forever": "*",
+    "esprima": "~1.0.3",
+    "escodegen": "",
+    "supervisor": "*",
+    "debug": "*",
+    "wisp": "~0.8.0"
+  },
+  "devDependencies": {
+    "mocha": "*",
+    "replay": "*",
+    "should": "*"
+  },
+  "main": "./index"
+}
