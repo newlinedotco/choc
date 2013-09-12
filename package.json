@@ -7,7 +7,6 @@
   "author": "Nate Murray <nate@natemurray.com>",
   "dependencies": {
     "coffee-script": "~1.6.2",
-    "debug": "~0.7.2",
     "underscore": "~1.4.4",
     "underscore.string": "~2.3.1",
     "supervisor": "~0.5.2",
@@ -17,13 +16,24 @@
     "hogan.js": "~2.0.0",
     "nodemon": "~0.7.8",
     "deep": "0.0.1",
+    "forever": "*",
+    "debug": "*",
     "wisp": "~0.8.0"
   },
   "devDependencies": {
     "mocha": "*",
     "replay": "*",
     "should": "*",
-    "browserify": "~2.17.3"
+    "matchdep": "*",
+    "grunt": "~0.4.0",
+    "grunt-contrib-coffee": "~0.6.5",
+    "grunt-contrib-jshint": "~0.4.3",
+    "grunt-contrib-clean": "~0.4.0",
+    "grunt-contrib-copy": "~0.4.0",
+    "grunt-contrib-nodeunit": "~0.1.2",
+    "bower": "~0.x",
+    "browserify": "~2.17.3",
+    "grunt-wisp": "~0.1.2"
   },
   "scripts": {
     "test": "node test/run.js",
