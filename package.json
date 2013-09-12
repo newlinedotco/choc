@@ -34,7 +34,8 @@
     "bower": "~0.x",
     "browserify": "~2.17.3",
     "mkdirp": "~0.3.5",
-    "grunt-gh-pages": "~0.7.1"
+    "grunt-gh-pages": "~0.7.1",
+    "grunt-browserify": "~1.2.4"
   },
   "scripts": {
     "test": "node test/run.js",

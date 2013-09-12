@@ -2,7 +2,6 @@
 node_modules
 *.sock
 test/fixtures/tmp/
-dist
 \#*
 .\#*
 .emacs.desktop.lock

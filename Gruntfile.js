@@ -46,6 +46,13 @@ module.exports = function (grunt) {
       }
     },
 
+    browserify: {
+      dist: {
+        files: {
+          'dist/choc.browser.js': ['tools/entry-point.js']
+        }
+      }
+    },
 
 		bower: {
 			options: {
@@ -79,6 +86,7 @@ module.exports = function (grunt) {
   grunt.loadTasks('tasks');
   grunt.registerTask('build', [
     'clean:dist',
-    'coffee'
+    'coffee',
+    'browserify'
   ]);
 };
