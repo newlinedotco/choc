@@ -36,14 +36,14 @@ module.exports = function (grunt) {
     },
 
     wisp: {
-       default_options: {
-         options: {
-           srcBaseDir: "wisp/"
-         },
-         files: {
-           'js/': ['wisp/**/*.wisp']
-         }
-       }
+      dist: {
+        options: {
+          srcBaseDir: "wisp/"
+        },
+        files: {
+          'js/': ['wisp/**/*.wisp']
+        }
+      }
     },
 
 
