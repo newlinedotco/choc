@@ -13,7 +13,7 @@
             [escodegen :as escodegen]
             [underscore :refer [has]]
             [util :refer [puts inspect]]
-            [choc.readable.util :refer [to-set set-incl? partition pp transpile
+            [choc.readable.readable-util :refer [to-set set-incl? partition pp transpile
                                         flatten-once parse-js when appendify-form appendify-to-str]]
             ))
 

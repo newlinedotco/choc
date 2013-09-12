@@ -33,7 +33,7 @@
     "grunt-contrib-nodeunit": "~0.1.2",
     "bower": "~0.x",
     "browserify": "~2.17.3",
-    "grunt-wisp": "~0.1.2"
+    "mkdirp": "~0.3.5"
   },
   "scripts": {
     "test": "node test/run.js",

@@ -1,4 +1,4 @@
-(ns choc.readable.util
+(ns choc.readable.readable-util
   (:require [wisp.ast :refer [symbol keyword]]
             [wisp.sequence :refer [cons conj list list? seq vec empty?
                                        count first second third rest last

@@ -11,7 +11,7 @@
             [esprima :as esprima]
             [underscore :refer [has]]
             [util :refer [puts inspect]]
-            [choc.src.util :refer [to-set set-incl? partition transpile pp parse-js when appendify-form]]
+            [choc.src.readable-util :refer [to-set set-incl? partition transpile pp parse-js when appendify-form]]
             [choc.src.readable :refer [readable-node readable-js-str generate-readable-expression compile-message annotation-for]]
             ))
 

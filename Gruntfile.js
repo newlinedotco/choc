@@ -38,10 +38,10 @@ module.exports = function (grunt) {
     wisp: {
        default_options: {
          options: {
-           srcBaseDir: "readable/src/"
+           srcBaseDir: "wisp/"
          },
          files: {
-           'js/': ['readable/src/**/*.wisp']
+           'js/': ['wisp/**/*.wisp']
          }
        }
     },
@@ -76,8 +76,9 @@ module.exports = function (grunt) {
 	// 		]).on('end', this.async());
 	// });
 
-    grunt.registerTask('build', [
-      'clean:dist',
-      'coffee'
-    ]);
+  grunt.loadTasks('tasks');
+  grunt.registerTask('build', [
+    'clean:dist',
+    'coffee'
+  ]);
 };
