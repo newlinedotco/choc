@@ -1,0 +1,13 @@
+{
+  "name": "choc",
+  "version": "0.0.1",
+  "main": "choc.browser.js",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "components",
+    "bower_components",
+    "test",
+    "tests"
+  ]
+}
