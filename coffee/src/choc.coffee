@@ -359,7 +359,6 @@ scrub = (source, count, opts) ->
 
     # if you make it here without an exception, execution finished
     executionTerminated = true
-    console.log("execution terminated")
   catch e
     # throwing a Choc.PAUSE_ERROR_NAME is how we pause execution (for now)
     # the most obvious consequence of this is that you can't have a catch-all

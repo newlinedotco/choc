@@ -131,4 +131,5 @@ class ChocAnimationEditor
     @updateViews()
 
 root = exports ? this
+root.choc ||= {}
 root.choc.AnimationEditor = ChocAnimationEditor

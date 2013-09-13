@@ -274,7 +274,6 @@ class ChocEditor
           @slider.slider('value', max)
           @slider.slider('step', count)
 
-    console.log("regular calculate iterations")
     window.choc.scrub @codemirror.getValue(), @options.maxIterations, 
       onTimeline: (args...) => @onTimeline.apply(@, args)
       beforeEach: (args...) => @beforeScrub.apply(@, args)
@@ -289,4 +288,5 @@ class ChocEditor
     @calculateIterations(true)
 
 root = exports ? this
+root.choc ||= {}
 root.choc.Editor = ChocEditor
