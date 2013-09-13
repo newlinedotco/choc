@@ -375,6 +375,8 @@
 
   root = typeof exports !== "undefined" && exports !== null ? exports : this;
 
+  root.choc || (root.choc = {});
+
   root.choc.Editor = ChocEditor;
 
 }).call(this);

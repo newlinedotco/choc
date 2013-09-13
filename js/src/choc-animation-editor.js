@@ -163,6 +163,8 @@
 
   root = typeof exports !== "undefined" && exports !== null ? exports : this;
 
+  root.choc || (root.choc = {});
+
   root.choc.AnimationEditor = ChocAnimationEditor;
 
 }).call(this);

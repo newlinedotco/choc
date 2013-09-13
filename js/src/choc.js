@@ -399,4 +399,6 @@
 
   exports.AnimationEditor = require("./choc-animation-editor").choc.AnimationEditor;
 
+  exports.poodle = "hello";
+
 }).call(this);

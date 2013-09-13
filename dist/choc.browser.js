@@ -164,6 +164,8 @@
 
   root = typeof exports !== "undefined" && exports !== null ? exports : this;
 
+  root.choc || (root.choc = {});
+
   root.choc.AnimationEditor = ChocAnimationEditor;
 
 }).call(this);
@@ -545,6 +547,8 @@
   })();
 
   root = typeof exports !== "undefined" && exports !== null ? exports : this;
+
+  root.choc || (root.choc = {});
 
   root.choc.Editor = ChocEditor;
 
@@ -951,6 +955,8 @@ var global=self;(function() {
   exports.Editor = require("./choc-editor").choc.Editor;
 
   exports.AnimationEditor = require("./choc-animation-editor").choc.AnimationEditor;
+
+  exports.poodle = "hello";
 
 }).call(this);
 
