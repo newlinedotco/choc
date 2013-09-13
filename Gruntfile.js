@@ -70,19 +70,6 @@ module.exports = function (grunt) {
 		}
 	});
 
-	// grunt.registerTask('bower-install', function () {
-	// 	require('bower').commands
-	// 		.install([
-	// 			'jquery',
-	// 			'underscore',
-	// 			'requirejs',
-	// 			'respond',
-	// 			'anima',
-	// 			'typeahead.js',
-	// 			'highstock'
-	// 		]).on('end', this.async());
-	// });
-
   grunt.loadTasks('tasks');
   grunt.registerTask('build', [
     'clean:dist',
