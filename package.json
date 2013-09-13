@@ -18,7 +18,9 @@
     "deep": "0.0.1",
     "forever": "*",
     "debug": "*",
-    "wisp": "~0.8.0"
+    "wisp": "~0.8.0",
+    "grunt-cli": "~0.1.9",
+    "bower": "~1.2.6"
   },
   "devDependencies": {
     "mocha": "*",

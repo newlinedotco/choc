@@ -20,15 +20,10 @@ test-js: js
 
 install:
 	npm install
+	bower install
 
 watch:
 	./node_modules/.bin/supervisor --watch coffee/,node_modules/choc-readable/ --extensions 'coffee|js' --exec 'make' --no-restart-on exit build
-
-js: clean
-	coffee -c -o ./js ./coffee
-
-watch-js: clean
-	coffee -wc -o ./js ./coffee
 
 loc:
 	cat $(SRC_FILES) | grep -v -E '^( *#|\s*$$)' | wc -l | tr -s ' '
@@ -38,18 +33,16 @@ test-loc:
 	cat $(TEST_FILES) | grep -v -E '^( *#|\s*$$)' | wc -l | tr -s ' '
 
 clean:
-	@rm -fr js/
+	grunt clean
 
 tree:
 	tree -I node_modules
 
 develop:
 	npm link
-  bower link
+	bower link
 
-browserify:
-	npm run-script build
-
-build: js browserify
+build:
+	grunt build
 
 .PHONY: test build
