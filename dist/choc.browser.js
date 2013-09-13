@@ -1,4 +1,556 @@
 ;(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+(function() {
+  var ChocAnimationEditor, root;
+
+  ChocAnimationEditor = (function() {
+    var gval;
+
+    gval = eval;
+
+    function ChocAnimationEditor(options) {
+      var defaults;
+      defaults = {
+        maxIterations: 1000,
+        maxAnimationFrames: 100
+      };
+      this.options = _.extend(defaults, options);
+      this.$ = options.$;
+      this.state = {
+        delay: null,
+        slider: {
+          value: 0
+        },
+        playing: false
+      };
+      this.setupEditor();
+    }
+
+    ChocAnimationEditor.prototype.changeSliderValue = function(newValue) {
+      this.$("#amount").text("frame " + newValue);
+      return this.state.slider.value = newValue;
+    };
+
+    ChocAnimationEditor.prototype.changeSlider = function(newValue) {
+      this.changeSliderValue(newValue);
+      return this.updateFrameView();
+    };
+
+    ChocAnimationEditor.prototype.setupEditor = function() {
+      var onSliderChange,
+        _this = this;
+      this.interactiveValues = {
+        onChange: function(v) {
+          clearTimeout(_this.state.delay);
+          return _this.state.delay = setTimeout((function() {
+            return _this.updateViews();
+          }), 1);
+        }
+      };
+      this.codemirror = CodeMirror(this.$("#editor")[0], {
+        value: this.options.code,
+        mode: "javascript",
+        viewportMargin: Infinity,
+        tabMode: "spaces",
+        interactiveNumbers: this.interactiveValues
+      });
+      this.codemirror.on("change", function() {
+        clearTimeout(_this.state.delay);
+        return _this.state.delay = setTimeout((function() {
+          return _this.updateViews();
+        }), 500);
+      });
+      onSliderChange = function(event, ui) {
+        if (event.hasOwnProperty("originalEvent")) {
+          return _this.changeSlider(ui.value);
+        }
+      };
+      this.slider = this.$("#slider").slider({
+        min: 0,
+        max: this.options.maxAnimationFrames,
+        change: onSliderChange,
+        slide: onSliderChange
+      });
+      return this.$("#animation-controls").click(function() {
+        if (_this.state.playing) {
+          return _this.onPause();
+        } else {
+          return _this.onPlay();
+        }
+      });
+    };
+
+    ChocAnimationEditor.prototype.onPlay = function() {
+      this.$("#animation-controls").text("Pause");
+      this.state.playing = true;
+      this.updateViews();
+      return this.options.play();
+    };
+
+    ChocAnimationEditor.prototype.onPause = function() {
+      this.$("#animation-controls").text("Play");
+      this.state.playing = false;
+      this.options.pause();
+      return this.updateViews();
+    };
+
+    ChocAnimationEditor.prototype.onFrame = function(frameCount, timeDelta) {
+      this.changeSliderValue(frameCount);
+      return this.slider.slider('value', frameCount);
+    };
+
+    ChocAnimationEditor.prototype.updateFrameView = function() {
+      var appendSource, code, e;
+      try {
+        code = this.codemirror.getValue();
+        if (this.options.animate != null) {
+          appendSource = "for(var __i=0; __i<" + this.state.slider.value + "; __i++) {\n  if(__i == " + (this.state.slider.value - 1) + ") {\n    pad.clear();\n    " + this.options.animate + "();\n    pad.update();\n  } else {\n  " + this.options.animate + "();\n  }\n}";
+        }
+        this.runCode(this.codemirror.getValue() + appendSource, false);
+        return this.$("#messages").text("");
+      } catch (_error) {
+        e = _error;
+        console.log(e);
+        console.log(e.stack);
+        return this.$("#messages").text(e.toString());
+      }
+    };
+
+    ChocAnimationEditor.prototype.runCode = function(code, isPreview) {
+      var localsIndex, localsStr;
+      if (isPreview == null) {
+        isPreview = false;
+      }
+      gval = eval;
+      localsIndex = isPreview ? 1 : 0;
+      window._choc_preview_locals = this.options.locals;
+      localsStr = _.map(_.keys(this.options.locals), function(name) {
+        return "var " + name + " = _choc_preview_locals." + name + "[" + localsIndex + "]";
+      }).join("; ");
+      return gval(localsStr + "\n" + code);
+    };
+
+    ChocAnimationEditor.prototype.updateViews = function() {
+      this.generatePreview();
+      return this.updateFrameView();
+    };
+
+    ChocAnimationEditor.prototype.generatePreview = function() {
+      var draw, _base, _base1, _fn, _i, _ref;
+      if (typeof (_base = this.options).beforeGeneratePreview === "function") {
+        _base.beforeGeneratePreview();
+      }
+      this.runCode(this.codemirror.getValue(), true);
+      draw = gval(this.options.animate);
+      _fn = function() {
+        return draw();
+      };
+      for (_i = 1, _ref = this.options.maxAnimationFrames; 1 <= _ref ? _i <= _ref : _i >= _ref; 1 <= _ref ? _i++ : _i--) {
+        _fn();
+      }
+      return typeof (_base1 = this.options).afterGeneratePreview === "function" ? _base1.afterGeneratePreview() : void 0;
+    };
+
+    ChocAnimationEditor.prototype.start = function(frame) {
+      if (frame == null) {
+        frame = 1;
+      }
+      this.changeSlider(frame);
+      return this.updateViews();
+    };
+
+    return ChocAnimationEditor;
+
+  })();
+
+  root = typeof exports !== "undefined" && exports !== null ? exports : this;
+
+  root.choc.AnimationEditor = ChocAnimationEditor;
+
+}).call(this);
+
+},{}],2:[function(require,module,exports){
+(function() {
+  var ChocEditor, root,
+    __slice = [].slice;
+
+  ChocEditor = (function() {
+    var WRAP_CLASS;
+
+    WRAP_CLASS = "CodeMirror-activeline";
+
+    function ChocEditor(options) {
+      var defaults;
+      defaults = {
+        maxIterations: 1000,
+        maxAnimationFrames: 100,
+        editorId: "#editor",
+        amountId: "#amount",
+        sliderId: "#slider",
+        timelineId: "#timeline",
+        messagesId: "#messages"
+      };
+      this.options = _.extend(defaults, options);
+      this.$ = options.$;
+      this.state = {
+        delay: null,
+        lineWidgets: [],
+        editor: {
+          activeLine: null
+        },
+        timeline: {
+          activeLine: null,
+          activeFrame: null
+        },
+        slider: {
+          value: 0
+        },
+        mouse: {
+          x: 0,
+          y: 0
+        },
+        mouseovercell: false
+      };
+      this.setupEditor();
+    }
+
+    ChocEditor.prototype.setupEditor = function() {
+      var onSliderChange,
+        _this = this;
+      this.interactiveValues = {
+        onChange: function(v) {
+          clearTimeout(_this.state.delay);
+          return _this.state.delay = setTimeout((function() {
+            return _this.calculateIterations();
+          }), 1);
+        }
+      };
+      this.codemirror = CodeMirror(this.$(this.options.editorId)[0], {
+        value: this.options.code,
+        mode: "javascript",
+        viewportMargin: Infinity,
+        tabMode: "spaces",
+        interactiveNumbers: this.interactiveValues
+      });
+      this.codemirror.on("change", function() {
+        clearTimeout(_this.state.delay);
+        return _this.state.delay = setTimeout((function() {
+          return _this.calculateIterations();
+        }), 500);
+      });
+      onSliderChange = function(event, ui) {
+        _this.$(_this.options.amountId).text("step " + ui.value);
+        if (event.hasOwnProperty("originalEvent")) {
+          _this.state.slider.value = ui.value;
+          return _this.updatePreview();
+        }
+      };
+      return this.slider = this.$(this.options.sliderId).slider({
+        min: 0,
+        max: 50,
+        change: onSliderChange,
+        slide: onSliderChange
+      });
+    };
+
+    ChocEditor.prototype.beforeScrub = function() {
+      return this.options.beforeScrub();
+    };
+
+    ChocEditor.prototype.afterScrub = function() {
+      return this.options.afterScrub();
+    };
+
+    ChocEditor.prototype.clearActiveLine = function() {
+      if (this.state.editor.activeLine) {
+        this.state.editor.activeLine.removeClass(WRAP_CLASS);
+      }
+      if (this.state.timeline.activeLine) {
+        this.state.timeline.activeLine.removeClass("active");
+      }
+      if (this.state.timeline.activeFrame) {
+        return this.state.timeline.activeFrame.removeClass("active");
+      }
+    };
+
+    ChocEditor.prototype.updateActiveLine = function(cm, lineNumber, frameNumber) {
+      var activeFrame, activeRow, activeTd, line;
+      line = this.$(this.$(".CodeMirror-lines pre")[lineNumber]);
+      if (cm.state.activeLine === line) {
+        return;
+      }
+      this.clearActiveLine();
+      if (line) {
+        line.addClass(WRAP_CLASS);
+      }
+      this.state.editor.activeLine = line;
+      this.state.timeline.activeLine = this.$(this.$("" + this.options.timelineId + " table tr")[lineNumber + 1]);
+      if (this.state.timeline.activeLine) {
+        this.state.timeline.activeLine.addClass("active");
+      }
+      activeRow = this.$("" + this.options.timelineId + " table tr")[lineNumber + 1];
+      activeTd = this.$(activeRow).find("td")[frameNumber];
+      activeFrame = this.$(activeTd).find(".cell");
+      this.state.timeline.activeFrame = activeFrame;
+      if (this.state.timeline.activeFrame) {
+        this.state.timeline.activeFrame.addClass("active");
+      }
+      return this.updateTimelineMarker(activeFrame);
+    };
+
+    ChocEditor.prototype.updateTimelineMarker = function(activeFrame, shouldScroll) {
+      var relX, timeline;
+      if (shouldScroll == null) {
+        shouldScroll = true;
+      }
+      if ((activeFrame != null ? activeFrame.position() : void 0) != null) {
+        timeline = this.$(this.options.timelineId);
+        relX = activeFrame.position().left + timeline.scrollLeft() + (activeFrame.width() / 2.0);
+        $("#tlmark").css('left', relX);
+        if (!this.state.mouseovercell) {
+          if (shouldScroll) {
+            timeline.scrollLeft(relX - 40);
+          }
+        }
+        return this.state.mouseovercell = false;
+      }
+    };
+
+    ChocEditor.prototype.onScrub = function(info, opts) {
+      if (opts == null) {
+        opts = {};
+      }
+      return this.updateActiveLine(this.codemirror, info.lineNumber - 1, info.frameNumber);
+    };
+
+    ChocEditor.prototype.onMessages = function(messages) {
+      var firstMessage, _ref,
+        _this = this;
+      firstMessage = (_ref = messages[0]) != null ? _ref.message : void 0;
+      if (firstMessage) {
+        return _.map(messages, function(messageInfo) {
+          var line, messageString, widget, widgetHtml;
+          messageString = "";
+          if (_.isObject(messageInfo.message)) {
+            messageString = messageInfo.message.inline;
+          } else {
+            messageString = messageInfo.message;
+          }
+          line = _this.codemirror.getLineHandle(messageInfo.lineNumber - 1);
+          widgetHtml = $("<div class='line-messages'>" + messageString + "</div>");
+          widget = _this.codemirror.addLineWidget(line, widgetHtml[0]);
+          return _this.state.lineWidgets.push(widget);
+        });
+      }
+    };
+
+    ChocEditor.prototype.generateTimelineTable = function(timeline) {
+      var cell, column, display, execLine, frameId, headerRow, idx, info, innerCell, klass, message, row, rowidx, self, slider, table, tdiv, timelineCreator, tlmark, updatePreview, updateSlider, value, _i, _j, _len, _ref, _ref1, _ref2, _ref3, _results;
+      tdiv = this.$(this.options.timelineId);
+      execLine = this.$("#executionLine");
+      table = $('<table></table>');
+      headerRow = $("<tr></tr>");
+      for (column = _i = 0, _ref = timeline.steps.length - 1; _i <= _ref; column = _i += 1) {
+        value = "";
+        klass = "";
+        if ((column % 10) === 0) {
+          value = column;
+          klass = "mod-ten";
+        } else if ((column % 5) === 0) {
+          value = "<div class='tick'></div>";
+          klass = "mod-five";
+        } else {
+          value = "<div class='tick'></div>";
+          klass = "mod-one";
+        }
+        headerRow.append("<th><div class='cell " + klass + "'>" + value + "</div></th>");
+      }
+      table.append(headerRow);
+      rowidx = 0;
+      while (rowidx < timeline.maxLines + 1) {
+        row = $('<tr class="timeline-row"></tr>');
+        column = 0;
+        while (column < timeline.steps.length) {
+          idx = rowidx * column;
+          if (timeline.stepMap[column][rowidx]) {
+            info = timeline.stepMap[column][rowidx];
+            message = (_ref1 = info.messages) != null ? _ref1[0] : void 0;
+            display = "&#8226;";
+            frameId = "data-frame-" + info.frameNumber;
+            cell = $("<td></td>");
+            innerCell = $("<div></div>").addClass("cell content-cell").attr("id", frameId).attr("data-frame-number", info.frameNumber).attr("data-line-number", info.lineNumber);
+            cell.append(innerCell);
+            if ((message != null ? (_ref2 = message.message) != null ? _ref2.timeline : void 0 : void 0) != null) {
+              timelineCreator = message.message.timeline;
+              if (_.isFunction(timelineCreator)) {
+                timelineCreator(innerCell);
+              }
+            } else if ((message != null ? message.timeline : void 0) != null) {
+              display = message.timeline;
+              if (display.hasOwnProperty("_choc_timeline")) {
+                display = display._choc_timeline();
+              }
+              innerCell.html(display);
+            } else {
+              innerCell.html(display);
+            }
+            row.append(cell);
+          } else {
+            value = "";
+            cell = $("<td><div class='cell'>" + value + "</div></td>");
+            row.append(cell);
+          }
+          column += 1;
+        }
+        rowidx += 1;
+        table.append(row);
+      }
+      tdiv.html(table);
+      tlmark = $("<div id='tlmark'>&nbsp;</div>");
+      tlmark.height(tdiv.height() - (2 * row.height()));
+      tlmark.css('top', row.height());
+      tdiv.append(tlmark);
+      slider = this.slider;
+      updatePreview = this.updatePreview;
+      self = this;
+      updateSlider = function(frameNumber) {
+        self.$(this.options.sliderId).text("step " + frameNumber);
+        self.state.slider.value = frameNumber;
+        return updatePreview.apply(self);
+      };
+      _ref3 = this.$("" + this.options.timelineId + " .content-cell");
+      _results = [];
+      for (_j = 0, _len = _ref3.length; _j < _len; _j++) {
+        cell = _ref3[_j];
+        _results.push((function(cell) {
+          return $(cell).on('mouseover', function() {
+            var frameNumber;
+            cell = $(cell);
+            frameNumber = cell.data('frame-number');
+            info = {
+              lineNumber: cell.data('line-number'),
+              frameNumber: frameNumber
+            };
+            self.state.mouseovercell = true;
+            return updateSlider(info.frameNumber + 1);
+          });
+        })(cell));
+      }
+      return _results;
+    };
+
+    ChocEditor.prototype.onTimeline = function(timeline) {
+      return this.generateTimelineTable(timeline);
+    };
+
+    ChocEditor.prototype.updatePreview = function() {
+      var code, e,
+        _this = this;
+      _.map(this.state.lineWidgets, function(widget) {
+        return widget.clear();
+      });
+      try {
+        code = this.codemirror.getValue();
+        window.choc.scrub(code, this.state.slider.value, {
+          onFrame: function() {
+            var args;
+            args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+            return _this.onScrub.apply(_this, args);
+          },
+          beforeEach: function() {
+            var args;
+            args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+            return _this.beforeScrub.apply(_this, args);
+          },
+          afterEach: function() {
+            var args;
+            args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+            return _this.afterScrub.apply(_this, args);
+          },
+          onMessages: function() {
+            var args;
+            args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+            return _this.onMessages.apply(_this, args);
+          },
+          locals: this.options.locals
+        });
+        return this.$(this.options.messagesId).text("");
+      } catch (_error) {
+        e = _error;
+        console.log(e);
+        console.log(e.stack);
+        return this.$(this.options.messagesId).text(e.toString());
+      }
+    };
+
+    ChocEditor.prototype.calculateIterations = function(first) {
+      var afterAll,
+        _this = this;
+      if (first == null) {
+        first = false;
+      }
+      afterAll = function() {};
+      if (first) {
+        afterAll = function(info) {
+          var count;
+          count = info.frameCount;
+          _this.slider.slider('option', 'max', count);
+          return _this.slider.slider('value', count);
+        };
+      } else {
+        afterAll = function(info) {
+          var count, max;
+          count = info.frameCount;
+          _this.slider.slider('option', 'max', count);
+          max = _this.slider.slider('option', 'max');
+          if (_this.state.slider.value > max) {
+            _this.state.slider.value = max;
+            _this.slider.slider('value', max);
+            return _this.slider.slider('step', count);
+          }
+        };
+      }
+      console.log("regular calculate iterations");
+      return window.choc.scrub(this.codemirror.getValue(), this.options.maxIterations, {
+        onTimeline: function() {
+          var args;
+          args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+          return _this.onTimeline.apply(_this, args);
+        },
+        beforeEach: function() {
+          var args;
+          args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+          return _this.beforeScrub.apply(_this, args);
+        },
+        afterEach: function() {
+          var args;
+          args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+          return _this.afterScrub.apply(_this, args);
+        },
+        afterFrame: function() {
+          var args;
+          args = 1 <= arguments.length ? __slice.call(arguments, 0) : [];
+          return _this.afterFrame.apply(_this, args);
+        },
+        afterAll: afterAll,
+        locals: this.options.locals
+      });
+    };
+
+    ChocEditor.prototype.start = function() {
+      return this.calculateIterations(true);
+    };
+
+    return ChocEditor;
+
+  })();
+
+  root = typeof exports !== "undefined" && exports !== null ? exports : this;
+
+  root.choc.Editor = ChocEditor;
+
+}).call(this);
+
+},{}],3:[function(require,module,exports){
 var global=self;(function() {
   var ALL_STATEMENTS, Choc, HOIST_STATEMENTS, PLAIN_STATEMENTS, Tracer, annotate, debug, deep, escodegen, esmorph, esprima, estraverse, generateAnnotatedSource, generateAnnotatedSourceM, generateCallTrace, generateStatement, generateTraceTree, generateVariableAssignment, generateVariableDeclaration, inspect, isHoistStatement, isPlainStatement, isStatement, noop, pp, puts, readable, scrub, _, _ref,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
@@ -396,9 +948,13 @@ var global=self;(function() {
 
   exports.annotate = annotate;
 
+  exports.Editor = require("./choc-editor").choc.Editor;
+
+  exports.AnimationEditor = require("./choc-animation-editor").choc.AnimationEditor;
+
 }).call(this);
 
-},{"../../lib/estraverse":2,"choc-readable":3,"debug":28,"deep":29,"escodegen":30,"esmorph":43,"esprima":44,"underscore":49,"util":47}],2:[function(require,module,exports){
+},{"../../lib/estraverse":4,"./choc-animation-editor":1,"./choc-editor":2,"choc-readable":5,"debug":30,"deep":31,"escodegen":32,"esmorph":45,"esprima":46,"underscore":51,"util":49}],4:[function(require,module,exports){
 /*
   Copyright (C) 2012 Yusuke Suzuki <utatane.tea@gmail.com>
   Copyright (C) 2012 Ariya Hidayat <ariya.hidayat@gmail.com>
@@ -873,10 +1429,10 @@ var global=self;(function() {
 }));
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{}],3:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 module.exports = require("./js/src/readable")
 
-},{"./js/src/readable":4}],4:[function(require,module,exports){
+},{"./js/src/readable":6}],6:[function(require,module,exports){
 var _ns_ = {
   "id": "choc.readable"
 };
@@ -1296,7 +1852,7 @@ var annotationFor = function annotationFor(callee, calleeObject, calleeCompiled,
     })();
 };
 exports.annotationFor = annotationFor
-},{"./util":5,"escodegen":6,"esprima":19,"underscore":20,"util":47,"wisp/ast":21,"wisp/compiler":23,"wisp/reader":24,"wisp/runtime":25,"wisp/sequence":26,"wisp/string":27}],5:[function(require,module,exports){
+},{"./util":7,"escodegen":8,"esprima":21,"underscore":22,"util":49,"wisp/ast":23,"wisp/compiler":25,"wisp/reader":26,"wisp/runtime":27,"wisp/sequence":28,"wisp/string":29}],7:[function(require,module,exports){
 var _ns_ = {
   "id": "choc.readable.util"
 };
@@ -1465,7 +2021,7 @@ var appendifyToStr = function appendifyToStr(items) {
   }, "", items);
 };
 exports.appendifyToStr = appendifyToStr
-},{"esprima":19,"underscore":20,"util":47,"wisp/ast":21,"wisp/compiler":23,"wisp/reader":24,"wisp/runtime":25,"wisp/sequence":26}],6:[function(require,module,exports){
+},{"esprima":21,"underscore":22,"util":49,"wisp/ast":23,"wisp/compiler":25,"wisp/reader":26,"wisp/runtime":27,"wisp/sequence":28}],8:[function(require,module,exports){
 var global=self;/*
   Copyright (C) 2012 Michael Ficarra <escodegen.copyright@michael.ficarra.me>
   Copyright (C) 2012 Robert Gust-Bardon <donate@robert.gust-bardon.org>
@@ -3724,7 +4280,7 @@ var global=self;/*
 }());
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{"./package.json":18,"estraverse":7,"source-map":8}],7:[function(require,module,exports){
+},{"./package.json":20,"estraverse":9,"source-map":10}],9:[function(require,module,exports){
 /*
   Copyright (C) 2012 Yusuke Suzuki <utatane.tea@gmail.com>
   Copyright (C) 2012 Ariya Hidayat <ariya.hidayat@gmail.com>
@@ -4041,7 +4597,7 @@ var global=self;/*
 }));
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{}],8:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 /*
  * Copyright 2009-2011 Mozilla Foundation and contributors
  * Licensed under the New BSD license. See LICENSE.txt or:
@@ -4051,7 +4607,7 @@ exports.SourceMapGenerator = require('./source-map/source-map-generator').Source
 exports.SourceMapConsumer = require('./source-map/source-map-consumer').SourceMapConsumer;
 exports.SourceNode = require('./source-map/source-node').SourceNode;
 
-},{"./source-map/source-map-consumer":13,"./source-map/source-map-generator":14,"./source-map/source-node":15}],9:[function(require,module,exports){
+},{"./source-map/source-map-consumer":15,"./source-map/source-map-generator":16,"./source-map/source-node":17}],11:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -4149,7 +4705,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./util":16,"amdefine":17}],10:[function(require,module,exports){
+},{"./util":18,"amdefine":19}],12:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -4295,7 +4851,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./base64":11,"amdefine":17}],11:[function(require,module,exports){
+},{"./base64":13,"amdefine":19}],13:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -4339,7 +4895,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"amdefine":17}],12:[function(require,module,exports){
+},{"amdefine":19}],14:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -4422,7 +4978,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"amdefine":17}],13:[function(require,module,exports){
+},{"amdefine":19}],15:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -4850,7 +5406,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./array-set":9,"./base64-vlq":10,"./binary-search":12,"./util":16,"amdefine":17}],14:[function(require,module,exports){
+},{"./array-set":11,"./base64-vlq":12,"./binary-search":14,"./util":18,"amdefine":19}],16:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -5233,7 +5789,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./array-set":9,"./base64-vlq":10,"./util":16,"amdefine":17}],15:[function(require,module,exports){
+},{"./array-set":11,"./base64-vlq":12,"./util":18,"amdefine":19}],17:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -5588,7 +6144,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./source-map-generator":14,"./util":16,"amdefine":17}],16:[function(require,module,exports){
+},{"./source-map-generator":16,"./util":18,"amdefine":19}],18:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -5681,7 +6237,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"amdefine":17}],17:[function(require,module,exports){
+},{"amdefine":19}],19:[function(require,module,exports){
 var process=require("__browserify_process"),__filename="/../node_modules/choc-readable/node_modules/escodegen/node_modules/source-map/node_modules/amdefine/amdefine.js";/** vim: et:ts=4:sw=4:sts=4
  * @license amdefine 0.0.5 Copyright (c) 2011, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
@@ -5982,7 +6538,7 @@ function amdefine(module, require) {
 
 module.exports = amdefine;
 
-},{"__browserify_process":48,"path":46}],18:[function(require,module,exports){
+},{"__browserify_process":50,"path":48}],20:[function(require,module,exports){
 module.exports={
   "name": "escodegen",
   "description": "ECMAScript code generator",
@@ -6043,7 +6599,7 @@ module.exports={
   "_resolved": "https://registry.npmjs.org/escodegen/-/escodegen-0.0.22.tgz"
 }
 
-},{}],19:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 /*
   Copyright (C) 2012 Ariya Hidayat <ariya.hidayat@gmail.com>
   Copyright (C) 2012 Mathias Bynens <mathias@qiwi.be>
@@ -9953,7 +10509,7 @@ parseStatement: true, parseSourceElement: true */
 }));
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{}],20:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 //     Underscore.js 1.5.1
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
@@ -11201,7 +11757,7 @@ parseStatement: true, parseSourceElement: true */
 
 }).call(this);
 
-},{}],21:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 var _ns_ = {
   "id": "wisp.ast"
 };
@@ -11420,7 +11976,7 @@ var prStr = function prStr(x) {
     void(0);
 };
 exports.prStr = prStr
-},{"./runtime":25,"./sequence":26,"./string":27}],22:[function(require,module,exports){
+},{"./runtime":27,"./sequence":28,"./string":29}],24:[function(require,module,exports){
 var _ns_ = {
   "id": "wisp.backend.javascript.writer",
   "doc": "Compiler backend for for writing JS output"
@@ -11638,7 +12194,7 @@ var write = function write(form) {
     void(0);
 };
 exports.write = write
-},{"./../../ast":21,"./../../runtime":25,"./../../sequence":26,"./../../string":27}],23:[function(require,module,exports){
+},{"./../../ast":23,"./../../runtime":27,"./../../sequence":28,"./../../string":29}],25:[function(require,module,exports){
 var _ns_ = {
   "id": "wisp.compiler",
   "doc": "wisp language compiler"
@@ -12681,7 +13237,7 @@ installMacro(symbol(void(0), "print"), function() {
   "Prints the object(s) to the output for human consumption.";
   return concat(list(symbol(void(0), ".log"), symbol(void(0), "console")), more);
 })
-},{"./ast":21,"./backend/javascript/writer":22,"./reader":24,"./runtime":25,"./sequence":26,"./string":27}],24:[function(require,module,exports){
+},{"./ast":23,"./backend/javascript/writer":24,"./reader":26,"./runtime":27,"./sequence":28,"./string":29}],26:[function(require,module,exports){
 var _ns_ = {
   "id": "wisp.reader",
   "doc": "Reader module provides functions for reading text input\n  as wisp data structures"
@@ -13470,7 +14026,7 @@ var maybeReadTaggedType = function maybeReadTaggedType(reader, initch) {
     readerError(reader, "" + "Could not find tag parser for " + (name(tag)) + " in " + ("" + (keys(__tagTable__))));
 };
 exports.maybeReadTaggedType = maybeReadTaggedType
-},{"./ast":21,"./runtime":25,"./sequence":26,"./string":27}],25:[function(require,module,exports){
+},{"./ast":23,"./runtime":27,"./sequence":28,"./string":29}],27:[function(require,module,exports){
 var _ns_ = {
   "id": "wisp.runtime",
   "doc": "Core primitives required for runtime"
@@ -14085,7 +14641,7 @@ var print = function print() {
   return console.log.apply(console.log, more);
 };
 exports.print = print
-},{}],26:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 var _ns_ = {
   "id": "wisp.sequence"
 };
@@ -14650,7 +15206,7 @@ var repeat = function repeat(n, x) {
   })(n, []);
 };
 exports.repeat = repeat
-},{"./runtime":25}],27:[function(require,module,exports){
+},{"./runtime":27}],29:[function(require,module,exports){
 var _ns_ = {
   "id": "wisp.string"
 };
@@ -14751,7 +15307,7 @@ var isBlank = function isBlank(string) {
   return (isNil(string)) || (isEmpty(string)) || (reMatches(__SPACES__, string));
 };
 exports.isBlank = isBlank
-},{"./runtime":25,"./sequence":26}],28:[function(require,module,exports){
+},{"./runtime":27,"./sequence":28}],30:[function(require,module,exports){
 
 /**
  * Expose `debug()` as the module.
@@ -14877,7 +15433,7 @@ debug.enabled = function(name) {
 
 if (window.localStorage) debug.enable(localStorage.debug);
 
-},{}],29:[function(require,module,exports){
+},{}],31:[function(require,module,exports){
 // Generated by CoffeeScript 1.6.2
 (function() {
   var deep, _,
@@ -14991,7 +15547,7 @@ if (window.localStorage) debug.enable(localStorage.debug);
 
 }).call(this);
 
-},{"underscore":49}],30:[function(require,module,exports){
+},{"underscore":51}],32:[function(require,module,exports){
 var global=self;/*
   Copyright (C) 2012 Michael Ficarra <escodegen.copyright@michael.ficarra.me>
   Copyright (C) 2012 Robert Gust-Bardon <donate@robert.gust-bardon.org>
@@ -17250,7 +17806,7 @@ var global=self;/*
 }());
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{"./package.json":42,"estraverse":31,"source-map":32}],31:[function(require,module,exports){
+},{"./package.json":44,"estraverse":33,"source-map":34}],33:[function(require,module,exports){
 /*
   Copyright (C) 2012 Yusuke Suzuki <utatane.tea@gmail.com>
   Copyright (C) 2012 Ariya Hidayat <ariya.hidayat@gmail.com>
@@ -17567,7 +18123,7 @@ var global=self;/*
 }));
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{}],32:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 /*
  * Copyright 2009-2011 Mozilla Foundation and contributors
  * Licensed under the New BSD license. See LICENSE.txt or:
@@ -17577,7 +18133,7 @@ exports.SourceMapGenerator = require('./source-map/source-map-generator').Source
 exports.SourceMapConsumer = require('./source-map/source-map-consumer').SourceMapConsumer;
 exports.SourceNode = require('./source-map/source-node').SourceNode;
 
-},{"./source-map/source-map-consumer":37,"./source-map/source-map-generator":38,"./source-map/source-node":39}],33:[function(require,module,exports){
+},{"./source-map/source-map-consumer":39,"./source-map/source-map-generator":40,"./source-map/source-node":41}],35:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -17675,7 +18231,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./util":40,"amdefine":41}],34:[function(require,module,exports){
+},{"./util":42,"amdefine":43}],36:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -17821,7 +18377,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./base64":35,"amdefine":41}],35:[function(require,module,exports){
+},{"./base64":37,"amdefine":43}],37:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -17865,7 +18421,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"amdefine":41}],36:[function(require,module,exports){
+},{"amdefine":43}],38:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -17948,7 +18504,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"amdefine":41}],37:[function(require,module,exports){
+},{"amdefine":43}],39:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -18376,7 +18932,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./array-set":33,"./base64-vlq":34,"./binary-search":36,"./util":40,"amdefine":41}],38:[function(require,module,exports){
+},{"./array-set":35,"./base64-vlq":36,"./binary-search":38,"./util":42,"amdefine":43}],40:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -18759,7 +19315,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./array-set":33,"./base64-vlq":34,"./util":40,"amdefine":41}],39:[function(require,module,exports){
+},{"./array-set":35,"./base64-vlq":36,"./util":42,"amdefine":43}],41:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -19114,7 +19670,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"./source-map-generator":38,"./util":40,"amdefine":41}],40:[function(require,module,exports){
+},{"./source-map-generator":40,"./util":42,"amdefine":43}],42:[function(require,module,exports){
 /* -*- Mode: js; js-indent-level: 2; -*- */
 /*
  * Copyright 2011 Mozilla Foundation and contributors
@@ -19207,7 +19763,7 @@ define(function (require, exports, module) {
 
 });
 
-},{"amdefine":41}],41:[function(require,module,exports){
+},{"amdefine":43}],43:[function(require,module,exports){
 var process=require("__browserify_process"),__filename="/../node_modules/escodegen/node_modules/source-map/node_modules/amdefine/amdefine.js";/** vim: et:ts=4:sw=4:sts=4
  * @license amdefine 0.0.5 Copyright (c) 2011, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
@@ -19508,7 +20064,7 @@ function amdefine(module, require) {
 
 module.exports = amdefine;
 
-},{"__browserify_process":48,"path":46}],42:[function(require,module,exports){
+},{"__browserify_process":50,"path":48}],44:[function(require,module,exports){
 module.exports={
   "name": "escodegen",
   "description": "ECMAScript code generator",
@@ -19569,7 +20125,7 @@ module.exports={
   "_resolved": "https://registry.npmjs.org/escodegen/-/escodegen-0.0.22.tgz"
 }
 
-},{}],43:[function(require,module,exports){
+},{}],45:[function(require,module,exports){
 /*
   Copyright (C) 2013 Ariya Hidayat <ariya.hidayat@gmail.com>
   Copyright (C) 2012 Ariya Hidayat <ariya.hidayat@gmail.com>
@@ -19890,7 +20446,7 @@ module.exports={
 }));
 
 
-},{"esprima":44}],44:[function(require,module,exports){
+},{"esprima":46}],46:[function(require,module,exports){
 /*
   Copyright (C) 2012 Ariya Hidayat <ariya.hidayat@gmail.com>
   Copyright (C) 2012 Mathias Bynens <mathias@qiwi.be>
@@ -23800,7 +24356,7 @@ parseStatement: true, parseSourceElement: true */
 }));
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{}],45:[function(require,module,exports){
+},{}],47:[function(require,module,exports){
 var process=require("__browserify_process");if (!process.EventEmitter) process.EventEmitter = function () {};
 
 var EventEmitter = exports.EventEmitter = process.EventEmitter;
@@ -23996,7 +24552,7 @@ EventEmitter.listenerCount = function(emitter, type) {
   return ret;
 };
 
-},{"__browserify_process":48}],46:[function(require,module,exports){
+},{"__browserify_process":50}],48:[function(require,module,exports){
 var process=require("__browserify_process");function filter (xs, fn) {
     var res = [];
     for (var i = 0; i < xs.length; i++) {
@@ -24175,7 +24731,7 @@ exports.relative = function(from, to) {
 
 exports.sep = '/';
 
-},{"__browserify_process":48}],47:[function(require,module,exports){
+},{"__browserify_process":50}],49:[function(require,module,exports){
 var events = require('events');
 
 exports.isArray = isArray;
@@ -24522,7 +25078,7 @@ exports.format = function(f) {
   return str;
 };
 
-},{"events":45}],48:[function(require,module,exports){
+},{"events":47}],50:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -24576,7 +25132,7 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],49:[function(require,module,exports){
+},{}],51:[function(require,module,exports){
 //     Underscore.js 1.4.4
 //     http://underscorejs.org
 //     (c) 2009-2013 Jeremy Ashkenas, DocumentCloud Inc.
@@ -25804,7 +26360,7 @@ process.chdir = function (dir) {
 
 }).call(this);
 
-},{}],50:[function(require,module,exports){
+},{}],52:[function(require,module,exports){
 var global=self;/*
   2013 Nate Murray <nate@natemurray.com>
 */
@@ -25816,5 +26372,5 @@ var global=self;/*
     choc.browser = true;
 }());
 
-},{"../js/src/choc":1}]},{},[50])
+},{"../js/src/choc":3}]},{},[52])
 ;

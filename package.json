@@ -19,7 +19,6 @@
     "forever": "*",
     "debug": "*",
     "wisp": "~0.8.0",
-    "grunt-cli": "~0.1.9",
     "bower": "~1.2.6"
   },
   "devDependencies": {
@@ -28,6 +27,7 @@
     "should": "*",
     "matchdep": "*",
     "grunt": "~0.4.0",
+    "grunt-cli": "~0.1.9",
     "grunt-contrib-coffee": "~0.6.5",
     "grunt-contrib-jshint": "~0.4.3",
     "grunt-contrib-clean": "~0.4.0",

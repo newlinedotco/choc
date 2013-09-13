@@ -52,22 +52,8 @@ module.exports = function (grunt) {
           'dist/choc.browser.js': ['tools/entry-point.js']
         }
       }
-    },
+    }
 
-		bower: {
-			options: {
-				exclude: ['underscore']
-			},
-			standard: {
-				rjsConfig: 'tmp/config.js'
-			},
-			global: {
-				rjsConfig: 'tmp/global-config.js'
-			},
-			baseUrl: {
-				rjsConfig: 'tmp/baseurl-config.js'
-			}
-		}
 	});
 
   grunt.loadTasks('tasks');

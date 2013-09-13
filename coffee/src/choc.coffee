@@ -389,3 +389,6 @@ exports.scrub = scrub
 exports.generateAnnotatedSource = generateAnnotatedSource
 exports.readable = readable
 exports.annotate = annotate
+exports.Editor = require("./choc-editor").choc.Editor
+exports.AnimationEditor = require("./choc-animation-editor").choc.AnimationEditor
+
