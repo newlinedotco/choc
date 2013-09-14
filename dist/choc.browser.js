@@ -511,7 +511,6 @@
           }
         };
       }
-      console.log("regular calculate iterations");
       return window.choc.scrub(this.codemirror.getValue(), this.options.maxIterations, {
         onTimeline: function() {
           var args;
@@ -918,8 +917,7 @@ var global=self;(function() {
       }).join("; ");
       gval = eval;
       gval(localsStr + "\n" + newSource + "\n" + appendSource);
-      executionTerminated = true;
-      return console.log("execution terminated");
+      return executionTerminated = true;
     } catch (_error) {
       e = _error;
       if (e.message === Choc.PAUSE_ERROR_NAME) {
@@ -955,8 +953,6 @@ var global=self;(function() {
   exports.Editor = require("./choc-editor").choc.Editor;
 
   exports.AnimationEditor = require("./choc-animation-editor").choc.AnimationEditor;
-
-  exports.poodle = "hello";
 
 }).call(this);
 
