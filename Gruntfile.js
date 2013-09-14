@@ -52,6 +52,13 @@ module.exports = function (grunt) {
           'dist/choc.browser.js': ['tools/entry-point.js']
         }
       }
+    },
+
+    watch: {
+      coffee: {
+        files: ['coffee/src/*.coffee'],
+        tasks: ['coffee:dist']
+      },
     }
 
 	});

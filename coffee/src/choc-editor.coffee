@@ -1,3 +1,4 @@
+
 class ChocEditor
   WRAP_CLASS = "CodeMirror-activeline"
 
@@ -45,6 +46,7 @@ class ChocEditor
       viewportMargin: Infinity
       tabMode: "spaces"
       interactiveNumbers: @interactiveValues
+      highlightSelectionMatches: {showToken: /\w/}
       }
 
     @codemirror.on "change", () =>
@@ -99,6 +101,11 @@ class ChocEditor
     activeFrame = @$(activeTd).find(".cell")
     @state.timeline.activeFrame = activeFrame
     @state.timeline.activeFrame.addClass("active") if @state.timeline.activeFrame
+
+    runTds        = @$("#{@options.timelineId} table tr").find("td:nth-child(-n+#{frameNumber}) .cell")
+    notYetRunTds  = @$("#{@options.timelineId} table tr").find("td:nth-child(n+#{frameNumber + 1}) .cell")
+    @$(runTds).addClass("executed")
+    @$(notYetRunTds).removeClass('executed')
     @updateTimelineMarker(activeFrame)
 
   updateTimelineMarker: (activeFrame, shouldScroll=true) ->
@@ -173,11 +180,11 @@ class ChocEditor
 
           message = info.messages?[0]
 
-          display = "&#8226;"
+          display = "&nbsp;" #&#8226;
           frameId = "data-frame-#{info.frameNumber}"
           cell = $("<td></td>")
           innerCell = $("<div></div>")
-            .addClass("cell content-cell")
+            .addClass("cell content-cell circle")
             .attr("id", frameId)
             .attr("data-frame-number", info.frameNumber)
             .attr("data-line-number", info.lineNumber)
@@ -188,11 +195,13 @@ class ChocEditor
             if _.isFunction(timelineCreator)
               # display = timelineCreator("#" + frameId) # the table hasn't been created yet
               timelineCreator(innerCell)
+              innerCell.removeClass('circle')
 
           else if message?.timeline? 
             display = message.timeline
             if display.hasOwnProperty("_choc_timeline")
               display = display._choc_timeline()
+            innerCell.removeClass('circle')
             innerCell.html(display)
           else
             innerCell.html(display)
@@ -274,6 +283,7 @@ class ChocEditor
           @slider.slider('value', max)
           @slider.slider('step', count)
 
+    console.log("regular calculate iterations")
     window.choc.scrub @codemirror.getValue(), @options.maxIterations, 
       onTimeline: (args...) => @onTimeline.apply(@, args)
       beforeEach: (args...) => @beforeScrub.apply(@, args)
@@ -288,5 +298,4 @@ class ChocEditor
     @calculateIterations(true)
 
 root = exports ? this
-root.choc ||= {}
 root.choc.Editor = ChocEditor
