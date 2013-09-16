@@ -57,7 +57,7 @@ module.exports = function (grunt) {
     watch: {
       coffee: {
         files: ['coffee/src/*.coffee'],
-        tasks: ['coffee:dist']
+        tasks: ['coffee:dist', 'wisp', 'browserify']
       },
     }
 

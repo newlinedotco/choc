@@ -4,6 +4,7 @@ class ChocEditor
 
   constructor: (options) ->
     defaults =
+      id: "#choc"
       maxIterations: 1000
       maxAnimationFrames: 100
       editorId: "#editor"
@@ -11,6 +12,7 @@ class ChocEditor
       sliderId: "#slider"
       timelineId: "#timeline"
       messagesId: "#messages"
+      timeline: false
 
     @options = _.extend(defaults, options)
     @$ = options.$
@@ -28,9 +30,40 @@ class ChocEditor
         x: 0
         y: 0
       mouseovercell: false
+      container: null
+      amountElement: null
+      sliderContainer: null
+      editorElement: null
+
     @setupEditor()
 
   setupEditor: () ->
+    @state.container = @$(@options.id)
+
+    # setup a slider container with the amount and slider within it
+    @state.sliderContainer = $('<div class="slider-container"></div>')
+    @state.amountElement = $('<div class="amount-container"></div>')
+    @state.sliderElement = $('<div class="slider-container"></div>')
+    @state.sliderContainer.append(@state.amountElement)
+    @state.sliderContainer.append(@state.sliderElement)
+
+    # setup the editor container
+    @state.editorContainer = $('<div class="editor-container"></div>')
+    @state.editorElement = $('<div></div>')
+    @state.editorContainer.append(@state.editorElement)
+
+    # if we have a timeline
+    if @options.timeline
+      @state.timelineContainer = $('<div class="timeline-container"></div>')
+      @state.timelineElement = $('<div class="timeline"></div>')
+      @state.timelineContainer.append(@state.timelineElement)
+      
+    # add it all together
+    @state.container.append(@state.sliderContainer)
+    @state.container.append(@state.editorContainer)
+    @state.container.append(@state.timelineContainer) if @options.timeline
+
+     # container.append()
     @interactiveValues = {
       onChange: (v) =>
         clearTimeout(@state.delay)
@@ -40,7 +73,9 @@ class ChocEditor
           1)
     }
 
-    @codemirror = CodeMirror @$(@options.editorId)[0], {
+    console.log @state.editorElement
+
+    @codemirror = CodeMirror @state.editorElement[0], {
       value: @options.code
       mode:  "javascript"
       viewportMargin: Infinity
@@ -54,27 +89,21 @@ class ChocEditor
       @state.delay = setTimeout((() => @calculateIterations()), 500)
 
     onSliderChange = (event, ui) =>
-      @$( @options.amountId ).text( "step #{ui.value}" ) 
+      @state.amountElement.text( "step #{ui.value}" ) 
       if event.hasOwnProperty("originalEvent") # e.g. triggered by a user interaction, not programmatically below
         @state.slider.value = ui.value
         @updatePreview()
 
-    @slider = @$(@options.sliderId).slider {
+    @slider = @state.sliderElement.slider {
       min: 0
       max: 50
       change: onSliderChange
       slide: onSliderChange
       }
 
-    # @$(document).mousemove (e) =>
-    #   @state.mouse.x = e.pageX
-    #   @state.mouse.y = e.pageY
-
-  beforeScrub: () ->
-    @options.beforeScrub()
+  beforeScrub: () -> @options.beforeScrub()
   
-  afterScrub: () ->
-    @options.afterScrub()
+  afterScrub: () -> @options.afterScrub()
 
   clearActiveLine: () ->
     if @state.editor.activeLine
@@ -140,9 +169,8 @@ class ChocEditor
         @state.lineWidgets.push(widget)
 
   # Generate the HTML view of the timeline data structure
-  # TODO: this is a bit ugly
   generateTimelineTable: (timeline) ->
-    tdiv = @$(@options.timelineId)
+    tdiv = @state.timelineElement
     execLine = @$("#executionLine")
     table = $('<table></table>')
 
@@ -298,4 +326,5 @@ class ChocEditor
     @calculateIterations(true)
 
 root = exports ? this
+root.choc ||= {}
 root.choc.Editor = ChocEditor
