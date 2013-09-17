@@ -7,10 +7,6 @@ class ChocEditor
       id: "#choc"
       maxIterations: 1000
       maxAnimationFrames: 100
-      editorId: "#editor"
-      amountId: "#amount"
-      sliderId: "#slider"
-      timelineId: "#timeline"
       messagesId: "#messages"
       timeline: false
 
@@ -32,7 +28,7 @@ class ChocEditor
       mouseovercell: false
       container: null
       amountElement: null
-      sliderContainer: null
+      sliderElement: null
       editorElement: null
 
     @setupEditor()
@@ -40,12 +36,12 @@ class ChocEditor
   setupEditor: () ->
     @state.container = @$(@options.id)
 
-    # setup a slider container with the amount and slider within it
-    @state.sliderContainer = $('<div class="slider-container"></div>')
+    # setup a controls container with the amount and slider within it
+    @state.controlsContainer = $('<div class="controls-container"></div>')
     @state.amountElement = $('<div class="amount-container"></div>')
-    @state.sliderElement = $('<div class="slider-container"></div>')
-    @state.sliderContainer.append(@state.amountElement)
-    @state.sliderContainer.append(@state.sliderElement)
+    @state.sliderElement = $('<div class="slider-"></div>')
+    @state.controlsContainer.append(@state.amountElement)
+    @state.controlsContainer.append(@state.sliderElement)
 
     # setup the editor container
     @state.editorContainer = $('<div class="editor-container"></div>')
@@ -59,7 +55,7 @@ class ChocEditor
       @state.timelineContainer.append(@state.timelineElement)
       
     # add it all together
-    @state.container.append(@state.sliderContainer)
+    @state.container.append(@state.controlsContainer)
     @state.container.append(@state.editorContainer)
     @state.container.append(@state.timelineContainer) if @options.timeline
 
@@ -72,8 +68,6 @@ class ChocEditor
             @calculateIterations()), 
           1)
     }
-
-    console.log @state.editorElement
 
     @codemirror = CodeMirror @state.editorElement[0], {
       value: @options.code
@@ -120,26 +114,27 @@ class ChocEditor
     line.addClass(WRAP_CLASS) if line
     @state.editor.activeLine = line
 
-    @state.timeline.activeLine = @$(@$("#{@options.timelineId} table tr")[lineNumber + 1])
-    @state.timeline.activeLine.addClass("active") if @state.timeline.activeLine
+    if @state.timelineElement
+      @state.timeline.activeLine = @$(@state.timelineElement.find("table tr")[lineNumber + 1])
+      @state.timeline.activeLine.addClass("active") if @state.timeline.activeLine
     
     # update active frame
     # splitting this up into three 'queries' is a lot faster than one giant query (in my profiling in Chrome)
-    activeRow   = @$("#{@options.timelineId} table tr")[lineNumber + 1]
-    activeTd    = @$(activeRow).find("td")[frameNumber]
-    activeFrame = @$(activeTd).find(".cell")
-    @state.timeline.activeFrame = activeFrame
-    @state.timeline.activeFrame.addClass("active") if @state.timeline.activeFrame
+      activeRow   = @state.timelineElement.find("table tr")[lineNumber + 1]
+      activeTd    = @$(activeRow).find("td")[frameNumber]
+      activeFrame = @$(activeTd).find(".cell")
+      @state.timeline.activeFrame = activeFrame
+      @state.timeline.activeFrame.addClass("active") if @state.timeline.activeFrame
 
-    runTds        = @$("#{@options.timelineId} table tr").find("td:nth-child(-n+#{frameNumber}) .cell")
-    notYetRunTds  = @$("#{@options.timelineId} table tr").find("td:nth-child(n+#{frameNumber + 1}) .cell")
-    @$(runTds).addClass("executed")
-    @$(notYetRunTds).removeClass('executed')
-    @updateTimelineMarker(activeFrame)
+      runTds        = @state.timelineElement.find("table tr").find("td:nth-child(-n+#{frameNumber}) .cell")
+      notYetRunTds  = @state.timelineElement.find("table tr").find("td:nth-child(n+#{frameNumber + 1}) .cell")
+      @$(runTds).addClass("executed")
+      @$(notYetRunTds).removeClass('executed')
+      @updateTimelineMarker(activeFrame)
 
   updateTimelineMarker: (activeFrame, shouldScroll=true) ->
     if activeFrame?.position()?
-      timeline = @$(@options.timelineId)
+      timeline = @state.timelineElement
       relX = activeFrame.position().left + timeline.scrollLeft() + (activeFrame.width() / 2.0)
       $("#tlmark").css('left', relX)
       if !@state.mouseovercell # ew
@@ -253,26 +248,25 @@ class ChocEditor
     slider = @slider
     updatePreview = @updatePreview
     self = @
-    updateSlider = (frameNumber) ->
-      self.$( @options.sliderId ).text( "step #{frameNumber}" ) 
+    updateSlider = (frameNumber) =>
+      self.$( @state.sliderElement ).text( "step #{frameNumber}" ) 
       self.state.slider.value = frameNumber
       updatePreview.apply(self)
 
-    for cell in @$("#{@options.timelineId} .content-cell")
+    for cell in @state.timelineElement.find(".content-cell")
       ((cell) -> 
         $(cell).on 'mouseover', () ->
-          cell = $(cell)
-          frameNumber = cell.data('frame-number')
-          info = {lineNumber: cell.data('line-number'), frameNumber: frameNumber}
-          self.state.mouseovercell = true # ew
-          updateSlider(info.frameNumber + 1)
+          # cell = $(cell)
+          # frameNumber = cell.data('frame-number')
+          # info = {lineNumber: cell.data('line-number'), frameNumber: frameNumber}
+          # self.state.mouseovercell = true # ew
+          # updateSlider(info.frameNumber + 1)
+          # TODO timeline.onScroll (e) -> updateSlider on the frame
       )(cell)
-    
-    # TODO -- 
-    # timeline.onScroll (e) -> updateSlider on the frame
 
   onTimeline: (timeline) ->
-    @generateTimelineTable(timeline)
+    if @options.timeline
+      @generateTimelineTable(timeline)
 
   updatePreview: () ->
     # clear the lineWidgets (e.g. the text description)
@@ -300,7 +294,6 @@ class ChocEditor
         count = info.frameCount
         @slider.slider('option', 'max', count)
         @slider.slider('value', count)
-        # @options.afterCalculatingIterations() if @options.afterCalculatingIterations?
     else
       afterAll = (info) =>
         count = info.frameCount
@@ -319,8 +312,6 @@ class ChocEditor
       afterFrame:  (args...) => @afterFrame.apply(@, args)
       afterAll: afterAll
       locals: @options.locals
-
-    # @updatePreview() # TODO - bring this back?
 
   start: () ->
     @calculateIterations(true)
