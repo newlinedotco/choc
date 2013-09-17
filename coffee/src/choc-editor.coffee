@@ -30,6 +30,7 @@ class ChocEditor
       amountElement: null
       sliderElement: null
       editorElement: null
+      tlmarkElement: null
 
     @setupEditor()
 
@@ -53,6 +54,12 @@ class ChocEditor
       @state.timelineContainer = $('<div class="timeline-container"></div>')
       @state.timelineElement = $('<div class="timeline"></div>')
       @state.timelineContainer.append(@state.timelineElement)
+
+      # put the editor and the timeline side by side
+      @state.editorContainer.addClass("editor-with-timeline")
+      @state.timelineContainer.addClass("timeline-with-editor")
+      @state.editorContainer.css("position", "relative").css("top", "26px") # TODO - read the table header size
+      
       
     # add it all together
     @state.container.append(@state.controlsContainer)
@@ -136,7 +143,7 @@ class ChocEditor
     if activeFrame?.position()?
       timeline = @state.timelineElement
       relX = activeFrame.position().left + timeline.scrollLeft() + (activeFrame.width() / 2.0)
-      $("#tlmark").css('left', relX)
+      @state.tlmarkElement.css('left', relX)
       if !@state.mouseovercell # ew
         timeline.scrollLeft(relX - 40) if shouldScroll # TODO - tween
       @state.mouseovercell = false
@@ -166,7 +173,6 @@ class ChocEditor
   # Generate the HTML view of the timeline data structure
   generateTimelineTable: (timeline) ->
     tdiv = @state.timelineElement
-    execLine = @$("#executionLine")
     table = $('<table></table>')
 
     # header
@@ -240,7 +246,7 @@ class ChocEditor
 
     tdiv.html(table)
 
-    tlmark = $("<div id='tlmark'>&nbsp;</div>")
+    tlmark = @state.tlmarkElement = $("<div class='tlmark'>&nbsp;</div>")
     tlmark.height(tdiv.height() - (2 * row.height()))
     tlmark.css('top', row.height())
     tdiv.append(tlmark)
@@ -249,7 +255,7 @@ class ChocEditor
     updatePreview = @updatePreview
     self = @
     updateSlider = (frameNumber) =>
-      self.$( @state.sliderElement ).text( "step #{frameNumber}" ) 
+      self.$(@state.sliderElement).text("step #{frameNumber}") 
       self.state.slider.value = frameNumber
       updatePreview.apply(self)
 
