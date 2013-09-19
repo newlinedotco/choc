@@ -125,8 +125,8 @@ class ChocEditor
       @state.timeline.activeLine = @$(@state.timelineElement.find("table tr")[lineNumber + 1])
       @state.timeline.activeLine.addClass("active") if @state.timeline.activeLine
     
-    # update active frame
-    # splitting this up into three 'queries' is a lot faster than one giant query (in my profiling in Chrome)
+      # update active frame
+      # splitting this up into three 'queries' is a lot faster than one giant query (in my profiling in Chrome)
       activeRow   = @state.timelineElement.find("table tr")[lineNumber + 1]
       activeTd    = @$(activeRow).find("td")[frameNumber]
       activeFrame = @$(activeTd).find(".cell")
