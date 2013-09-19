@@ -34,6 +34,9 @@ class ChocEditor
 
     @setupEditor()
 
+  fireEvent: (name, opts={}) ->
+    $('body').trigger name, opts
+
   setupEditor: () ->
     @state.container = @$(@options.id)
 
@@ -76,6 +79,10 @@ class ChocEditor
           1)
     }
 
+    fireEvent = @.fireEvent
+    onCodeMirrorLoaded = () ->
+      fireEvent("chocEditorLoaded")
+
     @codemirror = CodeMirror @state.editorElement[0], {
       value: @options.code
       mode:  "javascript"
@@ -83,7 +90,8 @@ class ChocEditor
       tabMode: "spaces"
       interactiveNumbers: @interactiveValues
       highlightSelectionMatches: {showToken: /\w/}
-      }
+      onLoad: onCodeMirrorLoaded()
+    }
 
     @codemirror.on "change", () =>
       clearTimeout(@state.delay)
@@ -100,6 +108,7 @@ class ChocEditor
       max: 50
       change: onSliderChange
       slide: onSliderChange
+      create: () -> fireEvent("chocSliderLoaded")
       }
 
   beforeScrub: () -> @options.beforeScrub()
