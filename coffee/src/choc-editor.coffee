@@ -40,7 +40,7 @@ class ChocEditor
     # setup a controls container with the amount and slider within it
     @state.controlsContainer = $('<div class="controls-container"></div>')
     @state.amountElement = $('<div class="amount-container"></div>')
-    @state.sliderElement = $('<div class="slider-"></div>')
+    @state.sliderElement = $('<div class="slider-container"></div>')
     @state.controlsContainer.append(@state.amountElement)
     @state.controlsContainer.append(@state.sliderElement)
 
@@ -90,7 +90,7 @@ class ChocEditor
       @state.delay = setTimeout((() => @calculateIterations()), 500)
 
     onSliderChange = (event, ui) =>
-      @state.amountElement.text( "step #{ui.value}" ) 
+      @state.amountElement.text("step #{ui.value}") 
       if event.hasOwnProperty("originalEvent") # e.g. triggered by a user interaction, not programmatically below
         @state.slider.value = ui.value
         @updatePreview()

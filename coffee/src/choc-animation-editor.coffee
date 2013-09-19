@@ -3,6 +3,7 @@ class ChocAnimationEditor
 
   constructor: (options) ->
     defaults =
+      id: "#choc"
       maxIterations: 1000
       maxAnimationFrames: 100
 
@@ -13,29 +14,48 @@ class ChocAnimationEditor
       slider:
         value: 0
       playing: false
+      container: null
+      amountElement: null
+      sliderElement: null
+      editorElement: null
+      tlmarkElement: null
+
     @setupEditor()
 
-  changeSliderValue: (newValue) ->
-    @$( "#amount" ).text( "frame #{newValue}" ) 
-    @state.slider.value = newValue
-
-  changeSlider: (newValue) ->
-    @changeSliderValue(newValue)
-    @updateFrameView()
-
   setupEditor: () ->
+    @state.container = @$(@options.id)
+
+    # setup a controls container with the amount and slider within it
+    @state.controlsContainer = $('<div class="controls-container"></div>')
+    @state.amountElement = $('<div class="amount-container"></div>')
+    @state.sliderElement = $('<div class="slider-container"></div>')
+    @state.animationControlsElement = $('<a href="#" class="animation-controls">Play</a>')
+    @state.controlsContainer.append(@state.amountElement)
+    @state.controlsContainer.append(@state.sliderElement)
+    @state.controlsContainer.append(@state.animationControlsElement)
+
+    # setup the editor container
+    @state.editorContainer = $('<div class="editor-container"></div>')
+    @state.editorElement = $('<div></div>')
+    @state.editorContainer.append(@state.editorElement)
+     
+    # add it all together
+    @state.container.append(@state.controlsContainer)
+    @state.container.append(@state.editorContainer)
+
     @interactiveValues = {
       onChange: (v) =>
         clearTimeout(@state.delay)
         @state.delay = setTimeout((() => @updateViews()), 1)
     }
 
-    @codemirror = CodeMirror @$("#editor")[0], {
+    @codemirror = CodeMirror @state.editorElement[0], {
       value: @options.code
       mode:  "javascript"
       viewportMargin: Infinity
       tabMode: "spaces"
       interactiveNumbers: @interactiveValues
+      highlightSelectionMatches: {showToken: /\w/}
       }
 
     @codemirror.on "change", () =>
@@ -46,27 +66,36 @@ class ChocAnimationEditor
       if event.hasOwnProperty("originalEvent") # e.g. triggered by a user interaction, not programmatically below
         @changeSlider(ui.value)
 
-    @slider = @$("#slider").slider {
+    @slider = @state.sliderElement.slider {
       min: 0
       max: @options.maxAnimationFrames
       change: onSliderChange
       slide: onSliderChange
       }
 
-    @$("#animation-controls").click () =>
+    @state.animationControlsElement.click () =>
       if @state.playing
         @onPause()
       else
         @onPlay()
 
+  changeSliderValue: (newValue) ->
+    @state.amountElement.text("frame #{newValue}") 
+    @state.slider.value = newValue
+
+  changeSlider: (newValue) ->
+    @changeSliderValue(newValue)
+    @updateFrameView()
+
+
   onPlay: () ->
-    @$("#animation-controls").text("Pause")
+    @state.animationControlsElement.text("Pause")
     @state.playing = true
     @updateViews()
     @options.play()
 
   onPause: () ->
-    @$("#animation-controls").text("Play")
+    @state.animationControlsElement.text("Play")
     @state.playing = false
     @options.pause()
     @updateViews()
