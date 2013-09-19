@@ -241,9 +241,10 @@
     }
 
     ChocEditor.prototype.fireEvent = function(name, opts) {
-      console.log("fireEvent", name);
-      opts || (opts = {});
-      return $('body').trigger($.Event(name, opts));
+      if (opts == null) {
+        opts = {};
+      }
+      return $('body').trigger(name, opts);
     };
 
     ChocEditor.prototype.setupEditor = function() {

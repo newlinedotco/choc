@@ -34,10 +34,8 @@ class ChocEditor
 
     @setupEditor()
 
-  fireEvent: (name, opts) ->
-    console.log "fireEvent", name
-    opts ||= {}
-    $('body').trigger $.Event(name, opts)
+  fireEvent: (name, opts={}) ->
+    $('body').trigger name, opts
 
   setupEditor: () ->
     @state.container = @$(@options.id)
