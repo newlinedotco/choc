@@ -10,6 +10,7 @@
     function ChocAnimationEditor(options) {
       var defaults;
       defaults = {
+        id: "#choc",
         maxIterations: 1000,
         maxAnimationFrames: 100
       };
@@ -20,24 +21,32 @@
         slider: {
           value: 0
         },
-        playing: false
+        playing: false,
+        container: null,
+        amountElement: null,
+        sliderElement: null,
+        editorElement: null,
+        tlmarkElement: null
       };
       this.setupEditor();
     }
 
-    ChocAnimationEditor.prototype.changeSliderValue = function(newValue) {
-      this.$("#amount").text("frame " + newValue);
-      return this.state.slider.value = newValue;
-    };
-
-    ChocAnimationEditor.prototype.changeSlider = function(newValue) {
-      this.changeSliderValue(newValue);
-      return this.updateFrameView();
-    };
-
     ChocAnimationEditor.prototype.setupEditor = function() {
       var onSliderChange,
         _this = this;
+      this.state.container = this.$(this.options.id);
+      this.state.controlsContainer = $('<div class="controls-container"></div>');
+      this.state.amountElement = $('<div class="amount-container"></div>');
+      this.state.sliderElement = $('<div class="slider-container"></div>');
+      this.state.animationControlsElement = $('<a href="#" class="animation-controls">Play</a>');
+      this.state.controlsContainer.append(this.state.amountElement);
+      this.state.controlsContainer.append(this.state.sliderElement);
+      this.state.controlsContainer.append(this.state.animationControlsElement);
+      this.state.editorContainer = $('<div class="editor-container"></div>');
+      this.state.editorElement = $('<div></div>');
+      this.state.editorContainer.append(this.state.editorElement);
+      this.state.container.append(this.state.controlsContainer);
+      this.state.container.append(this.state.editorContainer);
       this.interactiveValues = {
         onChange: function(v) {
           clearTimeout(_this.state.delay);
@@ -46,12 +55,15 @@
           }), 1);
         }
       };
-      this.codemirror = CodeMirror(this.$("#editor")[0], {
+      this.codemirror = CodeMirror(this.state.editorElement[0], {
         value: this.options.code,
         mode: "javascript",
         viewportMargin: Infinity,
         tabMode: "spaces",
-        interactiveNumbers: this.interactiveValues
+        interactiveNumbers: this.interactiveValues,
+        highlightSelectionMatches: {
+          showToken: /\w/
+        }
       });
       this.codemirror.on("change", function() {
         clearTimeout(_this.state.delay);
@@ -64,13 +76,13 @@
           return _this.changeSlider(ui.value);
         }
       };
-      this.slider = this.$("#slider").slider({
+      this.slider = this.state.sliderElement.slider({
         min: 0,
         max: this.options.maxAnimationFrames,
         change: onSliderChange,
         slide: onSliderChange
       });
-      return this.$("#animation-controls").click(function() {
+      return this.state.animationControlsElement.click(function() {
         if (_this.state.playing) {
           return _this.onPause();
         } else {
@@ -79,15 +91,25 @@
       });
     };
 
+    ChocAnimationEditor.prototype.changeSliderValue = function(newValue) {
+      this.state.amountElement.text("frame " + newValue);
+      return this.state.slider.value = newValue;
+    };
+
+    ChocAnimationEditor.prototype.changeSlider = function(newValue) {
+      this.changeSliderValue(newValue);
+      return this.updateFrameView();
+    };
+
     ChocAnimationEditor.prototype.onPlay = function() {
-      this.$("#animation-controls").text("Pause");
+      this.state.animationControlsElement.text("Pause");
       this.state.playing = true;
       this.updateViews();
       return this.options.play();
     };
 
     ChocAnimationEditor.prototype.onPause = function() {
-      this.$("#animation-controls").text("Play");
+      this.state.animationControlsElement.text("Play");
       this.state.playing = false;
       this.options.pause();
       return this.updateViews();
@@ -224,7 +246,7 @@
       this.state.container = this.$(this.options.id);
       this.state.controlsContainer = $('<div class="controls-container"></div>');
       this.state.amountElement = $('<div class="amount-container"></div>');
-      this.state.sliderElement = $('<div class="slider-"></div>');
+      this.state.sliderElement = $('<div class="slider-container"></div>');
       this.state.controlsContainer.append(this.state.amountElement);
       this.state.controlsContainer.append(this.state.sliderElement);
       this.state.editorContainer = $('<div class="editor-container"></div>');

@@ -51,7 +51,7 @@
       this.state.container = this.$(this.options.id);
       this.state.controlsContainer = $('<div class="controls-container"></div>');
       this.state.amountElement = $('<div class="amount-container"></div>');
-      this.state.sliderElement = $('<div class="slider-"></div>');
+      this.state.sliderElement = $('<div class="slider-container"></div>');
       this.state.controlsContainer.append(this.state.amountElement);
       this.state.controlsContainer.append(this.state.sliderElement);
       this.state.editorContainer = $('<div class="editor-container"></div>');
