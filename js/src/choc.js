@@ -18,7 +18,7 @@
 
   _ = require("underscore");
 
-  readable = require("choc-readable");
+  readable = require("./readable");
 
   debug = require("debug")("choc");
 
