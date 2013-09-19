@@ -25,7 +25,7 @@ install:
 	bower install
 
 watch:
-	./node_modules/.bin/supervisor --watch coffee/,node_modules/choc-readable/ --extensions 'coffee|js' --exec 'make' --no-restart-on exit build
+	grunt watch
 
 loc:
 	cat $(SRC_FILES) | grep -v -E '^( *#|\s*$$)' | wc -l | tr -s ' '

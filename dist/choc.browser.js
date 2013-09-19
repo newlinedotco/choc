@@ -183,13 +183,11 @@
     function ChocEditor(options) {
       var defaults;
       defaults = {
+        id: "#choc",
         maxIterations: 1000,
         maxAnimationFrames: 100,
-        editorId: "#editor",
-        amountId: "#amount",
-        sliderId: "#slider",
-        timelineId: "#timeline",
-        messagesId: "#messages"
+        messagesId: "#messages",
+        timeline: false
       };
       this.options = _.extend(defaults, options);
       this.$ = options.$;
@@ -210,7 +208,12 @@
           x: 0,
           y: 0
         },
-        mouseovercell: false
+        mouseovercell: false,
+        container: null,
+        amountElement: null,
+        sliderElement: null,
+        editorElement: null,
+        tlmarkElement: null
       };
       this.setupEditor();
     }
@@ -218,6 +221,28 @@
     ChocEditor.prototype.setupEditor = function() {
       var onSliderChange,
         _this = this;
+      this.state.container = this.$(this.options.id);
+      this.state.controlsContainer = $('<div class="controls-container"></div>');
+      this.state.amountElement = $('<div class="amount-container"></div>');
+      this.state.sliderElement = $('<div class="slider-"></div>');
+      this.state.controlsContainer.append(this.state.amountElement);
+      this.state.controlsContainer.append(this.state.sliderElement);
+      this.state.editorContainer = $('<div class="editor-container"></div>');
+      this.state.editorElement = $('<div></div>');
+      this.state.editorContainer.append(this.state.editorElement);
+      if (this.options.timeline) {
+        this.state.timelineContainer = $('<div class="timeline-container"></div>');
+        this.state.timelineElement = $('<div class="timeline"></div>');
+        this.state.timelineContainer.append(this.state.timelineElement);
+        this.state.editorContainer.addClass("editor-with-timeline");
+        this.state.timelineContainer.addClass("timeline-with-editor");
+        this.state.editorContainer.css("position", "relative").css("top", "26px");
+      }
+      this.state.container.append(this.state.controlsContainer);
+      this.state.container.append(this.state.editorContainer);
+      if (this.options.timeline) {
+        this.state.container.append(this.state.timelineContainer);
+      }
       this.interactiveValues = {
         onChange: function(v) {
           clearTimeout(_this.state.delay);
@@ -226,12 +251,15 @@
           }), 1);
         }
       };
-      this.codemirror = CodeMirror(this.$(this.options.editorId)[0], {
+      this.codemirror = CodeMirror(this.state.editorElement[0], {
         value: this.options.code,
         mode: "javascript",
         viewportMargin: Infinity,
         tabMode: "spaces",
-        interactiveNumbers: this.interactiveValues
+        interactiveNumbers: this.interactiveValues,
+        highlightSelectionMatches: {
+          showToken: /\w/
+        }
       });
       this.codemirror.on("change", function() {
         clearTimeout(_this.state.delay);
@@ -240,13 +268,13 @@
         }), 500);
       });
       onSliderChange = function(event, ui) {
-        _this.$(_this.options.amountId).text("step " + ui.value);
+        _this.state.amountElement.text("step " + ui.value);
         if (event.hasOwnProperty("originalEvent")) {
           _this.state.slider.value = ui.value;
           return _this.updatePreview();
         }
       };
-      return this.slider = this.$(this.options.sliderId).slider({
+      return this.slider = this.state.sliderElement.slider({
         min: 0,
         max: 50,
         change: onSliderChange,
@@ -275,7 +303,7 @@
     };
 
     ChocEditor.prototype.updateActiveLine = function(cm, lineNumber, frameNumber) {
-      var activeFrame, activeRow, activeTd, line;
+      var activeFrame, activeRow, activeTd, line, notYetRunTds, runTds;
       line = this.$(this.$(".CodeMirror-lines pre")[lineNumber]);
       if (cm.state.activeLine === line) {
         return;
@@ -285,18 +313,24 @@
         line.addClass(WRAP_CLASS);
       }
       this.state.editor.activeLine = line;
-      this.state.timeline.activeLine = this.$(this.$("" + this.options.timelineId + " table tr")[lineNumber + 1]);
-      if (this.state.timeline.activeLine) {
-        this.state.timeline.activeLine.addClass("active");
+      if (this.state.timelineElement) {
+        this.state.timeline.activeLine = this.$(this.state.timelineElement.find("table tr")[lineNumber + 1]);
+        if (this.state.timeline.activeLine) {
+          this.state.timeline.activeLine.addClass("active");
+        }
+        activeRow = this.state.timelineElement.find("table tr")[lineNumber + 1];
+        activeTd = this.$(activeRow).find("td")[frameNumber];
+        activeFrame = this.$(activeTd).find(".cell");
+        this.state.timeline.activeFrame = activeFrame;
+        if (this.state.timeline.activeFrame) {
+          this.state.timeline.activeFrame.addClass("active");
+        }
+        runTds = this.state.timelineElement.find("table tr").find("td:nth-child(-n+" + frameNumber + ") .cell");
+        notYetRunTds = this.state.timelineElement.find("table tr").find("td:nth-child(n+" + (frameNumber + 1) + ") .cell");
+        this.$(runTds).addClass("executed");
+        this.$(notYetRunTds).removeClass('executed');
+        return this.updateTimelineMarker(activeFrame);
       }
-      activeRow = this.$("" + this.options.timelineId + " table tr")[lineNumber + 1];
-      activeTd = this.$(activeRow).find("td")[frameNumber];
-      activeFrame = this.$(activeTd).find(".cell");
-      this.state.timeline.activeFrame = activeFrame;
-      if (this.state.timeline.activeFrame) {
-        this.state.timeline.activeFrame.addClass("active");
-      }
-      return this.updateTimelineMarker(activeFrame);
     };
 
     ChocEditor.prototype.updateTimelineMarker = function(activeFrame, shouldScroll) {
@@ -305,9 +339,9 @@
         shouldScroll = true;
       }
       if ((activeFrame != null ? activeFrame.position() : void 0) != null) {
-        timeline = this.$(this.options.timelineId);
+        timeline = this.state.timelineElement;
         relX = activeFrame.position().left + timeline.scrollLeft() + (activeFrame.width() / 2.0);
-        $("#tlmark").css('left', relX);
+        this.state.tlmarkElement.css('left', relX);
         if (!this.state.mouseovercell) {
           if (shouldScroll) {
             timeline.scrollLeft(relX - 40);
@@ -346,9 +380,9 @@
     };
 
     ChocEditor.prototype.generateTimelineTable = function(timeline) {
-      var cell, column, display, execLine, frameId, headerRow, idx, info, innerCell, klass, message, row, rowidx, self, slider, table, tdiv, timelineCreator, tlmark, updatePreview, updateSlider, value, _i, _j, _len, _ref, _ref1, _ref2, _ref3, _results;
-      tdiv = this.$(this.options.timelineId);
-      execLine = this.$("#executionLine");
+      var cell, column, display, frameId, headerRow, idx, info, innerCell, klass, message, row, rowidx, self, slider, table, tdiv, timelineCreator, tlmark, updatePreview, updateSlider, value, _i, _j, _len, _ref, _ref1, _ref2, _ref3, _results,
+        _this = this;
+      tdiv = this.state.timelineElement;
       table = $('<table></table>');
       headerRow = $("<tr></tr>");
       for (column = _i = 0, _ref = timeline.steps.length - 1; _i <= _ref; column = _i += 1) {
@@ -376,21 +410,23 @@
           if (timeline.stepMap[column][rowidx]) {
             info = timeline.stepMap[column][rowidx];
             message = (_ref1 = info.messages) != null ? _ref1[0] : void 0;
-            display = "&#8226;";
+            display = "&nbsp;";
             frameId = "data-frame-" + info.frameNumber;
             cell = $("<td></td>");
-            innerCell = $("<div></div>").addClass("cell content-cell").attr("id", frameId).attr("data-frame-number", info.frameNumber).attr("data-line-number", info.lineNumber);
+            innerCell = $("<div></div>").addClass("cell content-cell circle").attr("id", frameId).attr("data-frame-number", info.frameNumber).attr("data-line-number", info.lineNumber);
             cell.append(innerCell);
             if ((message != null ? (_ref2 = message.message) != null ? _ref2.timeline : void 0 : void 0) != null) {
               timelineCreator = message.message.timeline;
               if (_.isFunction(timelineCreator)) {
                 timelineCreator(innerCell);
+                innerCell.removeClass('circle');
               }
             } else if ((message != null ? message.timeline : void 0) != null) {
               display = message.timeline;
               if (display.hasOwnProperty("_choc_timeline")) {
                 display = display._choc_timeline();
               }
+              innerCell.removeClass('circle');
               innerCell.html(display);
             } else {
               innerCell.html(display);
@@ -407,7 +443,7 @@
         table.append(row);
       }
       tdiv.html(table);
-      tlmark = $("<div id='tlmark'>&nbsp;</div>");
+      tlmark = this.state.tlmarkElement = $("<div class='tlmark'>&nbsp;</div>");
       tlmark.height(tdiv.height() - (2 * row.height()));
       tlmark.css('top', row.height());
       tdiv.append(tlmark);
@@ -415,33 +451,25 @@
       updatePreview = this.updatePreview;
       self = this;
       updateSlider = function(frameNumber) {
-        self.$(this.options.sliderId).text("step " + frameNumber);
+        self.$(_this.state.sliderElement).text("step " + frameNumber);
         self.state.slider.value = frameNumber;
         return updatePreview.apply(self);
       };
-      _ref3 = this.$("" + this.options.timelineId + " .content-cell");
+      _ref3 = this.state.timelineElement.find(".content-cell");
       _results = [];
       for (_j = 0, _len = _ref3.length; _j < _len; _j++) {
         cell = _ref3[_j];
         _results.push((function(cell) {
-          return $(cell).on('mouseover', function() {
-            var frameNumber;
-            cell = $(cell);
-            frameNumber = cell.data('frame-number');
-            info = {
-              lineNumber: cell.data('line-number'),
-              frameNumber: frameNumber
-            };
-            self.state.mouseovercell = true;
-            return updateSlider(info.frameNumber + 1);
-          });
+          return $(cell).on('mouseover', function() {});
         })(cell));
       }
       return _results;
     };
 
     ChocEditor.prototype.onTimeline = function(timeline) {
-      return this.generateTimelineTable(timeline);
+      if (this.options.timeline) {
+        return this.generateTimelineTable(timeline);
+      }
     };
 
     ChocEditor.prototype.updatePreview = function() {
@@ -511,6 +539,7 @@
           }
         };
       }
+      console.log("regular calculate iterations");
       return window.choc.scrub(this.codemirror.getValue(), this.options.maxIterations, {
         onTimeline: function() {
           var args;
