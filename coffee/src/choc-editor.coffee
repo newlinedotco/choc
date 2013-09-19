@@ -115,7 +115,7 @@ class ChocEditor
       @state.timeline.activeFrame.removeClass("active")
 
   updateActiveLine: (cm, lineNumber, frameNumber) ->
-    line = @$(@$(".CodeMirror-lines pre")[lineNumber])
+    line = @$(@state.container.find(".CodeMirror-lines pre")[lineNumber]) #  here
     return if cm.state.activeLine is line
     @clearActiveLine()
     line.addClass(WRAP_CLASS) if line
@@ -145,7 +145,7 @@ class ChocEditor
       relX = activeFrame.position().left + timeline.scrollLeft() + (activeFrame.width() / 2.0)
       @state.tlmarkElement.css('left', relX)
       if !@state.mouseovercell # ew
-        timeline.scrollLeft(relX - 40) if shouldScroll # TODO - tween
+        timeline.scrollLeft(relX - 60) if shouldScroll # TODO - tween
       @state.mouseovercell = false
 
   onScrub: (info,opts={}) ->
