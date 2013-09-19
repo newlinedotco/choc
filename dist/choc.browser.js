@@ -240,8 +240,14 @@
       this.setupEditor();
     }
 
+    ChocEditor.prototype.fireEvent = function(name, opts) {
+      console.log("fireEvent", name);
+      opts || (opts = {});
+      return $('body').trigger($.Event(name, opts));
+    };
+
     ChocEditor.prototype.setupEditor = function() {
-      var onSliderChange,
+      var fireEvent, onCodeMirrorLoaded, onSliderChange,
         _this = this;
       this.state.container = this.$(this.options.id);
       this.state.controlsContainer = $('<div class="controls-container"></div>');
@@ -273,6 +279,10 @@
           }), 1);
         }
       };
+      fireEvent = this.fireEvent;
+      onCodeMirrorLoaded = function() {
+        return fireEvent("chocEditorLoaded");
+      };
       this.codemirror = CodeMirror(this.state.editorElement[0], {
         value: this.options.code,
         mode: "javascript",
@@ -281,7 +291,8 @@
         interactiveNumbers: this.interactiveValues,
         highlightSelectionMatches: {
           showToken: /\w/
-        }
+        },
+        onLoad: onCodeMirrorLoaded()
       });
       this.codemirror.on("change", function() {
         clearTimeout(_this.state.delay);
@@ -300,7 +311,10 @@
         min: 0,
         max: 50,
         change: onSliderChange,
-        slide: onSliderChange
+        slide: onSliderChange,
+        create: function() {
+          return fireEvent("chocSliderLoaded");
+        }
       });
     };
 
