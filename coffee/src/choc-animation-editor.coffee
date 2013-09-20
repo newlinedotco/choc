@@ -78,6 +78,7 @@ class ChocAnimationEditor
         @onPause()
       else
         @onPlay()
+      return false
 
   changeSliderValue: (newValue) ->
     @state.amountElement.text("frame #{newValue}") 
