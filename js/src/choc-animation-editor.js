@@ -83,10 +83,11 @@
       });
       return this.state.animationControlsElement.click(function() {
         if (_this.state.playing) {
-          return _this.onPause();
+          _this.onPause();
         } else {
-          return _this.onPlay();
+          _this.onPlay();
         }
+        return false;
       });
     };
 

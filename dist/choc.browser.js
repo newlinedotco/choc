@@ -84,10 +84,11 @@
       });
       return this.state.animationControlsElement.click(function() {
         if (_this.state.playing) {
-          return _this.onPause();
+          _this.onPause();
         } else {
-          return _this.onPlay();
+          _this.onPlay();
         }
+        return false;
       });
     };
 
@@ -341,7 +342,7 @@
 
     ChocEditor.prototype.updateActiveLine = function(cm, lineNumber, frameNumber) {
       var activeFrame, activeRow, activeTd, line, notYetRunTds, runTds;
-      line = this.$(this.$(".CodeMirror-lines pre")[lineNumber]);
+      line = this.$(this.state.container.find(".CodeMirror-lines pre")[lineNumber]);
       if (cm.state.activeLine === line) {
         return;
       }
@@ -381,7 +382,7 @@
         this.state.tlmarkElement.css('left', relX);
         if (!this.state.mouseovercell) {
           if (shouldScroll) {
-            timeline.scrollLeft(relX - 40);
+            timeline.scrollLeft(relX - 60);
           }
         }
         return this.state.mouseovercell = false;
@@ -4920,7 +4921,7 @@ exports.SourceNode = require('./source-map/source-node').SourceNode;
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require('amdefine')(module, require);
+    var define = require('amdefine')(module);
 }
 define(function (require, exports, module) {
 
@@ -4940,10 +4941,10 @@ define(function (require, exports, module) {
   /**
    * Static method for creating ArraySet instances from an existing array.
    */
-  ArraySet.fromArray = function ArraySet_fromArray(aArray, aAllowDuplicates) {
+  ArraySet.fromArray = function ArraySet_fromArray(aArray) {
     var set = new ArraySet();
     for (var i = 0, len = aArray.length; i < len; i++) {
-      set.add(aArray[i], aAllowDuplicates);
+      set.add(aArray[i]);
     }
     return set;
   };
@@ -4953,15 +4954,14 @@ define(function (require, exports, module) {
    *
    * @param String aStr
    */
-  ArraySet.prototype.add = function ArraySet_add(aStr, aAllowDuplicates) {
-    var isDuplicate = this.has(aStr);
+  ArraySet.prototype.add = function ArraySet_add(aStr) {
+    if (this.has(aStr)) {
+      // Already a member; nothing to do.
+      return;
+    }
     var idx = this._array.length;
-    if (!isDuplicate || aAllowDuplicates) {
-      this._array.push(aStr);
-    }
-    if (!isDuplicate) {
-      this._set[util.toSetString(aStr)] = idx;
-    }
+    this._array.push(aStr);
+    this._set[util.toSetString(aStr)] = idx;
   };
 
   /**
@@ -5049,7 +5049,7 @@ define(function (require, exports, module) {
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 if (typeof define !== 'function') {
-    var define = require('amdefine')(module, require);
+    var define = require('amdefine')(module);
 }
 define(function (require, exports, module) {
 
@@ -5165,7 +5165,7 @@ define(function (require, exports, module) {
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require('amdefine')(module, require);
+    var define = require('amdefine')(module);
 }
 define(function (require, exports, module) {
 
@@ -5209,7 +5209,7 @@ define(function (require, exports, module) {
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require('amdefine')(module, require);
+    var define = require('amdefine')(module);
 }
 define(function (require, exports, module) {
 
@@ -5292,7 +5292,7 @@ define(function (require, exports, module) {
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require('amdefine')(module, require);
+    var define = require('amdefine')(module);
 }
 define(function (require, exports, module) {
 
@@ -5343,18 +5343,14 @@ define(function (require, exports, module) {
     var sourceRoot = util.getArg(sourceMap, 'sourceRoot', null);
     var sourcesContent = util.getArg(sourceMap, 'sourcesContent', null);
     var mappings = util.getArg(sourceMap, 'mappings');
-    var file = util.getArg(sourceMap, 'file', null);
+    var file = util.getArg(sourceMap, 'file');
 
     if (version !== this._version) {
       throw new Error('Unsupported version: ' + version);
     }
 
-    // Pass `true` below to allow duplicate names and sources. While source maps
-    // are intended to be compressed and deduplicated, the TypeScript compiler
-    // sometimes generates source maps with duplicates in them. See Github issue
-    // #72 and bugzil.la/889492.
-    this._names = ArraySet.fromArray(names, true);
-    this._sources = ArraySet.fromArray(sources, true);
+    this._names = ArraySet.fromArray(names);
+    this._sources = ArraySet.fromArray(sources);
     this.sourceRoot = sourceRoot;
     this.sourcesContent = sourcesContent;
     this.file = file;
@@ -5589,9 +5585,9 @@ define(function (require, exports, module) {
     };
 
   /**
-   * Returns the original source content. The only argument is the url of the
-   * original source file. Returns null if no original source content is
-   * availible.
+   * Returns the original source content. The only argument is
+   * the url of the original source file. Returns null if no
+   * original source content is availible.
    */
   SourceMapConsumer.prototype.sourceContentFor =
     function SourceMapConsumer_sourceContentFor(aSource) {
@@ -5600,30 +5596,15 @@ define(function (require, exports, module) {
       }
 
       if (this.sourceRoot) {
-        aSource = util.relative(this.sourceRoot, aSource);
+        // Try to remove the sourceRoot
+        var relativeUrl = util.relative(this.sourceRoot, aSource);
+        if (this._sources.has(relativeUrl)) {
+          return this.sourcesContent[this._sources.indexOf(relativeUrl)];
+        }
       }
 
       if (this._sources.has(aSource)) {
         return this.sourcesContent[this._sources.indexOf(aSource)];
-      }
-
-      var url;
-      if (this.sourceRoot
-          && (url = util.urlParse(this.sourceRoot))) {
-        // XXX: file:// URIs and absolute paths lead to unexpected behavior for
-        // many users. We can help them out when they expect file:// URIs to
-        // behave like it would if they were running a local HTTP server. See
-        // https://bugzilla.mozilla.org/show_bug.cgi?id=885597.
-        var fileUriAbsPath = aSource.replace(/^file:\/\//, "");
-        if (url.scheme == "file"
-            && this._sources.has(fileUriAbsPath)) {
-          return this.sourcesContent[this._sources.indexOf(fileUriAbsPath)]
-        }
-
-        if ((!url.path || url.path == "/")
-            && this._sources.has("/" + aSource)) {
-          return this.sourcesContent[this._sources.indexOf("/" + aSource)];
-        }
       }
 
       throw new Error('"' + aSource + '" is not in the SourceMap.');
@@ -5739,7 +5720,7 @@ define(function (require, exports, module) {
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require('amdefine')(module, require);
+    var define = require('amdefine')(module);
 }
 define(function (require, exports, module) {
 
@@ -6018,7 +5999,7 @@ define(function (require, exports, module) {
       var result = '';
       var mapping;
 
-      // The mappings must be guaranteed to be in sorted order before we start
+      // The mappings must be guarenteed to be in sorted order before we start
       // serializing them or else the generated line numbers (which are defined
       // via the ';' separators) will be all messed up. Note: it might be more
       // performant to maintain the sorting as we insert them, rather than as we
@@ -6122,7 +6103,7 @@ define(function (require, exports, module) {
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require('amdefine')(module, require);
+    var define = require('amdefine')(module);
 }
 define(function (require, exports, module) {
 
@@ -6242,7 +6223,7 @@ define(function (require, exports, module) {
       return node;
 
       function addMappingWithCode(mapping, code) {
-        if (mapping === null || mapping.source === undefined) {
+        if (mapping.source === undefined) {
           node.add(code);
         } else {
           node.add(new SourceNode(mapping.originalLine,
@@ -6422,36 +6403,23 @@ define(function (require, exports, module) {
     };
     var map = new SourceMapGenerator(aArgs);
     var sourceMappingActive = false;
-    var lastOriginalSource = null;
-    var lastOriginalLine = null;
-    var lastOriginalColumn = null;
-    var lastOriginalName = null;
     this.walk(function (chunk, original) {
       generated.code += chunk;
       if (original.source !== null
           && original.line !== null
           && original.column !== null) {
-        if(lastOriginalSource !== original.source
-           || lastOriginalLine !== original.line
-           || lastOriginalColumn !== original.column
-           || lastOriginalName !== original.name) {
-          map.addMapping({
-            source: original.source,
-            original: {
-              line: original.line,
-              column: original.column
-            },
-            generated: {
-              line: generated.line,
-              column: generated.column
-            },
-            name: original.name
-          });
-        }
-        lastOriginalSource = original.source;
-        lastOriginalLine = original.line;
-        lastOriginalColumn = original.column;
-        lastOriginalName = original.name;
+        map.addMapping({
+          source: original.source,
+          original: {
+            line: original.line,
+            column: original.column
+          },
+          generated: {
+            line: generated.line,
+            column: generated.column
+          },
+          name: original.name
+        });
         sourceMappingActive = true;
       } else if (sourceMappingActive) {
         map.addMapping({
@@ -6460,7 +6428,6 @@ define(function (require, exports, module) {
             column: generated.column
           }
         });
-        lastOriginalSource = null;
         sourceMappingActive = false;
       }
       chunk.split('').forEach(function (ch) {
@@ -6491,7 +6458,7 @@ define(function (require, exports, module) {
  * http://opensource.org/licenses/BSD-3-Clause
  */
 if (typeof define !== 'function') {
-    var define = require('amdefine')(module, require);
+    var define = require('amdefine')(module);
 }
 define(function (require, exports, module) {
 
@@ -6531,25 +6498,6 @@ define(function (require, exports, module) {
       path: match[7]
     };
   }
-  exports.urlParse = urlParse;
-
-  function urlGenerate(aParsedUrl) {
-    var url = aParsedUrl.scheme + "://";
-    if (aParsedUrl.auth) {
-      url += aParsedUrl.auth + "@"
-    }
-    if (aParsedUrl.host) {
-      url += aParsedUrl.host;
-    }
-    if (aParsedUrl.port) {
-      url += ":" + aParsedUrl.port
-    }
-    if (aParsedUrl.path) {
-      url += aParsedUrl.path;
-    }
-    return url;
-  }
-  exports.urlGenerate = urlGenerate;
 
   function join(aRoot, aPath) {
     var url;
@@ -6559,8 +6507,7 @@ define(function (require, exports, module) {
     }
 
     if (aPath.charAt(0) === '/' && (url = urlParse(aRoot))) {
-      url.path = aPath;
-      return urlGenerate(url);
+      return aRoot.replace(url.path, '') + aPath;
     }
 
     return aRoot.replace(/\/$/, '') + '/' + aPath;
@@ -6588,12 +6535,6 @@ define(function (require, exports, module) {
 
   function relative(aRoot, aPath) {
     aRoot = aRoot.replace(/\/$/, '');
-
-    var url = urlParse(aRoot);
-    if (aPath.charAt(0) == "/" && url && url.path == "/") {
-      return aPath.slice(1);
-    }
-
     return aPath.indexOf(aRoot + '/') === 0
       ? aPath.substr(aRoot.length + 1)
       : aPath;
@@ -6604,7 +6545,7 @@ define(function (require, exports, module) {
 
 },{"amdefine":20}],20:[function(require,module,exports){
 var process=require("__browserify_process"),__filename="/../node_modules/escodegen/node_modules/source-map/node_modules/amdefine/amdefine.js";/** vim: et:ts=4:sw=4:sts=4
- * @license amdefine 0.0.8 Copyright (c) 2011, The Dojo Foundation All Rights Reserved.
+ * @license amdefine 0.0.5 Copyright (c) 2011, The Dojo Foundation All Rights Reserved.
  * Available via the MIT or new BSD license.
  * see: http://github.com/jrburke/amdefine for details
  */
@@ -6613,22 +6554,22 @@ var process=require("__browserify_process"),__filename="/../node_modules/escodeg
 /*global module, process */
 'use strict';
 
+var path = require('path');
+
 /**
  * Creates a define for node.
  * @param {Object} module the "module" object that is defined by Node for the
  * current module.
- * @param {Function} [requireFn]. Node's require function for the current module.
+ * @param {Function} [require]. Node's require function for the current module.
  * It only needs to be passed in Node versions before 0.5, when module.require
  * did not exist.
  * @returns {Function} a define function that is usable for the current node
  * module.
  */
-function amdefine(module, requireFn) {
-    'use strict';
+function amdefine(module, require) {
     var defineCache = {},
         loaderCache = {},
         alreadyCalled = false,
-        path = require('path'),
         makeRequire, stringRequire;
 
     /**
@@ -6743,7 +6684,7 @@ function amdefine(module, requireFn) {
     };
 
     //Favor explicit value, passed in if the module wants to support Node 0.4.
-    requireFn = requireFn || function req() {
+    require = require || function req() {
         return module.require.apply(module, arguments);
     };
 
@@ -6757,7 +6698,7 @@ function amdefine(module, requireFn) {
                 uri: __filename,
                 exports: e
             };
-            r = makeRequire(requireFn, e, m, id);
+            r = makeRequire(require, e, m, id);
         } else {
             //Only support one define call per file
             if (alreadyCalled) {
@@ -6770,7 +6711,7 @@ function amdefine(module, requireFn) {
             //the exports in here is amdefine exports.
             e = module.exports;
             m = module;
-            r = makeRequire(requireFn, e, m, module.id);
+            r = makeRequire(require, e, m, module.id);
         }
 
         //If there are dependencies, they are strings, so need
@@ -6783,7 +6724,7 @@ function amdefine(module, requireFn) {
 
         //Call the factory with the right dependencies.
         if (typeof factory === 'function') {
-            result = factory.apply(m.exports, deps);
+            result = factory.apply(module.exports, deps);
         } else {
             result = factory;
         }
@@ -6956,11 +6897,12 @@ module.exports={
   },
   "readme": "Escodegen ([escodegen](http://github.com/Constellation/escodegen)) is\n[ECMAScript](http://www.ecma-international.org/publications/standards/Ecma-262.htm)\n(also popularly known as [JavaScript](http://en.wikipedia.org/wiki/JavaScript>JavaScript))\ncode generator from [Parser API](https://developer.mozilla.org/en/SpiderMonkey/Parser_API) AST.\nSee [online generator demo](http://constellation.github.com/escodegen/demo/index.html).\n\n\n### Install\n\nEscodegen can be used in a web browser:\n\n    <script src=\"escodegen.browser.js\"></script>\n\nor in a Node.js application via the package manager:\n\n    npm install escodegen\n\n\n### Usage\n\nA simple example: the program\n\n    escodegen.generate({\n        type: 'BinaryExpression',\n        operator: '+',\n        left: { type: 'Literal', value: 40 },\n        right: { type: 'Literal', value: 2 }\n    });\n\nproduces the string `'40 + 2'`\n\nSee the [API page](https://github.com/Constellation/escodegen/wiki/API) for\noptions. To run the tests, execute `npm test` in the root directory.\n\n\n### License\n\n#### Escodegen\n\nCopyright (C) 2012 [Yusuke Suzuki](http://github.com/Constellation)\n (twitter: [@Constellation](http://twitter.com/Constellation)) and other contributors.\n\nRedistribution and use in source and binary forms, with or without\nmodification, are permitted provided that the following conditions are met:\n\n  * Redistributions of source code must retain the above copyright\n    notice, this list of conditions and the following disclaimer.\n\n  * Redistributions in binary form must reproduce the above copyright\n    notice, this list of conditions and the following disclaimer in the\n    documentation and/or other materials provided with the distribution.\n\nTHIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\"\nAND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE\nIMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE\nARE DISCLAIMED. IN NO EVENT SHALL <COPYRIGHT HOLDER> BE LIABLE FOR ANY\nDIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES\n(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;\nLOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND\nON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT\n(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF\nTHIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n\n#### source-map\n\nSourceNodeMocks has a limited interface of mozilla/source-map SourceNode implementations.\n\nCopyright (c) 2009-2011, Mozilla Foundation and contributors\nAll rights reserved.\n\nRedistribution and use in source and binary forms, with or without\nmodification, are permitted provided that the following conditions are met:\n\n* Redistributions of source code must retain the above copyright notice, this\n  list of conditions and the following disclaimer.\n\n* Redistributions in binary form must reproduce the above copyright notice,\n  this list of conditions and the following disclaimer in the documentation\n  and/or other materials provided with the distribution.\n\n* Neither the names of the Mozilla Foundation nor the names of project\n  contributors may be used to endorse or promote products derived from this\n  software without specific prior written permission.\n\nTHIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS \"AS IS\" AND\nANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED\nWARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE\nDISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE\nFOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL\nDAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR\nSERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER\nCAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,\nOR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE\nOF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\n\n\n### Status\n\n[![Build Status](https://secure.travis-ci.org/Constellation/escodegen.png)](http://travis-ci.org/Constellation/escodegen)\n",
   "readmeFilename": "README.md",
-  "bugs": {
-    "url": "https://github.com/Constellation/escodegen/issues"
-  },
   "_id": "escodegen@0.0.22",
-  "_from": "escodegen@0.0.22"
+  "dist": {
+    "shasum": "9d8e748b765cc591c672049febd4598152134ade"
+  },
+  "_from": "escodegen@0.0.22",
+  "_resolved": "https://registry.npmjs.org/escodegen/-/escodegen-0.0.22.tgz"
 }
 
 },{}],22:[function(require,module,exports){
@@ -8255,19 +8197,19 @@ parseStatement: true, parseSourceElement: true */
         while (index < length) {
             ch = source[index++];
             str += ch;
-            if (ch === '\\') {
-                ch = source[index++];
-                // ECMA-262 7.8.5
-                if (isLineTerminator(ch)) {
-                    throwError({}, Messages.UnterminatedRegExp);
-                }
-                str += ch;
-            } else if (classMarker) {
+            if (classMarker) {
                 if (ch === ']') {
                     classMarker = false;
                 }
             } else {
-                if (ch === '/') {
+                if (ch === '\\') {
+                    ch = source[index++];
+                    // ECMA-262 7.8.5
+                    if (isLineTerminator(ch)) {
+                        throwError({}, Messages.UnterminatedRegExp);
+                    }
+                    str += ch;
+                } else if (ch === '/') {
                     terminated = true;
                     break;
                 } else if (ch === '[') {
@@ -8999,8 +8941,9 @@ parseStatement: true, parseSourceElement: true */
             if (strict && expr.type === Syntax.Identifier && isRestrictedWord(expr.name)) {
                 throwErrorTolerant({}, Messages.StrictLHSPostfix);
             }
+
             if (!isLeftHandSide(expr)) {
-                throwErrorTolerant({}, Messages.InvalidLHSInAssignment);
+                throwError({}, Messages.InvalidLHSInAssignment);
             }
 
             expr = {
@@ -9033,7 +8976,7 @@ parseStatement: true, parseSourceElement: true */
             }
 
             if (!isLeftHandSide(expr)) {
-                throwErrorTolerant({}, Messages.InvalidLHSInAssignment);
+                throwError({}, Messages.InvalidLHSInAssignment);
             }
 
             expr = {
@@ -9282,7 +9225,7 @@ parseStatement: true, parseSourceElement: true */
         if (matchAssign()) {
             // LeftHandSideExpression
             if (!isLeftHandSide(expr)) {
-                throwErrorTolerant({}, Messages.InvalidLHSInAssignment);
+                throwError({}, Messages.InvalidLHSInAssignment);
             }
 
             // 11.13.1
@@ -9600,7 +9543,7 @@ parseStatement: true, parseSourceElement: true */
                 if (matchKeyword('in')) {
                     // LeftHandSideExpression
                     if (!isLeftHandSide(init)) {
-                        throwErrorTolerant({}, Messages.InvalidLHSInForIn);
+                        throwError({}, Messages.InvalidLHSInForIn);
                     }
 
                     lex();
@@ -9879,16 +9822,15 @@ parseStatement: true, parseSourceElement: true */
 
         expect('{');
 
-        cases = [];
-
         if (match('}')) {
             lex();
             return {
                 type: Syntax.SwitchStatement,
-                discriminant: discriminant,
-                cases: cases
+                discriminant: discriminant
             };
         }
+
+        cases = [];
 
         oldInSwitch = state.inSwitch;
         state.inSwitch = true;
@@ -11166,7 +11108,7 @@ parseStatement: true, parseSourceElement: true */
     }
 
     // Sync with package.json.
-    exports.version = '1.0.4';
+    exports.version = '1.0.3';
 
     exports.parse = parse;
 

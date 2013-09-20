@@ -146,7 +146,7 @@
 
     ChocEditor.prototype.updateActiveLine = function(cm, lineNumber, frameNumber) {
       var activeFrame, activeRow, activeTd, line, notYetRunTds, runTds;
-      line = this.$(this.$(".CodeMirror-lines pre")[lineNumber]);
+      line = this.$(this.state.container.find(".CodeMirror-lines pre")[lineNumber]);
       if (cm.state.activeLine === line) {
         return;
       }
@@ -186,7 +186,7 @@
         this.state.tlmarkElement.css('left', relX);
         if (!this.state.mouseovercell) {
           if (shouldScroll) {
-            timeline.scrollLeft(relX - 40);
+            timeline.scrollLeft(relX - 60);
           }
         }
         return this.state.mouseovercell = false;
