@@ -309,6 +309,7 @@ class ChocEditor
         count = info.frameCount
         @slider.slider('option', 'max', count)
         @slider.slider('value', count)
+        @state.slider.value = count
     else
       afterAll = (info) =>
         count = info.frameCount
@@ -330,6 +331,7 @@ class ChocEditor
 
   start: () ->
     @calculateIterations(true)
+    @updatePreview()
 
 root = exports ? this
 root.choc ||= {}
