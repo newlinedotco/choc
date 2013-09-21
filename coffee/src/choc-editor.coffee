@@ -9,6 +9,7 @@ class ChocEditor
       maxAnimationFrames: 100
       messagesId: "#messages"
       timeline: false
+      onLoaded: () ->
 
     @options = _.extend(defaults, options)
     @$ = options.$
@@ -35,7 +36,7 @@ class ChocEditor
     @setupEditor()
 
   fireEvent: (name, opts={}) ->
-    $('body').trigger name, opts
+    @state.container.trigger name, opts
 
   setupEditor: () ->
     @state.container = @$(@options.id)
@@ -79,9 +80,9 @@ class ChocEditor
           1)
     }
 
-    fireEvent = @.fireEvent
-    onCodeMirrorLoaded = () ->
-      fireEvent("chocEditorLoaded")
+    onCodeMirrorLoaded = () =>
+      @fireEvent("chocEditorLoaded")
+      @options.onLoaded()
 
     @codemirror = CodeMirror @state.editorElement[0], {
       value: @options.code
@@ -108,7 +109,7 @@ class ChocEditor
       max: 50
       change: onSliderChange
       slide: onSliderChange
-      create: () -> fireEvent("chocSliderLoaded")
+      create: () => @fireEvent("chocSliderLoaded")
       }
 
   beforeScrub: () -> @options.beforeScrub()
