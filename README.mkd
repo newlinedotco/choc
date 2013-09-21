@@ -1,17 +1,16 @@
-
 # choc
 
-  a library for learnable programming
+[View Choc Website](#)
 
-#
+Thinking procedurally is one of the hardest concepts to grasp for the beginning programmer.
 
-a tool for teachers
+Choc is a toolkit for teachers to craft small demos that can be explored interactively.
 
 ## License 
 
 (The MIT License)
 
-Copyright (c) 2012 Nate Murray &lt;nate@natemurray.com&gt;
+Copyright (c) 2013 Fullstack.io &lt;hello@fullstack.io&gt;
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
