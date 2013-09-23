@@ -201,7 +201,6 @@
                          (. node -declarations)))] 
           `((fn [] ~messages)))
 
-        ;; TODO IfStatement
         (= "IfStatement" t)
         (let [conditional (if (:hoistedName o) 
                             (symbol (:hoistedName o))
@@ -232,7 +231,7 @@
               true-messages [(compile-entry 
                               (list
                                :lineNumber (.. node -loc -start -line) 
-                               :message (list "Because " (generate-readable-expression (:test node)) )
+                               :message (list "Because " (generate-readable-expression (:test node)) " do this:")
                                :timeline "t"
                                ))
                              (compile-entry 
