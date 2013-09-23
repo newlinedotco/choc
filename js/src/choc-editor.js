@@ -14,7 +14,9 @@
         maxIterations: 1000,
         maxAnimationFrames: 100,
         messagesId: "#messages",
-        timeline: false
+        timeline: false,
+        timelineValues: true,
+        onLoaded: function() {}
       };
       this.options = _.extend(defaults, options);
       this.$ = options.$;
@@ -49,11 +51,11 @@
       if (opts == null) {
         opts = {};
       }
-      return $('body').trigger(name, opts);
+      return this.state.container.trigger(name, opts);
     };
 
     ChocEditor.prototype.setupEditor = function() {
-      var fireEvent, onCodeMirrorLoaded, onSliderChange,
+      var onCodeMirrorLoaded,
         _this = this;
       this.state.container = this.$(this.options.id);
       this.state.controlsContainer = $('<div class="controls-container"></div>');
@@ -85,9 +87,9 @@
           }), 1);
         }
       };
-      fireEvent = this.fireEvent;
       onCodeMirrorLoaded = function() {
-        return fireEvent("chocEditorLoaded");
+        _this.fireEvent("chocEditorLoaded");
+        return _this.options.onLoaded();
       };
       this.codemirror = CodeMirror(this.state.editorElement[0], {
         value: this.options.code,
@@ -106,22 +108,27 @@
           return _this.calculateIterations();
         }), 500);
       });
-      onSliderChange = function(event, ui) {
-        _this.state.amountElement.text("step " + ui.value);
-        if (event.hasOwnProperty("originalEvent")) {
-          _this.state.slider.value = ui.value;
-          return _this.updatePreview();
-        }
-      };
       return this.slider = this.state.sliderElement.slider({
         min: 0,
         max: 50,
-        change: onSliderChange,
-        slide: onSliderChange,
+        change: function(event, ui) {
+          return _this.onSliderChange(event, ui);
+        },
+        slide: function(event, ui) {
+          return _this.onSliderChange(event, ui);
+        },
         create: function() {
-          return fireEvent("chocSliderLoaded");
+          return _this.fireEvent("chocSliderLoaded");
         }
       });
+    };
+
+    ChocEditor.prototype.onSliderChange = function(event, ui) {
+      this.state.amountElement.text("step " + ui.value);
+      if (event.hasOwnProperty("originalEvent")) {
+        this.state.slider.value = ui.value;
+        return this.updatePreview();
+      }
     };
 
     ChocEditor.prototype.beforeScrub = function() {
@@ -255,22 +262,21 @@
             display = "&nbsp;";
             frameId = "data-frame-" + info.frameNumber;
             cell = $("<td></td>");
-            innerCell = $("<div></div>").addClass("cell content-cell circle").attr("id", frameId).attr("data-frame-number", info.frameNumber).attr("data-line-number", info.lineNumber);
+            innerCell = $("<div></div>").addClass("cell content-cell").attr("id", frameId).attr("data-frame-number", info.frameNumber).attr("data-line-number", info.lineNumber);
             cell.append(innerCell);
-            if ((message != null ? (_ref2 = message.message) != null ? _ref2.timeline : void 0 : void 0) != null) {
+            if (this.options.timelineValues && ((message != null ? (_ref2 = message.message) != null ? _ref2.timeline : void 0 : void 0) != null)) {
               timelineCreator = message.message.timeline;
               if (_.isFunction(timelineCreator)) {
                 timelineCreator(innerCell);
-                innerCell.removeClass('circle');
               }
-            } else if ((message != null ? message.timeline : void 0) != null) {
+            } else if (this.options.timelineValues && ((message != null ? message.timeline : void 0) != null)) {
               display = message.timeline;
               if (display.hasOwnProperty("_choc_timeline")) {
                 display = display._choc_timeline();
               }
-              innerCell.removeClass('circle');
               innerCell.html(display);
             } else {
+              innerCell.addClass('circle');
               innerCell.html(display);
             }
             row.append(cell);
@@ -366,7 +372,8 @@
           var count;
           count = info.frameCount;
           _this.slider.slider('option', 'max', count);
-          return _this.slider.slider('value', count);
+          _this.slider.slider('value', count);
+          return _this.state.slider.value = count;
         };
       } else {
         afterAll = function(info) {
@@ -409,7 +416,8 @@
     };
 
     ChocEditor.prototype.start = function() {
-      return this.calculateIterations(true);
+      this.calculateIterations(true);
+      return this.updatePreview();
     };
 
     return ChocEditor;

@@ -309,7 +309,7 @@ var readableNode = function readableNode(node, opts) {
               true;
             var trueMessages = [compileEntry(list("lineNumber", (node.loc).start ?
               ((node.loc).start).line :
-              void(0), "message", list("Because ", generateReadableExpression((node || 0)["test"])), "timeline", "t")), compileEntry(list("lineNumber", (node.loc).end ?
+              void(0), "message", list("Because ", generateReadableExpression((node || 0)["test"]), " do this:"), "timeline", "t")), compileEntry(list("lineNumber", (node.loc).end ?
               ((node.loc).end).line :
               void(0), "message", list("... and try again"), "timeline", ""))];
             var falseMessages = [compileEntry(list("lineNumber", (node.loc).start ?
