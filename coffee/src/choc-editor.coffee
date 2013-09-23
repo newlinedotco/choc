@@ -9,6 +9,7 @@ class ChocEditor
       maxAnimationFrames: 100
       messagesId: "#messages"
       timeline: false
+      timelineValues: true
       onLoaded: () ->
 
     @options = _.extend(defaults, options)
@@ -98,19 +99,19 @@ class ChocEditor
       clearTimeout(@state.delay)
       @state.delay = setTimeout((() => @calculateIterations()), 500)
 
-    onSliderChange = (event, ui) =>
-      @state.amountElement.text("step #{ui.value}") 
-      if event.hasOwnProperty("originalEvent") # e.g. triggered by a user interaction, not programmatically below
-        @state.slider.value = ui.value
-        @updatePreview()
-
     @slider = @state.sliderElement.slider {
       min: 0
       max: 50
-      change: onSliderChange
-      slide: onSliderChange
+      change: (event, ui) => @onSliderChange(event, ui)
+      slide: (event, ui) => @onSliderChange(event, ui)
       create: () => @fireEvent("chocSliderLoaded")
       }
+
+  onSliderChange: (event, ui) ->
+    @state.amountElement.text("step #{ui.value}") 
+    if event.hasOwnProperty("originalEvent") # e.g. triggered by a user interaction, not programmatically below
+      @state.slider.value = ui.value
+      @updatePreview()
 
   beforeScrub: () -> @options.beforeScrub()
   
@@ -223,26 +224,24 @@ class ChocEditor
           frameId = "data-frame-#{info.frameNumber}"
           cell = $("<td></td>")
           innerCell = $("<div></div>")
-            .addClass("cell content-cell circle")
+            # .addClass("cell content-cell circle")
+            .addClass("cell content-cell")
             .attr("id", frameId)
             .attr("data-frame-number", info.frameNumber)
             .attr("data-line-number", info.lineNumber)
           cell.append(innerCell)
 
-          if message?.message?.timeline?
+          if @options.timelineValues and message?.message?.timeline?
             timelineCreator = message.message.timeline
             if _.isFunction(timelineCreator)
-              # display = timelineCreator("#" + frameId) # the table hasn't been created yet
               timelineCreator(innerCell)
-              innerCell.removeClass('circle')
-
-          else if message?.timeline? 
+          else if @options.timelineValues and message?.timeline? 
             display = message.timeline
             if display.hasOwnProperty("_choc_timeline")
               display = display._choc_timeline()
-            innerCell.removeClass('circle')
             innerCell.html(display)
           else
+            innerCell.addClass('circle')
             innerCell.html(display)
          
           row.append(cell)
