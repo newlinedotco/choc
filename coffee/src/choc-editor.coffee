@@ -99,6 +99,9 @@ class ChocEditor
       clearTimeout(@state.delay)
       @state.delay = setTimeout((() => @calculateIterations()), 500)
 
+    @codemirror.on "focus", () =>
+      @clearLineWidgets()
+
     @slider = @state.sliderElement.slider {
       min: 0
       max: 50
@@ -283,9 +286,12 @@ class ChocEditor
     if @options.timeline
       @generateTimelineTable(timeline)
 
-  updatePreview: () ->
+  clearLineWidgets: () ->
     # clear the lineWidgets (e.g. the text description)
     _.map @state.lineWidgets, (widget) -> widget.clear()
+
+  updatePreview: () ->
+    @clearLineWidgets()
 
     try
       code = @codemirror.getValue()
