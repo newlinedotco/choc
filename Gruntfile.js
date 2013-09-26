@@ -58,9 +58,8 @@ module.exports = function (grunt) {
       coffee: {
         files: ['coffee/src/*.coffee'],
         tasks: ['coffee:dist', 'wisp', 'browserify']
-      },
+      }
     }
-
 	});
 
   grunt.loadTasks('tasks');
@@ -70,4 +69,5 @@ module.exports = function (grunt) {
     'wisp',
     'browserify'
   ]);
+
 };
