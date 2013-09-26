@@ -1,10 +1,16 @@
 # choc
 
-[View Choc Website](#)
+![Choc](https://github.com/fullstackio/choc/raw/master/doc/images/parabola-demo-1.gif)
+
+This project holds the [Choc](http://fullstack.io/choc) core
+
+[View Choc Website](http://fullstack.io/choc)
 
 Thinking procedurally is one of the hardest concepts to grasp for the beginning programmer.
 
 Choc is a toolkit for teachers to craft small demos that can be explored interactively.
+
+![Choc](https://github.com/fullstackio/choc/raw/master/doc/images/voxel-demo-1.gif)
 
 ## License 
 
