@@ -304,6 +304,9 @@
           return _this.calculateIterations();
         }), 500);
       });
+      this.codemirror.on("focus", function() {
+        return _this.clearLineWidgets();
+      });
       return this.slider = this.state.sliderElement.slider({
         min: 0,
         max: 50,
@@ -516,12 +519,16 @@
       }
     };
 
+    ChocEditor.prototype.clearLineWidgets = function() {
+      return _.map(this.state.lineWidgets, function(widget) {
+        return widget.clear();
+      });
+    };
+
     ChocEditor.prototype.updatePreview = function() {
       var code, e,
         _this = this;
-      _.map(this.state.lineWidgets, function(widget) {
-        return widget.clear();
-      });
+      this.clearLineWidgets();
       try {
         code = this.codemirror.getValue();
         window.choc.scrub(code, this.state.slider.value, {
